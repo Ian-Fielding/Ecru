@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8" />
+	<title>Ecru</title>
+	<link rel="stylesheet" href="style.css">
+	<script src="raytraceHelpers/builder.js" defer></script>
+</head>
+
+<body>
+	<div id="render">
+		<canvas id="canvas" width="500" height="500"></canvas>
+		<br>
+		<div id="div-for-rotation"></div>
+		<div id="div-for-main-button"><button onclick="updateCanvas()" class="main-button">Update Canvas</button></div>
+		<div id="options">
+			<b>Options</b>
+			<table>
+				<tr>
+					<td>Enable Auto-Updates?</td>
+					<td><input type="checkbox" onclick="toggleOption()" id="toggleAutoUpdate"></td>
+				</tr>
+				<tr>
+					<td>Pixel Density</td>
+					<td><input type="number" onclick="toggleOption()" id="togglePixelDensity" min="1" value="1" class="input" style="max-width: 40%"></td>
+				</tr>
+				<tr>
+					<td>Enable Shadows?</td>
+					<td><input type="checkbox" onclick="toggleOption()" id="toggleShadows"></td>
+				</tr>
+				<tr>
+					<td>Enable Smooth Shading?</td>
+					<td><input type="checkbox" onclick="toggleOption()" id="toggleSmoothShading"></td>
+				</tr>
+				<tr>
+					<td>Enable Anti-Aliasing?</td>
+					<td><input type="checkbox" onclick="toggleOption()" id="toggleAntiAlias"></td>
+				</tr>
+				<tr>
+					<td>A-A Rays per Pixel</td>
+					<td><input type="number" onclick="toggleOption()" id="toggleAntiAliasNumber" min="1" value="1" class="input" style="max-width: 40%"></td>
+				</tr>
+			</table>
+		</div>
+		<div id="github-link">
+			<p>View source on <a href="https://github.com/Ian-Fielding/RayTracer" target="_blank" rel="noopener noreferrer">GitHub</a></p>
+		</div>
+	</div>
+	<div id="rest">
+		<button onclick="addObject()" class="main-button">Add a New Object</button>
+		<button onclick="addLight()" class="main-button">Add a New Light</button>
+		<button onclick="clearObjects()" class="main-button">Clear Scene</button>
+		<div id="objects"></div>
+	</div>
+	<script src="raytraceHelpers/client.js"></script>
+</body>
+
+</html>
