@@ -9,7 +9,6 @@ const keywords=[
 	"sum",
 	"prod",
 	"log",
-	"log_",
 	"ln",
 	"sin",
 	"cos",
@@ -38,7 +37,6 @@ const keywords=[
 ];
 
 const punctuation=[
-    ",",
     "*",
     "/",
     "+",
@@ -68,7 +66,7 @@ class Scanner {
 		iloop:for(let i=0;i<input.length;i++){
 			let key=this.greedyGet(input,i);
 			if(key.length!=0){
-				arr.push(new Token(key,key));
+				arr.push(new Token("func",key));
 				i+=key.length-1;
 				continue;
 			}
@@ -116,6 +114,18 @@ class Scanner {
 
 		}
 
+		// superposition multiply
+
+		let isTerminal = x => x=="NUM" || x=="ID";
+		for(let i=0;i<Math.min(arr.length-1,10);i++){
+			let t1=arr[i].type;
+			let t2=arr[i+1].type;
+			if(isTerminal(t1) && isTerminal(t2))
+				arr.splice(i+1,0,new Token("*","*"));
+			
+		}
+
+
 		this.arr=arr;
 		this.count=0;
 	}
@@ -157,13 +167,130 @@ class Scanner {
 	}
 }
 
-class Parser{
+class Func{
+	constructor(name,args){
+		this.name=name;
+		this.args=args;
+	}
 
+	toString(){
+		if(this.args.length==0)
+			return this.name+"()";
+		let str=`${this.name}(${this.args[0]}`;
+		for(let i=1;i<this.args.length;i++)
+			str+=","+this.args[i];
+		return str+")";
+	}
+}
+
+
+
+class Parser{
+	constructor(input){
+		this.scanner=new Scanner(input);
+		this.root=this.expr1();
+	}
+
+	current(){
+		return this.scanner.peek().type;
+	}
+
+	match(type){
+		if(this.current() == type)
+			return this.scanner.consume();
+
+		console.log(`Error! Expected type ${type} but saw ${this.current()}`);
+		return this.scanner.peek();
+	}
+
+	// +,-
+	expr1(){
+		let left=this.expr2();
+		while(["+","-"].includes(this.current())){
+			let op=this.match(this.current()).value;
+			let right=this.expr2();
+
+			if(op=="+")
+				left = new Func("Add",[left,right]);
+			else
+				left = new Func("Sub",[left,right]);
+		}
+
+		return left;
+	}
+
+	// *,/
+	expr2(){
+		let left=this.expr2_5();
+		while(["*","/"].includes(this.current())){
+			let op=this.match(this.current()).value;
+			let right=this.expr2_5();
+
+			if(op=="*")
+				left = new Func("Mul",[left,right]);
+			else
+				left = new Func("Div",[left,right]);
+		}
+
+		return left;
+	}
+
+
+	// ^
+	expr2_5(){
+		let left=this.expr3();
+		while(this.current() == "^"){
+			this.match("^");
+			let right=this.expr3();
+
+			left = new Func("Pow",[left,right]);
+		}
+
+		return left;
+	}
+
+
+
+	// unary neg
+	expr3(){
+		if(this.current() != "-")
+			return this.expr4();
+
+		this.match("-");
+		return new Func("Neg",[this.expr3()]);
+	}
+
+	// (...), built-in funcs
+	expr4(){
+
+		let expr=null;
+		if(this.current() == "("){
+			this.match("(");
+			expr=this.expr1();
+			this.match(")");
+		}
+
+		else if(this.current() == "func"){
+			let val=this.match("func").value;
+			expr = new Func(val,[this.expr2()]);
+		}
+
+		else if(this.current()=="ID" || this.current() == "NUM"){
+			expr = this.match(this.current()).value;
+		}
+
+		if(expr == null)
+			console.log(`Error!! expr is null, while current is ${this.current()}`);
+
+		return expr;
+	}
 }
 
 function butClicked(){
 	let val=document.getElementById("cont");
-	let scan=new Scanner(val.value.replace(/\s/g,''));
+	let str=val.value.replace(/\s/g,'');
 
-	console.log(scan.toString());
+	let parser=new Parser(str);
+
+	console.log(parser.root.toString());
 }
