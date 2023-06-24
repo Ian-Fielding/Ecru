@@ -4,30 +4,38 @@
 <head>
 	<meta charset="utf-8" />
 	<title>Ecru</title>
-	<link rel="stylesheet" href="projects/ecru/style.css">
-		<script>
-			MathJax = {
-				tex: {
-					inlineMath: [['$', '$'], ['\\(', '\\)']]
-				},
-				svg: {
-					fontCache: 'global'
-				}
-			};
-		</script>
-		<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script"></script>
-		<script src="https://unpkg.com/mathjs/lib/browser/math.js"></script>
-	<script src="projects/ecru/parser.js" type="module" defer></script>
+	<link rel="stylesheet" href="ecruHelpers/style.css">
+	<script>
+		MathJax = {
+			tex: {
+				inlineMath: [['$', '$'], ['\\(', '\\)']]
+			},
+			svg: {
+				fontCache: 'global'
+			}
+		};
+	</script>
+	<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script"></script>
+	<script src="https://unpkg.com/mathjs/lib/browser/math.js"></script>
+	<script src="ecruHelpers/parser.js" type="module" defer></script>
 </head>
 
 <body>
-	<div id="coddnt">
-		<input type="text" id="cont">
-		<input type="button" id="but" value="submit">
-	</div>
+	<table>
+		<tr>
+			<th>Pattern:</th>
+			<th><input type="text" id="pattern1" value="k_1 + k_2 -> eval_add(k_1,k_2)"></th>
+			<th></th>
+		</tr>
+		<tr>
+			<th>Expression:</th>
+			<th><input type="text" id="cont" value="(1+2)+(3+4)"></th>
+			<th><input type="button" id="but" value="submit"></th>
+		</tr>
+	</table>
 
-	<p id="text">This is an example of $x^2+2x+4$</p>
-	
+
+	<p id="text"></p>	
 </body>
 
 </html>
