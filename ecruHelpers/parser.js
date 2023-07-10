@@ -1,8 +1,6 @@
 import * as AST from "/ecruHelpers/asts.js";
 import { parse } from "/ecruHelpers/parser/parser.js";
-import {EditorState} from "@codemirror/state"
-import {EditorView, keymap} from "@codemirror/view"
-import {defaultKeymap} from "@codemirror/commands"
+
 
 fetch("/ecruHelpers/sample.txt")
 	.then(response => response.text())
@@ -26,14 +24,3 @@ document.getElementById("but").onclick=function(){
 
 console.log("Ready!");
 
-
-
-let startState = EditorState.create({
-  doc: "Hello World",
-  extensions: [keymap.of(defaultKeymap)]
-})
-
-let view = new EditorView({
-  state: startState,
-  parent: document.body
-})
