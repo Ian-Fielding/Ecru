@@ -1,3 +1,61 @@
-body {
-	background-color: pink;
+html, body {
+	background-color: #192A5D;
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+button{
+	height: 100%;
+	width: 10%;
+}
+
+#toolbar{
+	height:15%;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+#editor{
+	font-family: 'Ysabeau Office', sans-serif;
+	resize:none;
+	background-color: #e6d5a2;
+	color: #192A5D;
+	border: 3px solid black;
+	width: 100%;
+	height: 85%;
+	box-sizing:border-box;
+	margin: 0;
+	padding: 0;
+	font-family: 'Fira Mono', monospace;
+}
+
+#left{
+	float: left;
+	width: calc(70% - 6px);
+	height:100%;
+	margin: 0;
+	padding: 0;
+}
+
+#right{
+	float: right;
+	width: calc(30% - 6px);
+	height: 100%;
+	padding: 0;
+	margin: 0;
+}
+#top {
+	width: 100%;
+	height: 30%;
+	margin: 0;
+	padding: 0;
+}
+#bot {
+	width: 100%;
+	height: 70%;
+	margin: 0;
+	padding: 0;
+	background-color: #e6d5a2;
 }

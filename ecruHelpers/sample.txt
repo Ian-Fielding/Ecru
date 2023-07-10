@@ -1,0 +1,19 @@
+/*
+ * 
+ * This is an example of a multi-lined comment.
+ * 
+ */
+
+// This is an example of a single-lined comment.
+
+// This is a variable declaration and assignment
+formula: Formula = 3x+4; // Formula type
+str: String = "Default Value"; // String type
+
+// Printing
+print "<b>str</b> is ";
+println str;
+print "<b>formula</b> is ";
+print formula;
+print " which is ";
+pprintln formula; // LaTeX support

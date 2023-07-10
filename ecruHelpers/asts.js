@@ -3,10 +3,11 @@ let PRINT=true;
 
 
 
+
 class AST{
-	constructor(name){
+	constructor(name,args=[]){
 		this.name=name;
-		this.args=[];
+		this.args=args;
 	}
 
 	copy(){
@@ -20,11 +21,358 @@ class AST{
 	}
 
 	toString(){
-		return this.name;
+		if(this.args.length==0)
+			return this.name+"()";
+		let str=`${this.name}(${this.args[0]}`;
+		for(let i=1;i<this.args.length;i++)
+			str+=","+this.args[i];
+		return str+")";
+	}
+
+
+	on(options){
+
+		return options;
+	}
+
+	run(options){
+		options=this.on(options);
+		for(let child of this.args){
+
+			if(child.run)
+				options=child.run(options);
+		}
+		return options;
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~         PROGRAM  ASTS         ~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+export class Program extends AST{
+	constructor(stmts){
+		super("Program",stmts);
+	}
+
+	toString(){
+		return "Program(...)";
+	}
+
+	toLongString(){
+		let str="";
+		for(let i=0;i<this.args.length;i++){
+			str+=`---\n${i}. ${this.args[i].toString()}\n`;
+		}
+		return str;
+	}
+}
+
+export class CommentStatement extends AST{
+	constructor(str){
+		super("CommentStmt",[str]);
+	}
+}
+
+export class DeclarationStatement extends AST{
+	constructor(id,type){
+		super("DeclStmt",[id,type]);
+		this.id=id;
+		this.type=type;
+	}
+
+	on(options){
+		if("currScope" in options){
+			let currScope=options["currScope"];
+			let name=this.id.args[0];
+
+			if(currScope.lookup(name)){
+				//TODO Throw error
+				console.log(`Error! The variable ${name} has already been defined!`);
+			}
+
+			let sym=new IdSymbol(name);
+			currScope.symtab.set(name,sym);
+			this.id.symbol=sym;
+			sym.type=this.type;
+		}
+		return options;
+	}
+}
+
+export class AssignmentStatement extends AST{
+	constructor(id,expr){
+		super("AssignStmt",[id,expr]);
+		this.id=id;
+		this.expr=expr;
+	}
+
+	on(options){
+
+		if("currScope" in options){
+
+			let currScope=options["currScope"];
+			let name=this.id.args[0];
+			let sym=currScope.lookup(name);
+
+			if(sym==null){
+				//TODO Throw error
+				console.log(`Error! The variable ${name} has not been defined!`);
+			}
+
+			//TODO Typecheck
+			sym.val=this.expr;
+		}
+		return options;
+	}
+}
+
+
+
+export class Scope{
+	constructor(parent=null){
+		this.parent=parent;
+		this.symtab=new Map();
+	}
+
+	depth(){
+		if(this.parent==null)
+			return 0;
+
+		return 1+this.parent.depth();
+	}
+
+	lookup(name){
+		if(this.symtab.has(name))
+			return this.symtab.get(name);
+		if(this.parent!=null)
+			return this.parent.lookup(name);
+		return null;
+	}
+}
+
+// ID
+// TypeAST
+// DECL
+// STATEMENTS
+// EXPRS
+// CONSTANTS
+// SYMBOLS
+// SCOPES
+
+
+export class PrintStatement extends AST{
+	constructor(expr,isNewLine=false){
+		super("PrintStmt",[expr]);
+		this.expr=expr;
+		this.isNewLine=isNewLine;
+	}
+
+	on(options){
+
+		if(options.run){
+			let str=this.expr.toString();
+			document.getElementById("bot").innerHTML+=str;
+
+			if(this.isNewLine)
+				document.getElementById("bot").innerHTML+="<hr>";
+		}
+
+		return options;
+	}
+}
+
+export class PrettyPrintStatement extends AST{
+	constructor(expr,isNewLine=false){
+		super("PrettyPrintStmt",[expr]);
+		this.expr=expr;
+		this.isNewLine=isNewLine;
+	}
+
+	on(options){
+
+		if(options.run){
+			console.log("HERE")
+			console.log(this.expr);
+			let str=this.expr.toLatex();
+			document.getElementById("bot").innerHTML+=`$${str}$`;
+
+			if(this.isNewLine)
+				document.getElementById("bot").innerHTML+="<hr>";
+
+			MathJax.typeset();
+		}
+
+		return options;
+	}
+}
+
+
+
+class Type{
+	constructor(type){
+		this.type=type;
+	}
+
+	toString(){
+		return this.type;
+	}
+}
+export class FormulaType extends Type{
+	constructor(){
+		super("FormulaType");
+	}
+}
+export class StringType extends Type{
+	constructor(){
+		super("StringType");
+	}
+}
+export class IntegerType extends Type{
+	constructor(){
+		super("IntegerType");
+	}
+}
+export class RationalType extends Type{
+	constructor(){
+		super("RationalType");
+	}
+}
+export class RealType extends Type{
+	constructor(){
+		super("RealType");
+	}
+}
+
+
+
+
+
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~          STRING ASTS          ~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export class Str extends AST{
+	constructor(name){
+		super(name);
 	}
 
 	toLatex(){
+		return `\\text{${this.name}}`;
+	}
+
+	toString(){
 		return this.name;
+	}
+}
+
+export class IdExpr extends AST{
+	constructor(id){
+		super("IdExpr",[id]);
+		this.id=id;
+	}
+
+	toLatex(){
+		return this.id.toLatex();
+	}
+
+	toString(){
+		return this.id.toString();
+	}
+}
+export class Id extends AST{
+	constructor(idName){
+		super("Id",[idName]);
+		this.symbol=null;
+		this.idName=idName;
+	}
+
+	on(options){
+
+		if("currScope" in options){
+
+			let currScope=options["currScope"];
+			let name=this.idName;
+			let sym=currScope.lookup(name);
+
+			if(sym==null){
+				//TODO Throw error
+				console.log(`Error! The variable ${name} has not been defined!`);
+			}
+
+			//TODO Typecheck
+			this.symbol=sym;
+		}
+		return options;
+	}
+
+
+	toLatex(){
+		if(this.symbol==null)
+			return this.idName;
+
+		return this.symbol.toLatex();
+	}
+
+	toString(){
+		if(this.symbol==null)
+			return this.idName;
+
+		return this.symbol.toString();
+	}
+}
+
+export class IdSymbol extends AST{
+	constructor(name){
+		super("IdSymbol",[name]);
+		this.type=null;
+		this.val=null;
+	}
+
+	toLatex(){
+		if(this.val==null)
+			return "\\text{UNDEFINED}";
+
+		return this.val.toLatex();
+	}
+
+	toString(){
+		if(this.val==null)
+			return `IdSymbol(${this.args[0]})`;
+
+		return this.val.toString();
+	}
+}
+
+
+
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~         FORMULAE ASTS         ~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class Formula extends AST {
+	constructor(name,args=[]){
+		super(name,args);
 	}
 
 	checkPattern(pattern,bind){
@@ -53,10 +401,9 @@ class AST{
 	}
 }
 
-export class Func extends AST{
+export class FormulaFunc extends Formula{
 	constructor(name,args){
-		super(name);
-		this.args=args;
+		super(name,args);
 	}
 
 	evaluate(){
@@ -69,7 +416,7 @@ export class Func extends AST{
 					sum+=k.val;
 			}
 
-			return new NumberLiteral(sum);
+			return new FormulaNumberLiteral(sum);
 		case "eval_multiply":
 			let prod=1;
 			for(let i=0;i<this.args.length;i++){
@@ -77,13 +424,13 @@ export class Func extends AST{
 				if(k)
 					prod*=k.val;
 			}
-			return new NumberLiteral(prod);
+			return new FormulaNumberLiteral(prod);
 		case "eval_negate":
-			return new NumberLiteral(-this.args[0].evaluate().val);
+			return new FormulaNumberLiteral(-this.args[0].evaluate().val);
 		case "eval_pow":
 			let pow=this.args[1].evaluate().val;
 			if(!Number.isInteger(pow))
-				return new NumberLiteral(Math.pow(this.args[0],this.args[1]));
+				return new FormulaNumberLiteral(Math.pow(this.args[0],this.args[1]));
 
 
 			function getPow(a,b){
@@ -96,7 +443,7 @@ export class Func extends AST{
 				return a*getPow(b-1);
 			}
 
-			return new NumberLiteral(getPow(this.args[0],this.args[1]));
+			return new FormulaNumberLiteral(getPow(this.args[0],this.args[1]));
 
 		default:
 			return this;
@@ -116,7 +463,7 @@ export class Func extends AST{
 		for(let i=0;i<this.args.length;i++)
 			newArr[i]=this.args[i].applyPattern(match,other);
 
-		return new Func(this.name,newArr);
+		return new FormulaFunc(this.name,newArr);
 	}
 
 	applyBind(bind){
@@ -124,17 +471,7 @@ export class Func extends AST{
 		for(let i=0;i<this.args.length;i++){
 			newArr[i]=this.args[i].applyBind(bind);
 		}
-		return new Func(this.name,newArr);
-	}
-
-
-	toString(){
-		if(this.args.length==0)
-			return this.name+"()";
-		let str=`${this.name}(${this.args[0]}`;
-		for(let i=1;i<this.args.length;i++)
-			str+=","+this.args[i];
-		return str+")";
+		return new FormulaFunc(this.name,newArr);
 	}
 
 	toLatex(){
@@ -173,7 +510,7 @@ export class Func extends AST{
 
 	equals(other){
 
-		if(other == null || !other instanceof Func)
+		if(other == null || !other instanceof FormulaFunc)
 			return false;
 
 		if(this.name!=other.name || this.args.length!=other.args.length)
@@ -187,12 +524,9 @@ export class Func extends AST{
 	}
 
 	checkPattern(pattern,bind){
-		if(PRINT)
-			console.log(`Checking if ${this.toString()} matches pattern ${pattern}`)
 
-		if(pattern instanceof Func && pattern.name==this.name){
-			if(PRINT)
-				console.log("names match, checking args");
+		if(pattern instanceof FormulaFunc && pattern.name==this.name){
+
 			let check=this.args;
 			let pat=pattern.args;
 
@@ -203,8 +537,6 @@ export class Func extends AST{
 				for(let i=0;i<check.length;i++){
 					let matches=pat[i].bind(check[i],bind);
 					if(!matches){
-						if(PRINT)
-							console.log(`args ${pat[i]} and ${check[i]} do not match!`);
 						allArgsMatch=false;
 						break;
 					}
@@ -212,8 +544,6 @@ export class Func extends AST{
 
 
 				if(allArgsMatch){
-					if(PRINT)
-						console.log("args match!");
 
 					return true;
 				}
@@ -222,8 +552,6 @@ export class Func extends AST{
 
 		}
 
-		if(PRINT)
-			console.log(`checking children for ${this.toString()}...`);
 
 		for(let i=0;i<this.args.length;i++){
 			let matches=this.args[i].checkPattern(pattern,bind);
@@ -233,19 +561,15 @@ export class Func extends AST{
 		}
 
 
-		if(PRINT)
-			console.log(`no matches for ${this.toString()}.`);
 		return false;
 	}
 
 	bind(node,bind){
-		if(!node instanceof Func || this.name!=node.name || this.args.length!=node.args.length)
+		if(!node instanceof FormulaFunc || this.name!=node.name || this.args.length!=node.args.length)
 			return false;
 
 		for(let i=0;i<this.args.length;i++){
 			if(!this.args[i].bind(node.args[i],bind)){
-				if(PRINT)
-					console.log(`args ${this.args[i]} and ${node.args[i]} do not match!`);
 				return false;
 			}
 		}
@@ -255,10 +579,10 @@ export class Func extends AST{
 
 }
 
-export class NumberLiteral extends AST{
-	constructor(val){
-		super("NUM_"+val);
-		this.val=Number(val);
+export class FormulaNumberLiteral extends Formula{
+	constructor(name){
+		super("FormulaNumberLiteral",[name]);
+		this.val=Number(name);
 	}
 
 	getChildren(){
@@ -274,7 +598,7 @@ export class NumberLiteral extends AST{
 	}
 
 	equals(other){
-		if(other == null || !other instanceof NumberLiteral)
+		if(other == null || !other instanceof FormulaNumberLiteral)
 			return false;
 
 		return this.val==other.val;
@@ -292,25 +616,51 @@ export class NumberLiteral extends AST{
 	}
 }
 
-export class Id extends AST{
+export class FormulaId extends Formula{
 	constructor(name){
-		super(name);
+		super("FormulaId",[name]);
+		this.val=name;
 	}
 
-	
+	toLatex(){
+		return this.val;
+	}
 
+	toString(){
+		return this.val;
+	}
 
 	equals(other){
-		if(!other instanceof Id)
+		if(!other instanceof FormulaId)
 			return false;
 
 		return this.name==other.name;
 	}
 }
 
-class Pattern extends AST{
-	constructor(name){
-		super(name);
+
+
+
+
+
+
+
+
+
+
+
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~         PATTERN  ASTS         ~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+class Pattern extends Formula{
+	constructor(name,args){
+		super(name,args);
 	}
 
 	equals(other){
@@ -325,7 +675,6 @@ class Pattern extends AST{
 	}
 
 	applyBind(bind){
-		console.log(bind);
 
 		if(bind.containsKey(this.name))
 			return bind.get(this.name);
@@ -336,15 +685,16 @@ class Pattern extends AST{
 
 export class PatternExpression extends Pattern{
 	constructor(name){
-		super(`E_{${name}}`);
+		super("pat_E",[name]);
+		this.patternName=`E_{${name}}`;
 	}
 
 
 	bind(node,bind){
-		if(bind.containsKey(this.name) && !bind.get(this.name).equals(node))
+		if(bind.containsKey(this.patternName) && !bind.get(this.patternName).equals(node))
 			return false;
 
-		bind.set(this.name,node);
+		bind.set(this.patternName,node);
 
 
 		return true;
@@ -353,12 +703,13 @@ export class PatternExpression extends Pattern{
 
 export class PatternInteger extends Pattern{
 	constructor(name){
-		super(`k_{${name}}`);
+		super("pat_k",[name]);
+		this.patternName=`k_{${name}}`;
 	}
 
 
 	bind(node,bind){
-		if(bind.containsKey(this.name) && !node.equals(bind.get(this.name)))
+		if(bind.containsKey(this.patternName) && !node.equals(bind.get(this.patternName)))
 			return false;
 
 		let expr=node instanceof NumberLiteral;
@@ -366,7 +717,7 @@ export class PatternInteger extends Pattern{
 		if(!expr){
 			return false;
 		}else{	
-			return bind.set(this.name,node);
+			return bind.set(this.patternName,node);
 		}
 		
 	}
@@ -418,8 +769,6 @@ export class Binding{
 	}
 
 	set(key,value){
-		if(PRINT)
-			console.log(`set key ${key} to value ${value}`);
 
 		if(!key in this.vars)
 			return false;
@@ -430,13 +779,9 @@ export class Binding{
 		this.map[key]=value;
 
 		if(this.isComplete()){
-			console.log("CHECKING FOR PRINTOUT")
-			console.log(this);
-			console.log(this.history);
 			for(let i=0;i<this.history.length;i++){
 				if(this.history[i].equals(this)){
 					this.clear();
-					console.log("CLEARED")
 					return false;
 				}
 			}
