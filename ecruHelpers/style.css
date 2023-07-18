@@ -1,8 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Anonymous+Pro&display=swap');
+
 html, body {
-	background-color: #192A5D;
+    --dark: #192A5D;
+    --ecru: #E8DAAE; /* F2E9CF */
+    --highlight: #DECA87;
+    --movable-bar-length: 15px;
+
+	background-color: var(--dark);
     margin: 0;
     height: 100%;
-    overflow: hidden;
+    font-family: 'Anonymous Pro', monospace;
 }
 
 button{
@@ -15,47 +22,97 @@ button{
 	width: 100%;
 	margin: 0;
 	padding: 0;
+	background-color: var(--dark);
 }
+#rest{
+	height: 85%;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+}
+
 
 #editor{
-	font-family: 'Ysabeau Office', sans-serif;
-	resize:none;
-	background-color: #e6d5a2;
-	color: #192A5D;
-	border: 3px solid black;
-	width: 100%;
-	height: 85%;
-	box-sizing:border-box;
+	float:left;
+	width: 60%;
+	height: 100%;
 	margin: 0;
 	padding: 0;
-	font-family: 'Fira Mono', monospace;
+	background-color: var(--ecru);
+    font-family: 'Anonymous Pro', monospace;
+}
+.ace-crimson-editor .ace_marker-layer .ace_active-line {
+	background: var(--highlight);
+}
+#rest2{
+	float:left;
+	width: 40%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
 }
 
-#left{
+
+#vertical-bar{
 	float: left;
-	width: calc(70% - 6px);
-	height:100%;
+	width: var(--movable-bar-length);
+	min-height: 100%;
 	margin: 0;
 	padding: 0;
+	background-color: var(--dark);
 }
-
+#scrollbar-vertical{
+	margin-top: calc(42.5vh - var(--movable-bar-length) * 0.5);
+}
 #right{
 	float: right;
-	width: calc(30% - 6px);
+	width: calc(100% - var(--movable-bar-length));
 	height: 100%;
 	padding: 0;
 	margin: 0;
 }
-#top {
+
+
+#top{
 	width: 100%;
-	height: 30%;
+	height: calc(40% - var(--movable-bar-length));
 	margin: 0;
 	padding: 0;
 }
-#bot {
+#canvas{
 	width: 100%;
-	height: 70%;
+	height: 100%;
 	margin: 0;
 	padding: 0;
-	background-color: #e6d5a2;
+}
+#horizontal-bar{
+	min-width: 100%;
+	height: var(--movable-bar-length);
+	margin: 0;
+	padding: 0;
+	text-align: center;
+	background-color: var(--dark);
+}
+
+#console{
+	width: 100%;
+	height: 60%;
+	margin: 0;
+	padding: 0;
+	background-color: lightblue;
+}
+
+
+.scrollbar{
+	width: var(--movable-bar-length);
+	height: var(--movable-bar-length);
+	padding: 0;
+
+
+	user-drag: none;
+    -webkit-user-drag: none;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
 }

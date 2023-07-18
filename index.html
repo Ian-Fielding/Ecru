@@ -2,12 +2,9 @@
 <html lang="en">
 
 <head>
-	<meta charset="utf-8" />
+	<meta charset="utf-8"/>
 	<title>Ecru</title>
 
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Fira+Mono&display=swap" rel="stylesheet">
 
 	<link rel="stylesheet" href="ecruHelpers/style.css">
 	<script>
@@ -21,23 +18,28 @@
 		};
 	</script>
 	<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script"></script>
-	<script src="https://unpkg.com/mathjs/lib/browser/math.js"></script> <!-- Remove? -->
-	<script src="//cdn.quilljs.com/1.3.6/quill.min.js"></script>
-	<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.3/ace.min.js"></script>
+
 	<script src="ecruHelpers/parser.js" type="module" defer></script>
 </head>
 
 <body>
-	<div id="left">
-		<div id="toolbar"><button id="but">GO</button></div>
-		<textarea id="editor"></textarea>
-	</div>
-	<div id="right">
-		<div id="top"></div>
-		<div id="bot">
-			
+	<div id="toolbar"><button id="but">GO</button><button id="clear">CLEAR</button></div>
+	<div id="rest">
+		<div id="editor"></div>
+		<div id="rest2">
+			<div id="vertical-bar" draggable="true"><img src="ecruHelpers/scrollbar-vertical.png" id="scrollbar-vertical" class="scrollbar"></div>
+			<div id="right">
+				<div id="top">
+					<canvas id="canvas"></canvas>
+				</div>
+				<div id="horizontal-bar" draggable="true"><img src="ecruHelpers/scrollbar-horizontal.png" class="scrollbar"></div>
+				<div id="console"></div>
+			</div>
 		</div>
 	</div>
+
+
 </body>
 
 </html>

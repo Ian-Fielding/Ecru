@@ -134,9 +134,16 @@ export class AssignmentStatement extends AST{
 				//TODO Throw error
 				console.log(`Error! The variable ${name} has not been defined!`);
 			}
+			this.id.symbol=sym;
 
 			//TODO Typecheck
-			sym.val=this.expr;
+		}
+
+		if(options.run){
+			console.log("important!")
+			console.log(this.id.sym);
+
+			this.id.symbol.val=this.expr.getVal();
 		}
 		return options;
 	}
@@ -187,10 +194,10 @@ export class PrintStatement extends AST{
 
 		if(options.run){
 			let str=this.expr.toString();
-			document.getElementById("bot").innerHTML+=str;
+			document.getElementById("console").innerHTML+=str;
 
 			if(this.isNewLine)
-				document.getElementById("bot").innerHTML+="<hr>";
+				document.getElementById("console").innerHTML+="<hr>";
 		}
 
 		return options;
@@ -210,10 +217,10 @@ export class PrettyPrintStatement extends AST{
 			console.log("HERE")
 			console.log(this.expr);
 			let str=this.expr.toLatex();
-			document.getElementById("bot").innerHTML+=`$${str}$`;
+			document.getElementById("console").innerHTML+=`$${str}$`;
 
 			if(this.isNewLine)
-				document.getElementById("bot").innerHTML+="<hr>";
+				document.getElementById("console").innerHTML+="<hr>";
 
 			MathJax.typeset();
 		}
@@ -262,6 +269,16 @@ export class RealType extends Type{
 
 
 
+export class Expr extends AST{
+	constructor(name,args=[]){
+		super(name,args);
+	}
+
+	getVal(){
+		return this;
+	}
+}
+
 
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -269,7 +286,7 @@ export class RealType extends Type{
 // ~~~          STRING ASTS          ~~~
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-export class Str extends AST{
+export class Str extends Expr{
 	constructor(name){
 		super(name);
 	}
@@ -283,10 +300,14 @@ export class Str extends AST{
 	}
 }
 
-export class IdExpr extends AST{
+export class IdExpr extends Expr{
 	constructor(id){
 		super("IdExpr",[id]);
 		this.id=id;
+	}
+
+	getVal(){
+		return this.id.getVal();
 	}
 
 	toLatex(){
@@ -302,6 +323,13 @@ export class Id extends AST{
 		super("Id",[idName]);
 		this.symbol=null;
 		this.idName=idName;
+	}
+
+	getVal(){
+		if(this.symbol==null)
+			return null;
+
+		return this.symbol.getVal();
 	}
 
 	on(options){
@@ -344,6 +372,11 @@ export class IdSymbol extends AST{
 		super("IdSymbol",[name]);
 		this.type=null;
 		this.val=null;
+		this.scope=null;
+	}
+
+	getVal(){
+		return this.val;
 	}
 
 	toLatex(){
@@ -370,7 +403,7 @@ export class IdSymbol extends AST{
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class Formula extends AST {
+class Formula extends Expr {
 	constructor(name,args=[]){
 		super(name,args);
 	}
