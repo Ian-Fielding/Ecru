@@ -2,7 +2,7 @@
 # peggy --format es --trace .\ecruHelpers\parser\parser.pegjs
 peggy --format es .\ecruHelpers\parser\parser.pegjs
 
-$JSImport1 = 'import * as AST from "/ecruHelpers/asts.js";'
+$JSImport1 = 'import * as AST from "/ecruHelpers/ast/asts.js";'
 $JSImport2 = 'import * as UTIL from "/ecruHelpers/utils.js";'
 
 $Cont = Get-Content -Path .\ecruHelpers\parser\parser.js

@@ -1,24 +1,27 @@
-import * as AST from "/ecruHelpers/asts.js";
-import { parse } from "/ecruHelpers/parser/parser.js";
+import * as AST from "./asts.js";
+import { parse } from "./parser/parser.js";
 
 let editor = ace.edit("editor");
 editor.setTheme("ace/theme/crimson_editor");
 editor.session.setUseSoftTabs(false);
+editor.setShowPrintMargin(false);
 document.getElementById('editor').style.fontSize='15px';
 
 
 fetch("/ecruHelpers/debug.txt")
 	.then(response => response.text())
 	.then(function(text){
-		editor.setValue(text);
+		editor.setValue(text,-1);
 	});
 
 
 let canvas=document.getElementById("canvas");
+canvas.height=document.getElementById("top").offsetHeight;
+canvas.width=document.getElementById("top").offsetWidth;
 let ctx=canvas.getContext("2d");
-ctx.fillStyle="blue";
 let H=canvas.height;
 let W=canvas.width;
+ctx.fillStyle="blue";
 ctx.fillRect(0,0,W,H);
 
 
@@ -45,6 +48,9 @@ vbar.addEventListener("drag",function(e){
 	editor.resize();
 
 	rest.style.width=`calc(100vw - var(--movable-bar-length) - ${ed.offsetWidth}px)`;
+
+	updateCanvasSize();
+
 });
 hbar.addEventListener("dragstart",function(e){
 	dragpos=e.y;
@@ -59,26 +65,34 @@ hbar.addEventListener("drag",function(e){
 	let dy=dragpos-v;
 	top.style.height=`calc(${starthei}px - ${dy}px)`;
 
-	console.log("BEFORE");
-	console.log(con.offsetHeight);
 	con.style.height=`calc(85vh - var(--movable-bar-length) - ${top.offsetHeight}px)`;
-	console.log("AFTER");
-	console.log(con.offsetHeight);
 
+	updateCanvasSize();
 });
 
-document.addEventListener("dragover", function(event) {
+function updateCanvasSize(){
+	canvas.width=top.offsetWidth;
+	canvas.height=top.offsetHeight;
+}
 
-  // prevent default to allow drop
-  event.preventDefault();
-
-}, false);
-
-
-
+hbar.addEventListener("dragend",updateCanvasSize);
+vbar.addEventListener("dragend",updateCanvasSize);
 
 
-document.getElementById("but").onclick=function(){
+document.addEventListener("dragover", (event) => event.preventDefault());
+
+
+
+
+
+document.getElementById("go").onclick=function(){
+
+	H=canvas.height;
+	W=canvas.width;
+	ctx.fillStyle="pink";
+	ctx.fillRect(0,0,10,10);
+	console.log(`W: ${W}   H: ${H}`)
+
 	let input=editor.getValue()+"\n";
 
 	let prog=parse(input,{ tracer: { trace: function(evt) {
