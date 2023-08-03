@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "child-process": "^1.0.2",
+    "express": "^4.18.2",
+    "node-fetch": "^3.3.2",
+    "path": "^0.12.7",
+    "peggy": "^3.0.2",
+    "ts-pegjs": "^4.2.1",
+    "typescript": "^5.1.6"
+  },
+  "type": "module"
+}

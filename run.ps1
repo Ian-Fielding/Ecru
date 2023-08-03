@@ -1,3 +1,3 @@
 .\generateParsers.ps1
 tsc
-node .\server.js
+node .\server.cjs

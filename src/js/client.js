@@ -1,5 +1,5 @@
-import * as AST from "./ast/asts.js";
-import * as PARSE from "./parser/parser.js";
+import { compile } from "./compile.js";
+import { IOBuffer } from "./IOBuffer.js";
 let vbar = document.getElementById("vertical-bar");
 let hbar = document.getElementById("horizontal-bar");
 let topElem = document.getElementById("top");
@@ -13,8 +13,7 @@ let editor = ace.edit("editor");
 editor.setTheme("ace/theme/crimson_editor");
 editor.session.setUseSoftTabs(false);
 editor.setShowPrintMargin(false);
-//document.getElementById('editor').style.fontSize='15px';
-fetch("/ecruHelpers/debug.txt")
+fetch("/projects/ecru/demo/debug.txt")
     .then(response => response.text())
     .then(function (text) {
     editor.setValue(text, -1);
@@ -61,22 +60,17 @@ function updateCanvasSize() {
 hbar.addEventListener("dragend", updateCanvasSize);
 vbar.addEventListener("dragend", updateCanvasSize);
 document.addEventListener("dragover", (event) => event.preventDefault());
+function addToConsole(input) {
+    con.innerHTML += input + "<hr>";
+}
 goBut.onclick = function () {
+    con.innerHTML = "";
     H = canvas.height;
     W = canvas.width;
     ctx.fillStyle = "pink";
     ctx.fillRect(0, 0, 10, 10);
-    let input = editor.getValue() + "\n";
-    let prog = PARSE.parse(input, { tracer: { trace: function (evt) {
-                console.log(evt);
-            } } });
-    let options = {
-        run: false,
-        currScope: new AST.Scope()
-    };
-    prog.run(options);
-    console.log(prog);
-    prog.run({ run: true, currScope: null });
+    let input = editor.getValue();
+    compile(input, new IOBuffer(addToConsole, addToConsole));
 };
 clearbut.onclick = function () {
     con.innerHTML = "";

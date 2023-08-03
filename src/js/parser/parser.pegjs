@@ -1,8 +1,17 @@
+
+/*
+ *
+ *
+ *	PROGRAM AND STATEMENTS
+ *
+ *
+ */
+
 program "valid Ecru program"
-	= stmts:statements _ {return new AST.Program(stmts);}
+	= stmts:statements __ {return new AST.Program(stmts);}
 
 statements "list of statements"
-	= leftList:(_ statement _)* {
+	= leftList:(_ statement)* {
 		let newArr=[];
 		for(let i=0;i<leftList.length;i++)
 			newArr=newArr.concat(leftList[i][1]);
@@ -29,58 +38,74 @@ statement "statement"
 	/ "pprintln" _ val:expr _ ";" {return new AST.PrettyPrintStatement(val,true);}
 	/ "print" _ val:expr _ ";" {return new AST.PrintStatement(val);}
 	/ "pprint" _ val:expr _ ";" {return new AST.PrettyPrintStatement(val);}
+	/ left:expr _ ";" {return left;}
 	/ ";" {return [];}
 
-declStatement
+declStatement "declaration statement"
 	= id:identifier _ ":" _ type:type {return new AST.DeclarationStatement(id,type);}
 
-identifier
-	= first:[a-zA-Z] last:[a-zA-Z0-9]* {
-		let id=first+UTIL.collapseArray(last);
-		return new AST.Id(id);
-	}
-	
-
-type
-	= "Formula" {return new AST.FormulaType();}
-	/ "String" {return new AST.StringType();}
-	/ "Integer" {return new AST.IntegerType();}
-	/ "Rational" {return new AST.RationalType();}
-	/ "Real" {return new AST.RealType();}
-
-
-commentStatement
+commentStatement "comment statement"
 	= "//" input:nonNewLine* "\n"  {
-		return new AST.CommentStatement(UTIL.collapseArray(input).trim());
+		return new AST.CommentStatement(input.join("").trim());
 	}
 	/ "/*" input:commentStatementHelper+ "/" {
 
-		let filteredInput=UTIL.collapseArray(input);
+		let filteredInput=input.join("");
 
 		return new AST.CommentStatement(filteredInput.substring(0,filteredInput.length-1));
 	}
-
 commentStatementHelper
-	= input:nonAsterisk* "*" {return UTIL.collapseArray(input)+"*";}
-
+	= input:nonAsterisk* "*" {return input.join("")+"*";}
 nonAsterisk
 	= input:. &{return input!="*" && input!="/"} {return input[0]}
 nonNewLine
 	= input:. &{return input!="\n"} {return input[0]}
 
+whileLoop "while loop"
+	= "while" _ test:expr _ "{" _ stmts:statements _ "}" {
+		return new AST.WhileLoop(test,stmts);
+	}
+
+
+
+
+
+
+
+
+/*
+ *
+ *
+ *	STRINGS
+ *
+ *
+ */
+
 
 string = "\"" input:nonQuote* "\"" {
-		return new AST.Str(UTIL.collapseArray(input));
+		return new AST.StringLiteral(input.join(""));
 	}
 nonQuote
 	= input:. &{return input!="\""} {return input[0]}
 
-expr = id:identifier {return new AST.IdExpr(id);}
-	/ string
-	/ formula
 
-formulae "list of formulae"
-	= left:formula rightList:( _ "," _ formula)*{
+
+
+
+
+
+/*
+ *
+ *
+ *	EXPRS
+ *
+ *
+ */
+
+
+
+exprs "list of expressions"
+	= left:expr rightList:( _ "," _ expr)*{
 		let newArr=Array(rightList.length+1);
 		newArr[0]=left;
 		for(let i=1;i<newArr.length;i++)
@@ -89,7 +114,8 @@ formulae "list of formulae"
 		return newArr;
 	}
 
-formula = additive
+expr = additive
+
 
 additive
 	= left:multiplicative rightList:(_ ("+" / "-") _ multiplicative)* {
@@ -161,27 +187,82 @@ factorial
 	}
 
 func
-	= left:funcName "(" _ rightList:formulae _ ")" {
-		return new AST.FormulaFunc(left,rightList);
-	}
-	/ left:funcName _ right:multiplicative {
-		return new AST.FormulaFunc(left,[right]);
-	}
-	/ primary
+	= left:primary rightList:(("(" / "[") _ exprs _ (")" / "]"))* {
+		for(let l of rightList){
+			let p1=l[0];
+			let exprs=l[2];
+			let p2=l[4];
 
+			if(p1=="(" && p2==")")
+				left = new AST.FormulaFunc(left,exprs);
+			else if(p1=="[" && p2=="]" && exprs.length==1)
+				left = new AST.ArrayAccess(left,exprs[0]);
+			else if(exprs.length!=1)
+				throw new Error("only 1 expression allowed in []");
+			else
+				throw new Error("unbalanced () or []");
+
+		}
+
+		return left;
+	}
+	/*/ left:idExpr _ right:multiplicative {
+		return new AST.FormulaFunc(left,[right]);
+	}*/
 funcName
-	= "add" / "sub" / "mul" / "div" / "pow" / "root" / "sqrt" / "sum" / "prod" / "log" / "ln" / "sin" / "cos" / "tan" / "sec" / "csc" / "cot" / "arcsin" / "arccos" / "arctan" / "arcsec" / "arccsc" / "arctan" / "sinh" / "cosh" / "tanh" / "sech" / "csch" / "coth" / "arcsinh" / "arccosh" / "arctanh" / "arcsech" / "arccsch" / "arctanh" / "eval_add" / "eval_negate" / "eval_multiply" / "eval_pow"
+	= "add" / "sub" / "mul" / "div" / "pow" / "root" / "sqrt" / "sum" / "prod" / "log" / "ln" / "sin" / "cos" / "tan" / "sec" / "csc" / "cot" / "arcsin" / "arccos" / "arctan" / "arcsec" / "arccsc" / "arctan" / "sinh" / "cosh" / "tanh" / "sech" / "csch" / "coth" / "arcsinh" / "arccosh" / "arctanh" / "arcsech" / "arccsch"
+
+
 
 primary
 	= number
 	/ "(" additive:additive ")" { return additive; }
-	/ constant
+	/ idExpr
+	/ string
 
-constant
-	= val:[a-z] {return new AST.FormulaId(val)}
+
+idExpr = id:identifier {return new AST.IdExpr(id);}
+
+
+
+
+/*
+ *
+ *
+ *	MISC
+ *
+ *
+ */
+
+
+identifier
+	= first:[a-zA-Z] last:[a-zA-Z0-9_]* {
+		let id=first+last.join("");
+		return new AST.Id(id);
+	}
+	
+
+type
+	= "Formula" {return new AST.FormulaType();}
+	/ "String" {return new AST.StringType();}
+	/ "Integer" {return new AST.IntegerType();}
+	/ "Rational" {return new AST.RationalType();}
+	/ "Real" {return new AST.RealType();}
+	/ "Boolean" {return new AST.IntegerType();}
+
 
 number
-	= digits:[0-9]+ { return new AST.FormulaNumberLiteral(parseInt(digits.join(""), 10)); }
+	= digits:[0-9]+ {
+		return new AST.NumberLiteral(parseInt(digits.join(""), 10));
+	}
+	/ firstPart:[0-9]* "." secondPart:[0-9]+ { 
+		let digits = parseInt(firstPart.join("")+"."+secondPart.join(""), 10);
+		return new AST.NumberLiteral(digits);
+	}
+
 
 _ "whitespace"
 	= [ \t\r\n]*
+
+__ "essential whitespace"
+	= [ \t\r\n]+

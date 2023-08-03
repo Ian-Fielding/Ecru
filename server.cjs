@@ -2,7 +2,7 @@ const express = require("express");
 const app = express();
 const port = 5000;
 const path = require('path')
-app.use('/ecruHelpers', express.static(path.join(__dirname, 'ecruHelpers')));
+app.use('/projects/ecru', express.static(path.join(__dirname, 'src')));
 app.use(express.json());
 
 app.listen(port, function() {
@@ -10,7 +10,7 @@ app.listen(port, function() {
 });
 
 app.get("/",function(req,res){
-    res.sendFile(__dirname+"/index.html");
+    res.sendFile(__dirname+"/src/index/index.html");
 });
 
 /*

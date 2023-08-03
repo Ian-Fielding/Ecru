@@ -6,7 +6,7 @@
 	<title>Ecru</title>
 
 
-	<link rel="stylesheet" href="ecruHelpers/style.css">
+	<link rel="stylesheet" href="/projects/ecru/index/style.css">
 	<script>
 		MathJax = {
 			tex: {
@@ -20,20 +20,23 @@
 	<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.3/ace.min.js"></script>
 
-	<script src="ecruHelpers/parser.js" type="module" defer></script>
+	<script src="projects/ecru/js/client.js" type="module" defer></script>
 </head>
 
 <body>
-	<div id="toolbar"><button id="but">GO</button><button id="clear">CLEAR</button></div>
+	<div id="toolbar">
+		<button type="button" id="go">GO</button>
+		<button type="button" id="clear">CLEAR</button>
+	</div>
 	<div id="rest">
 		<div id="editor"></div>
 		<div id="rest2">
-			<div id="vertical-bar" draggable="true"><img src="ecruHelpers/scrollbar-vertical.png" id="scrollbar-vertical" class="scrollbar"></div>
+			<div id="vertical-bar" draggable="true"><img src="projects/ecru/img/scrollbar-vertical.png" id="scrollbar-vertical" class="scrollbar" alt="scroll"></div>
 			<div id="right">
 				<div id="top">
 					<canvas id="canvas"></canvas>
 				</div>
-				<div id="horizontal-bar" draggable="true"><img src="ecruHelpers/scrollbar-horizontal.png" class="scrollbar"></div>
+				<div id="horizontal-bar" draggable="true"><img src="projects/ecru/img/scrollbar-horizontal.png" class="scrollbar" alt="scroll"></div>
 				<div id="console"></div>
 			</div>
 		</div>

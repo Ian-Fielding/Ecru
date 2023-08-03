@@ -1,6 +1,5 @@
-import * as AST from "./ast/asts.js";
-import * as PARSE from "./parser/parser.js";
-
+import { compile } from "./compile.js";
+import { IOBuffer } from "./IOBuffer.js";
 
 
 let vbar: HTMLElement = document.getElementById("vertical-bar")!;
@@ -19,21 +18,18 @@ let editor: any = ace.edit("editor");
 editor.setTheme("ace/theme/crimson_editor");
 editor.session.setUseSoftTabs(false);
 editor.setShowPrintMargin(false);
-//document.getElementById('editor').style.fontSize='15px';
 
 
-fetch("/ecruHelpers/debug.txt")
+fetch("/projects/ecru/demo/debug.txt")
 	.then(response => response.text())
 	.then(function(text: string){
 		editor.setValue(text,-1);
 	});
 
 
-
-
 canvas.height=topElem.offsetHeight;
 canvas.width=topElem.offsetWidth;
-let ctx: CanvasRenderingContext2D =canvas.getContext("2d")!;
+let ctx: CanvasRenderingContext2D = canvas.getContext("2d")!;
 let H: number=canvas.height;
 let W: number=canvas.width;
 ctx.fillStyle="blue";
@@ -93,32 +89,23 @@ document.addEventListener("dragover", (event: any) => event.preventDefault());
 
 
 
+function addToConsole(input:string):void{
+	con.innerHTML+=input+"<hr>";
+}
+
 
 
 goBut.onclick=function(): void{
+	con.innerHTML="";
 
 	H=canvas.height;
 	W=canvas.width;
 	ctx.fillStyle="pink";
 	ctx.fillRect(0,0,10,10);
 
-	let input: string=editor.getValue()+"\n";
+	let input: string=editor.getValue();
 
-	let prog=PARSE.parse(input,{ tracer: { trace: function(evt: any): void{
-		console.log(evt);
-	}}});
-
-	let options: AST.Options = {
-		run: false,
-		currScope: new AST.Scope()
-	}
-
-	prog.run(options);
-
-
-	console.log(prog);
-
-	prog.run({run:true,currScope:null});
+	compile(input,new IOBuffer(addToConsole,addToConsole));	
 }
 
 
