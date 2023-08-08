@@ -38,6 +38,8 @@ statement "statement"
 	/ "pprintln" _ val:expr _ ";" {return new AST.PrettyPrintStatement(val,true);}
 	/ "print" _ val:expr _ ";" {return new AST.PrintStatement(val);}
 	/ "pprint" _ val:expr _ ";" {return new AST.PrettyPrintStatement(val);}
+	/ ifStmt
+	/ whileLoop
 	/ left:expr _ ";" {return left;}
 	/ ";" {return [];}
 
@@ -64,6 +66,14 @@ nonNewLine
 whileLoop "while loop"
 	= "while" _ test:expr _ "{" _ stmts:statements _ "}" {
 		return new AST.WhileLoop(test,stmts);
+	}
+
+ifStmt "if statement"
+	= "if" _ test:expr _ "{" _ stmts:statements _ "}" _ elsePart:("else" _ "{" _ statements _ "}")|0..1| {
+
+		let elseStmts = elsePart.length==0 ? [] : elsePart[0][4];
+
+		return new AST.IfStmt(test,stmts,elseStmts);
 	}
 
 
@@ -123,9 +133,9 @@ additive
 			let op=expr[1];
 			let right=expr[3];
 			if(op=="+"){
-				left=new AST.FormulaFunc("add",[left,right]);
+				left=new MATH.Add([left,right]);
 			}else{
-				left=new AST.FormulaFunc("sub",[left,right]);
+				left=new MATH.Sub([left,right]);
 			}
 		}
 
@@ -133,23 +143,16 @@ additive
 	}
 
 multiplicative
-	= left:negation rightList:(_ (("*" / "/") _ negation / exponent))* {
+	= left:negation rightList:(_ ("*" / "/") _ negation)* {
 		for(let expr of rightList){
 
-			let op;
-			let right;
-			if(expr.length==4){
-				op=expr[1];
-				right=expr[3];
-			}else{
-				op="*";
-				right=expr[1];
-			}
+			let op=expr[1];
+			let right=expr[3];
 			
 			if(op=="/"){
-				left=new AST.FormulaFunc("div",[left,right]);
+				left=new MATH.Div([left,right]);
 			}else{
-				left=new AST.FormulaFunc("mul",[left,right]);
+				left=new MATH.Mul([left,right]);
 			}
 		}
 
@@ -159,7 +162,7 @@ multiplicative
 negation
 	= leftList:("-" _)* right:exponent {
 		for(let i in leftList){
-			right=new AST.FormulaFunc("neg",[right]);
+			right=new MATH.BuiltinFunc("neg",[right]);
 		}
 
 		return right;
@@ -169,7 +172,7 @@ exponent
 	= leftList:(factorial _ "^" _)* right:factorial {
 		for(let i=leftList.length-1;i>=0;i--){
 			let left=leftList[i][0];
-			right=new AST.FormulaFunc("pow",[left,right]);
+			right=new MATH.BuiltinFunc("pow",[left,right]);
 		}
 
 		return right;
@@ -180,7 +183,7 @@ exponent
 factorial
 	= left:func rightList:(_ "!")* {
 		for(let i in rightList){
-			left = new AST.FormulaFunc("fact",[left]);
+			left = new MATH.BuiltinFunc("fact",[left]);
 		}
 
 		return left;
@@ -194,7 +197,7 @@ func
 			let p2=l[4];
 
 			if(p1=="(" && p2==")")
-				left = new AST.FormulaFunc(left,exprs);
+				left = new MATH.BuiltinFunc(left,exprs);
 			else if(p1=="[" && p2=="]" && exprs.length==1)
 				left = new AST.ArrayAccess(left,exprs[0]);
 			else if(exprs.length!=1)
@@ -207,7 +210,7 @@ func
 		return left;
 	}
 	/*/ left:idExpr _ right:multiplicative {
-		return new AST.FormulaFunc(left,[right]);
+		return new MATH.BuiltinFunc(left,[right]);
 	}*/
 funcName
 	= "add" / "sub" / "mul" / "div" / "pow" / "root" / "sqrt" / "sum" / "prod" / "log" / "ln" / "sin" / "cos" / "tan" / "sec" / "csc" / "cot" / "arcsin" / "arccos" / "arctan" / "arcsec" / "arccsc" / "arctan" / "sinh" / "cosh" / "tanh" / "sech" / "csch" / "coth" / "arcsinh" / "arccosh" / "arctanh" / "arcsech" / "arccsch"
@@ -243,12 +246,24 @@ identifier
 	
 
 type
-	= "Formula" {return new AST.FormulaType();}
-	/ "String" {return new AST.StringType();}
-	/ "Integer" {return new AST.IntegerType();}
-	/ "Rational" {return new AST.RationalType();}
-	/ "Real" {return new AST.RealType();}
-	/ "Boolean" {return new AST.IntegerType();}
+	= left:("Object" / 
+		"Obj" / 
+		"Formula" / 
+		"Form" / 
+		"Real" / 
+		"R" / 
+		"Rational" / 
+		"Q" / 
+		"Integer" / 
+		"Int" / 
+		"Z" / 
+		"Natural" / 
+		"N" / 
+		"Boolean" / 
+		"Bool" / 
+		"String" / 
+		"Str" / 
+		"void") { return new AST.TypeAST(left); }
 
 
 number

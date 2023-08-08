@@ -21,23 +21,23 @@ export let parseTests = [
         expected: "Program(AssignStmt(IdExpr(x),3))",
     }, {
         name: "parse_test6",
-        input: "\n",
-        expected: "Program()",
+        input: "\nxz : String\n   \t = 3+4;",
+        expected: "Program(DeclStmt(xz,StringType()), AssignStmt(x,add(3,4)))",
     }, {
         name: "parse_test7",
-        input: "\n",
-        expected: "Program()",
+        input: "x",
+        expected: "Error",
     }, {
         name: "parse_test8",
-        input: "\n",
-        expected: "Program()",
+        input: "x^2;",
+        expected: "Program(exp(x,2))",
     }, {
         name: "parse_test9",
-        input: "\n",
-        expected: "Program()",
+        input: "print\nx;",
+        expected: "Program(PrintStmt(IdExpr(x)))",
     }, {
         name: "parse_test10",
-        input: "\n",
-        expected: "Program()",
+        input: "\n\n\npprint(x+x);",
+        expected: "Program(pprint(x+x+x))",
     },
 ];

@@ -26,4 +26,8 @@ export class IOBuffer {
 	}
 }
 
+function empty(input:string):void{}
+
+export let silentBuffer: IOBuffer = new IOBuffer(empty,empty);
+
 export let consoleBuffer: IOBuffer = new IOBuffer(console.log,console.error);

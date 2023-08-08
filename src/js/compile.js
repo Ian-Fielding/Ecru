@@ -15,6 +15,7 @@ export function compile(input, buffer = consoleBuffer) {
     }
     catch (e) {
         buffer.stderr(e.message);
+        retVal.parseTree = "Error";
         return retVal;
     }
     retVal.parseTree = prog.toString();

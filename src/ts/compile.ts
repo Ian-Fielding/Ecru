@@ -22,6 +22,7 @@ export function compile(input:string, buffer:IOBuffer = consoleBuffer):CompileOb
 		}}});
 	}catch(e:any){
 		buffer.stderr(e.message);
+		retVal.parseTree="Error";
 		return retVal;
 	}
 	

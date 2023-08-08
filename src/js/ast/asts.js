@@ -1,3 +1,4 @@
+import { divides, gcd } from "../utils.js";
 class AST {
     constructor(name, args = []) {
         this.name = name;
@@ -26,7 +27,7 @@ class AST {
             child.applyBind(scope, buffer);
         }
     }
-    applyType(buffer, expectedType = new DummyType()) {
+    applyType(buffer, expectedType = new TypeAST("Dummy")) {
         for (let child of this.args) {
             child.applyType(buffer, expectedType);
         }
@@ -36,22 +37,6 @@ class AST {
             child.execute(buffer);
         }
     }
-    /*
-    on(options: Options): Options{
-        return options;
-    }
-
-    run(options: Options): Options{
-        let scope:Scope|null = options.currScope;
-        options=this.on(options);
-
-        if(!options.run)
-            for(let child of this.args)
-                options=child.run(options);
-
-        options.currScope=scope;
-        return options;
-    }*/
     equals(other) {
         if (this.name != other.name || this.args.length != other.args.length)
             return false;
@@ -105,7 +90,7 @@ export class DeclarationStatement extends Statement {
         scope.symtab.set(name, sym);
         this.id.symbol = sym;
     }
-    applyType(buffer, expectedType = new DummyType()) {
+    applyType(buffer, expectedType = new TypeAST("Dummy")) {
         this.id.symbol.type = this.type;
     }
 }
@@ -124,7 +109,7 @@ export class AssignmentStatement extends Statement {
         }
         this.id.symbol = sym;
     }
-    applyType(buffer, expectedType = new DummyType()) {
+    applyType(buffer, expectedType = new TypeAST("Dummy")) {
         this.expr.applyType(buffer, this.id.symbol.type);
     }
     execute(buffer) {
@@ -178,10 +163,10 @@ export class PrettyPrintStatement extends Statement {
 }
 export class WhileLoop extends Statement {
     constructor(test, stmts) {
-        let other = new Array(stmts.length + 1);
-        other[0] = test;
-        for (let i in stmts)
-            other[i + 1] = stmts[i];
+        let other = [];
+        other.push(test);
+        for (let child of stmts)
+            other.push(child);
         super("WhileLoop", other);
         this.test = test;
         this.stmts = stmts;
@@ -189,72 +174,125 @@ export class WhileLoop extends Statement {
     applyBind(scope, buffer) {
         this.test.applyBind(scope, buffer);
         let childScope = new Scope(scope);
-        for (let child of this.args) {
+        for (let child of this.stmts) {
             child.applyBind(childScope, buffer);
         }
     }
     execute(buffer) {
         while (true) {
             let compVal = this.test.rval();
-            if (compVal instanceof NumberLiteral)
-                if (compVal.val == 0)
-                    break;
-            for (let child of this.stmts) {
+            if (compVal.val == 0)
+                break;
+            for (let child of this.stmts)
                 child.execute(buffer);
-            }
         }
     }
 }
-class Type extends AST {
-    constructor(name = "Type") {
-        super(name);
-        this.type = name;
-        this.parentClasses = ["Type"];
+export class IfStmt extends Statement {
+    constructor(test, stmts, elseStmts) {
+        let other = [];
+        other.push(test);
+        for (let child of stmts)
+            other.push(child);
+        for (let child of elseStmts)
+            other.push(child);
+        super("IfStmt", other);
+        this.test = test;
+        this.stmts = stmts;
+        this.elseStmts = elseStmts;
     }
-    instanceOf(otherType) {
-        return this.parentClasses.includes(otherType.constructor.name);
+    applyBind(scope, buffer) {
+        this.test.applyBind(scope, buffer);
+        let ifScope = new Scope(scope);
+        let elseScope = new Scope(scope);
+        for (let child of this.stmts)
+            child.applyBind(ifScope, buffer);
+        for (let child of this.elseStmts)
+            child.applyBind(elseScope, buffer);
     }
-}
-export class VoidType extends Type {
-    constructor(name = "VoidType") {
-        super(name);
-        this.parentClasses.push("VoidType");
-    }
-}
-export class DummyType extends Type {
-    constructor(name = "DummyType") {
-        super(name);
-        this.parentClasses.push("DummyType");
-    }
-}
-export class FormulaType extends Type {
-    constructor(name = "FormulaType") {
-        super(name);
-        this.parentClasses.push("FormulaType");
-    }
-}
-export class RealType extends FormulaType {
-    constructor(name = "RealType") {
-        super(name);
-        this.parentClasses.push("RealType");
-    }
-}
-export class RationalType extends RealType {
-    constructor(name = "RationalType") {
-        super(name);
-        this.parentClasses.push("RationalType");
+    execute(buffer) {
+        let compVal = this.test.rval();
+        console.log(compVal);
+        if (compVal.val != 0)
+            for (let child of this.stmts)
+                child.execute(buffer);
+        else
+            for (let child of this.elseStmts)
+                child.execute(buffer);
     }
 }
-export class IntegerType extends RationalType {
-    constructor(name = "IntegerType") {
-        super(name);
-        this.parentClasses.push("IntegerType");
+const PRIMES = [2, 3, 5];
+export class TypeAST extends AST {
+    constructor(name) {
+        super("UncertainType");
+        if (typeof name == "number") {
+            this.type = name;
+            return;
+        }
+        switch (name) {
+            case "Object":
+            case "Obj":
+                this.type = 1 /* TypeEnum.OBJECT */;
+                this.name = "ObjType";
+                break;
+            case "Formula":
+            case "Form":
+                this.type = 2 /* TypeEnum.FORMULA */;
+                this.name = "FormType";
+                break;
+            case "Real":
+            case "R":
+                this.type = 4 /* TypeEnum.REAL */;
+                this.name = "RealType";
+                break;
+            case "Rational":
+            case "Q":
+                this.type = 8 /* TypeEnum.RATIONAL */;
+                this.name = "RatType";
+                break;
+            case "Integer":
+            case "Int":
+            case "Z":
+                this.type = 16 /* TypeEnum.INTEGER */;
+                this.name = "IntType";
+                break;
+            case "Natural":
+            case "N":
+                this.type = 32 /* TypeEnum.NATURAL */;
+                this.name = "NatType";
+                break;
+            case "Boolean":
+            case "Bool":
+                this.type = 64 /* TypeEnum.BOOLEAN */;
+                this.name = "BoolType";
+                break;
+            case "String":
+            case "Str":
+                this.type = 6 /* TypeEnum.STRING */;
+                this.name = "StrType";
+                break;
+            case "void":
+                this.type = 5 /* TypeEnum.VOID */;
+                this.name = "VoidType";
+                break;
+            default:
+                this.type = 23456789 /* TypeEnum.DUMMY */;
+                this.name = "DummyType";
+                break;
+        }
     }
-}
-export class StringType extends FormulaType {
-    constructor(name = "StringType") {
-        super(name);
-        this.parentClasses.push("StringType");
+    instanceOf(t) {
+        if (t instanceof TypeAST)
+            return divides(t.type, this.type);
+        return divides(t, this.type);
+    }
+    closestParent(t) {
+        if (t instanceof TypeAST)
+            return new TypeAST(gcd(this.type, t.type));
+        return new TypeAST(gcd(this.type, t));
+    }
+    isMathType() {
+        return this.type % 4 /* TypeEnum.REAL */ == 0;
     }
 }
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -263,30 +301,35 @@ export class StringType extends FormulaType {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 export class Expr extends Statement {
-    constructor(name, args = []) {
+    constructor(name, args = [], type = new TypeAST("Dummy")) {
         super(name, args);
-        this.type = new DummyType();
+        this.type = type;
     }
     rval() {
         return this;
     }
-    applyType(buffer, expectedType = new DummyType()) {
+    applyType(buffer, expectedType = new TypeAST("Dummy")) {
         throw new Error("Must override this method!");
     }
     toLatex() {
         return `\\text{${this.name}}`;
     }
+    builtinToString() {
+        return this.toString();
+    }
 }
 export class StringLiteral extends Expr {
     constructor(name) {
-        super(name);
-        this.type = new StringType();
+        super(name, [], new TypeAST("String"));
     }
-    applyType(buffer, expectedType = new DummyType()) {
-        if (expectedType instanceof DummyType)
+    applyType(buffer, expectedType = new TypeAST("Dummy")) {
+        if (expectedType.instanceOf(23456789 /* TypeEnum.DUMMY */))
             return;
         if (!this.type.instanceOf(expectedType))
             buffer.stderr(`Cannot treat string "${this.name}" as type ${expectedType.type}`);
+    }
+    builtinToString() {
+        return this.name;
     }
 }
 export class IdExpr extends Expr {
@@ -297,28 +340,34 @@ export class IdExpr extends Expr {
     rval() {
         return this.id.rval();
     }
-    applyType(buffer, parentType = new DummyType()) {
+    applyType(buffer, parentType = new TypeAST("Dummy")) {
         this.id.applyType(buffer, parentType);
         this.type = this.id.type;
     }
     toLatex() {
         return this.id.toLatex();
     }
+    builtinToString() {
+        return this.id.builtinToString();
+    }
 }
-export class Id extends AST {
+export class Id extends Expr {
     constructor(idName) {
-        super("Id_" + idName, []);
+        super("Id_" + idName, [], new TypeAST("Dummy"));
         this.symbol = null;
         this.idName = idName;
-        this.type = new DummyType();
     }
     rval() {
         return this.symbol.rval();
     }
-    applyType(buffer, expectedType = new DummyType()) {
-        if (expectedType instanceof DummyType)
-            return;
+    applyType(buffer, expectedType = new TypeAST("Dummy")) {
         this.type = this.symbol.type;
+        if (expectedType.instanceOf(23456789 /* TypeEnum.DUMMY */))
+            return;
+        if (expectedType.instanceOf(6 /* TypeEnum.STRING */)) {
+            this.type = expectedType;
+            return;
+        }
         if (!this.type.instanceOf(expectedType))
             buffer.stderr(`Cannot treat ${this.idName} as type ${expectedType.type}`);
     }
@@ -330,35 +379,20 @@ export class Id extends AST {
         }
         this.symbol = sym;
     }
-    /*
-    on(options:Options):Options{
-
-        if(options.currScope){
-
-            let currScope:Scope=options.currScope;
-            let name:string=this.idName;
-            let sym:IdSymbol|null=currScope.lookup(name);
-
-            if(sym==null){
-                //TODO Throw error
-                //console.log(`Error! The variable ${name} has not been defined!`);
-            }
-
-            this.symbol=sym;
-        }
-        return options;
-    }*/
     toLatex() {
         return this.symbol.toLatex();
     }
     toString() {
         return this.idName;
     }
+    builtinToString() {
+        return this.symbol.builtinToString();
+    }
 }
-export class IdSymbol extends AST {
+export class IdSymbol {
     constructor(name) {
-        super("IdSymbol_" + name, []);
-        this.type = new DummyType();
+        this.name = name;
+        this.type = new TypeAST("Dummy");
         this.val = null;
         this.scope = null;
     }
@@ -372,8 +406,11 @@ export class IdSymbol extends AST {
     }
     toString() {
         if (this.val == null)
-            return `IdSymbol(${this.args[0]})`;
+            return `IdSymbol(${this.name})`;
         return this.val.toString();
+    }
+    builtinToString() {
+        return this.val.builtinToString();
     }
 }
 export class ArrayAccess extends Expr {
@@ -383,22 +420,25 @@ export class ArrayAccess extends Expr {
         this.ind = ind;
     }
 }
-export class FormulaFunc extends Expr {
-    constructor(name, args) {
-        super("func", [name].concat(args));
-    }
-}
 export class NumberLiteral extends Expr {
     constructor(name) {
-        super("NumberLiteral_" + name, []);
+        super("NumberLiteral_" + name, [], new TypeAST("Int"));
         this.val = Number(name);
-        this.type = new IntegerType();
     }
-    applyType(buffer, expectedType = new DummyType()) {
-        if (expectedType instanceof DummyType)
+    applyType(buffer, expectedType = new TypeAST("Dummy")) {
+        if (expectedType.instanceOf(23456789 /* TypeEnum.DUMMY */))
             return;
+        if (expectedType.instanceOf(6 /* TypeEnum.STRING */)) {
+            this.type = expectedType;
+            return;
+        }
         if (!this.type.instanceOf(expectedType))
             buffer.stderr(`Cannot treat number "${this.val}" as type ${expectedType.type}`);
+    }
+    rval() {
+        if (this.type.instanceOf(6 /* TypeEnum.STRING */))
+            return new StringLiteral("" + this.val);
+        return this;
     }
     toString() {
         return this.val + "";
@@ -410,11 +450,6 @@ export class NumberLiteral extends Expr {
         return this.val == other.val;
     }
 }
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// ~~~         PATTERN  ASTS         ~~~
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 export class Scope {
     constructor(parent = null) {
         this.parent = parent;

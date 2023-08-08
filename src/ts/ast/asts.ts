@@ -1,4 +1,5 @@
 import { IOBuffer } from "../IOBuffer.js";
+import { divides,gcd } from "../utils.js";
 
 export interface Options {
 	run: boolean,
@@ -43,7 +44,7 @@ class AST{
 		}
 	}
 
-	applyType(buffer:IOBuffer,expectedType:Type = new DummyType()):void{
+	applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
 		for(let child of this.args){
 			child.applyType(buffer,expectedType);
 		}
@@ -55,22 +56,6 @@ class AST{
 		}
 	}
 
-	/*
-	on(options: Options): Options{
-		return options;
-	}
-
-	run(options: Options): Options{
-		let scope:Scope|null = options.currScope;
-		options=this.on(options);
-
-		if(!options.run)
-			for(let child of this.args)
-				options=child.run(options);
-
-		options.currScope=scope;
-		return options;
-	}*/
 
 	equals(other:AST):boolean{
 
@@ -117,13 +102,6 @@ export class Program extends AST{
 		return str;
 	}
 
-	/*
-	on(options:Options):Options {
-		if(options.run)
-			for(let child of this.args)
-				options=child.run(options);
-		return options;
-	}*/
 }
 
 class Statement extends AST{
@@ -142,15 +120,15 @@ export class CommentStatement extends Statement{
 
 export class DeclarationStatement extends Statement{
 	id: Id;
-	type: Type;
+	type: TypeAST;
 
-	constructor(id:Id,type:Type){
+	constructor(id:Id,type:TypeAST){
 		super("DeclStmt",[id,type]);
 		this.id = id;
 		this.type = type;
 	}
 
-	applyBind(scope:Scope, buffer:IOBuffer):void{
+	override applyBind(scope:Scope, buffer:IOBuffer):void{
 		let name:string = this.id.idName;
 
 		if(scope.lookup(name)){
@@ -163,29 +141,11 @@ export class DeclarationStatement extends Statement{
 		this.id.symbol=sym;
 	}
 
-	applyType(buffer:IOBuffer,expectedType:Type = new DummyType()):void{
+	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
 
 		this.id.symbol!.type = this.type;
 	}
 
-	/*
-	on(options: Options): Options{
-		if(options.currScope){
-			let currScope:Scope=options.currScope;
-			let name:string=this.id.idName;
-
-			if(currScope.lookup(name)){
-				//TODO Throw error
-				//console.log(`Error! The variable ${name} has already been defined!`);
-			}
-
-			let sym:IdSymbol=new IdSymbol(name);
-			currScope.symtab.set(name,sym);
-			this.id.symbol=sym;
-			sym._type=this.type;
-		}
-		return options;
-	}*/
 }
 
 export class AssignmentStatement extends Statement{
@@ -198,7 +158,7 @@ export class AssignmentStatement extends Statement{
 		this.expr=expr;
 	}
 
-	applyBind(scope:Scope, buffer:IOBuffer):void{
+	override applyBind(scope:Scope, buffer:IOBuffer):void{
 		this.expr.applyBind(scope,buffer);
 
 		let name:string = this.id.idName;
@@ -211,51 +171,18 @@ export class AssignmentStatement extends Statement{
 		this.id.symbol=sym;
 	}
 
-	applyType(buffer:IOBuffer,expectedType:Type = new DummyType()):void{
+	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
 		this.expr.applyType(buffer,this.id.symbol!.type);
 
 	}
 
 
-	execute(buffer:IOBuffer):void{
+	override execute(buffer:IOBuffer):void{
 		// TODO replace id with Expr, support lval
 		let sym:IdSymbol = this.id.symbol!;
 		sym.val = this.expr.rval();
 	}
 
-	/*
-	on(options: Options): Options{
-
-		if(options.currScope){
-
-			let currScope:Scope=options.currScope;
-			let name:string=this.id.idName;
-			let sym:IdSymbol|null=currScope.lookup(name);
-
-			if(!sym){
-				//TODO Throw error
-				//console.log(`Error! The variable ${name} has not been defined!`);
-			}
-			this.id.symbol=sym;
-
-			//TODO Typecheck
-		}
-
-		if(options.run){
-			let sym:IdSymbol|null=this.id.symbol;
-
-			if(sym==null){
-				//TODO Throw error
-				//console.log(`Error! The variable ${name} has not been defined!`);
-				return options;
-			}
-
-
-			sym.val=this.expr.rval();
-		}
-
-		return options;
-	}*/
 }
 
 export class PrintStatement extends Statement{
@@ -268,7 +195,7 @@ export class PrintStatement extends Statement{
 		this.isNewLine=isNewLine;
 	}
 
-	execute(buffer:IOBuffer):void{
+	override execute(buffer:IOBuffer):void{
 		let term:string = this.isNewLine ? "\n" : "";
 
 		let str:Expr = this.expr.rval();
@@ -282,21 +209,6 @@ export class PrintStatement extends Statement{
 		}
 	}
 
-	/*
-	on(options:Options):Options{
-
-		if(options.run){
-			let str:string=this.expr.toString();
-
-			let con:HTMLElement = document.getElementById("console")!;
-			con.innerHTML+=str;
-
-			if(this.isNewLine)
-				con.innerHTML+="<hr>";
-		}
-
-		return options;
-	}*/
 }
 
 export class PrettyPrintStatement extends Statement{
@@ -309,7 +221,7 @@ export class PrettyPrintStatement extends Statement{
 		this.isNewLine=isNewLine;
 	}
 
-	execute(buffer:IOBuffer):void{
+	override execute(buffer:IOBuffer):void{
 		// TODO handle latex
 		let term:string = this.isNewLine ? "\n" : "";
 
@@ -324,23 +236,6 @@ export class PrettyPrintStatement extends Statement{
 		}
 	}
 
-	/*
-	on(options:Options):Options{
-
-		if(options.run){
-			let str:string=this.expr.toLatex();
-			
-			let con:HTMLElement = document.getElementById("console")!;
-			con.innerHTML+=`$${str}$`;
-
-			if(this.isNewLine)
-				con.innerHTML+="<hr>";
-
-			MathJax.typeset();
-		}
-
-		return options;
-	}*/
 }
 
 export class WhileLoop extends Statement{
@@ -348,125 +243,192 @@ export class WhileLoop extends Statement{
 	stmts: Statement[];
 
 	constructor(test:Expr, stmts:Statement[]){
-		let other: AST[] = new Array<AST>(stmts.length+1);
-		other[0]=test;
-		for(let i in stmts)
-			other[i+1]=stmts[i];
+		let other: AST[] = [];
+		other.push(test);
+		for(let child of stmts)
+			other.push(child);
 
 		super("WhileLoop",other);
 		this.test=test;
 		this.stmts=stmts;
 	}
 
-	applyBind(scope:Scope, buffer:IOBuffer):void{
+	override applyBind(scope:Scope, buffer:IOBuffer):void{
 		this.test.applyBind(scope,buffer);
 
 		let childScope:Scope = new Scope(scope);
 
-		for(let child of this.args){
+		for(let child of this.stmts){
 			child.applyBind(childScope,buffer);
 		}
 	}
 
-	execute(buffer:IOBuffer):void{
+	override execute(buffer:IOBuffer):void{
 		while(true){
-			let compVal:Expr = this.test.rval();
+			let compVal:NumberLiteral = this.test.rval() as NumberLiteral;
 
-			if(compVal instanceof NumberLiteral)
-				if(compVal.val == 0)
-					break;
+			if(compVal.val == 0)
+				break;
 
-			for(let child of this.stmts){
+			for(let child of this.stmts)
 				child.execute(buffer);
-			}
 		}
 
 		
 	}
 
+}
 
-	/*
-	on(options: Options): Options{
-		if(options.currScope){
-			options.currScope=new Scope(options.currScope);
+export class IfStmt extends Statement{
+	test: Expr;
+	stmts: Statement[];
+	elseStmts: Statement[];
 
-			//TODO typecheck test
+	constructor(test:Expr, stmts:Statement[], elseStmts:Statement[]){
+
+		let other: AST[] = [];
+		other.push(test);
+		for(let child of stmts)
+			other.push(child);
+		for(let child of elseStmts)
+			other.push(child);
+
+
+		super("IfStmt",other);
+		this.test=test;
+		this.stmts=stmts;
+		this.elseStmts=elseStmts;
+	}
+
+	override applyBind(scope:Scope, buffer:IOBuffer):void{
+		this.test.applyBind(scope,buffer);
+
+		let ifScope:Scope = new Scope(scope);
+		let elseScope:Scope = new Scope(scope);
+
+		for(let child of this.stmts)
+			child.applyBind(ifScope,buffer);
+		for(let child of this.elseStmts)
+			child.applyBind(elseScope,buffer);
+		
+	}
+
+	override execute(buffer:IOBuffer):void{
+		let compVal:NumberLiteral = this.test.rval() as NumberLiteral;
+
+		console.log(compVal)
+
+		if(compVal.val != 0)
+			for(let child of this.stmts)
+				child.execute(buffer);
+		else
+			for(let child of this.elseStmts)
+				child.execute(buffer);
+		
+	}
+
+}
+
+
+
+
+
+
+
+const PRIMES: number[] = [2,3,5];
+export const enum TypeEnum {
+	OBJECT		= 1,
+	FORMULA		= 2,
+	REAL		= 2*2,
+	RATIONAL	= 2*2*2,
+	INTEGER		= 2*2*2*2,
+	NATURAL		= 2*2*2*2*2,
+	BOOLEAN		= 2*2*2*2*2*2,
+	STRING		= 2*3,
+	VOID		= 5,
+	DUMMY		= 23456789,
+}
+
+
+export class TypeAST extends AST{
+	type:TypeEnum;
+	
+	constructor(name:string|number){
+		super("UncertainType");
+
+		if(typeof name == "number"){
+			this.type=<TypeEnum>name;
+			return;
 		}
 
-		if(options.run){
-			while(false){
-				for(let child of this.stmts)
-					options=child.run(options);
-			}
+		switch(<string>name){
+		case "Object":
+		case "Obj":
+			this.type=TypeEnum.OBJECT;
+			this.name="ObjType";
+			break;
+		case "Formula":
+		case "Form":
+			this.type=TypeEnum.FORMULA;
+			this.name="FormType";
+			break;
+		case "Real":
+		case "R":
+			this.type=TypeEnum.REAL;
+			this.name="RealType";
+			break;
+		case "Rational":
+		case "Q":
+			this.type=TypeEnum.RATIONAL;
+			this.name="RatType";
+			break;
+		case "Integer":
+		case "Int":
+		case "Z":
+			this.type=TypeEnum.INTEGER;
+			this.name="IntType";
+			break;
+		case "Natural":
+		case "N":
+			this.type=TypeEnum.NATURAL;
+			this.name="NatType";
+			break;
+		case "Boolean":
+		case "Bool":
+			this.type=TypeEnum.BOOLEAN;
+			this.name="BoolType";
+			break;
+		case "String":
+		case "Str":
+			this.type=TypeEnum.STRING;
+			this.name="StrType";
+			break;
+		case "void":
+			this.type=TypeEnum.VOID;
+			this.name="VoidType";
+			break;
+		default:
+			this.type=TypeEnum.DUMMY;
+			this.name="DummyType";
+			break;
 		}
-
-		return options;
-	}*/
-}
-
-
-
-
-
-
-
-class Type extends AST{
-	type:string;
-
-	parentClasses:string[];
-
-	constructor(name:string = "Type"){
-		super(name);
-		this.type=name;
-		this.parentClasses = ["Type"];
 	}
 
-	instanceOf(otherType:Type):boolean{
-		return this.parentClasses.includes(otherType.constructor.name)
-	}
-}
-export class VoidType extends Type{
-	constructor(name:string = "VoidType"){
-		super(name);
+	instanceOf(t:TypeAST|number):boolean{
+		if(t instanceof TypeAST)
+			return divides(t.type,this.type);
 
-		this.parentClasses.push("VoidType");
+		return divides(t,this.type);
+	}
 
+	closestParent(t:TypeAST|number):TypeAST{
+		if(t instanceof TypeAST)
+			return new TypeAST(gcd(this.type,t.type));
+		return new TypeAST(gcd(this.type,t));
 	}
-}
-export class DummyType extends Type{
-	constructor(name:string = "DummyType"){
-		super(name);
-		this.parentClasses.push("DummyType");
-	}
-}
-export class FormulaType extends Type{
-	constructor(name:string = "FormulaType"){
-		super(name);
-		this.parentClasses.push("FormulaType");
-	}
-}
-export class RealType extends FormulaType{
-	constructor(name:string = "RealType"){
-		super(name);
-		this.parentClasses.push("RealType");
-	}
-}
-export class RationalType extends RealType{
-	constructor(name:string = "RationalType"){
-		super(name);
-		this.parentClasses.push("RationalType");
-	}
-}
-export class IntegerType extends RationalType{
-	constructor(name:string = "IntegerType"){
-		super(name);
-		this.parentClasses.push("IntegerType");
-	}
-}
-export class StringType extends FormulaType{
-	constructor(name:string = "StringType"){
-		super(name);
-		this.parentClasses.push("StringType");
+
+	isMathType():boolean{
+		return this.type%TypeEnum.REAL==0;
 	}
 }
 
@@ -482,38 +444,45 @@ export class StringType extends FormulaType{
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 export class Expr extends Statement{
-	type:Type;
+	type:TypeAST;
 
-	constructor(name:string,args:AST[]=[]){
+	constructor(name:string,args:AST[]=[],type:TypeAST = new TypeAST("Dummy")){
 		super(name,args);
-		this.type=new DummyType();
+		this.type=type;
 	}
 
 	rval():Expr{
 		return this;
 	}
 
-	applyType(buffer:IOBuffer,expectedType:Type = new DummyType()):void{
+	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
 		throw new Error("Must override this method!");
 	}
 
 	toLatex():string{
 		return `\\text{${this.name}}`;
 	}
+
+	builtinToString():string{
+		return this.toString();
+	}
 }
 
 export class StringLiteral extends Expr{
 	constructor(name:string){
-		super(name);
-		this.type=new StringType();
+		super(name,[],new TypeAST("String"));
 	}
 
-	applyType(buffer:IOBuffer,expectedType:Type = new DummyType()):void{
-		if(expectedType instanceof DummyType)
+	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
+		if(expectedType.instanceOf(TypeEnum.DUMMY))
 			return;
 
 		if(!this.type.instanceOf(expectedType))
 			buffer.stderr(`Cannot treat string "${this.name}" as type ${expectedType.type}`);
+	}
+
+	override builtinToString():string{
+		return this.name;
 	}
 
 }
@@ -528,49 +497,55 @@ export class IdExpr extends Expr{
 		this.id=id;
 	}
 
-	rval():Expr{
+	override rval():Expr{
 		return this.id.rval();
 	}
 
-	applyType(buffer:IOBuffer,parentType:Type = new DummyType()):void{
+	override applyType(buffer:IOBuffer,parentType:TypeAST = new TypeAST("Dummy")):void{
 		this.id.applyType(buffer,parentType);
 		this.type = this.id.type;
 	}
 
-	toLatex():string{
+	override toLatex():string{
 		return this.id.toLatex();
 	}
 
+	override builtinToString():string{
+		return this.id.builtinToString();
+	}
 }
 
 
-export class Id extends AST{
+export class Id extends Expr{
 	symbol: IdSymbol|null;
 	idName: string;
-	type:Type;
 
 	constructor(idName:string){
-		super("Id_"+idName,[]);
+		super("Id_"+idName,[],new TypeAST("Dummy"));
 		this.symbol=null;
 		this.idName=idName;
-		this.type=new DummyType();
 	}
 
 	rval():Expr{
 		return this.symbol!.rval();
 	}
 
-	applyType(buffer:IOBuffer,expectedType:Type = new DummyType()):void{
-		if(expectedType instanceof DummyType)
+	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
+		this.type = this.symbol!.type;
+
+		if(expectedType.instanceOf(TypeEnum.DUMMY))
 			return;
 
-		this.type = this.symbol!.type;
+		if(expectedType.instanceOf(TypeEnum.STRING)){
+			this.type=expectedType;
+			return;
+		}
 
 		if(!this.type.instanceOf(expectedType))
 			buffer.stderr(`Cannot treat ${this.idName} as type ${expectedType.type}`);
 	}
 
-	applyBind(scope:Scope, buffer:IOBuffer):void{
+	override applyBind(scope:Scope, buffer:IOBuffer):void{
 		let name:string = this.idName;
 		let sym:IdSymbol|null = scope.lookup(name);
 
@@ -581,27 +556,9 @@ export class Id extends AST{
 		this.symbol=sym;
 	}
 
-	/*
-	on(options:Options):Options{
-
-		if(options.currScope){
-
-			let currScope:Scope=options.currScope;
-			let name:string=this.idName;
-			let sym:IdSymbol|null=currScope.lookup(name);
-
-			if(sym==null){
-				//TODO Throw error
-				//console.log(`Error! The variable ${name} has not been defined!`);
-			}
-
-			this.symbol=sym;
-		}
-		return options;
-	}*/
 
 
-	toLatex():string{
+	override toLatex():string{//TODO sucks
 
 		return this.symbol!.toLatex();
 	}
@@ -610,16 +567,20 @@ export class Id extends AST{
 		return this.idName;
 	}
 
+	override builtinToString():string{
+		return this.symbol!.builtinToString();
+	}
 }
 
-export class IdSymbol extends AST{
+export class IdSymbol{
 	val:Expr|null;
 	scope:Scope|null;
-	type:Type;
+	type:TypeAST;
+	name:string;
 
 	constructor(name:string){
-		super("IdSymbol_"+name,[]);
-		this.type=new DummyType();
+		this.name=name;
+		this.type=new TypeAST("Dummy");
 		this.val=null;
 		this.scope=null;
 	}
@@ -637,9 +598,13 @@ export class IdSymbol extends AST{
 
 	toString():string{
 		if(this.val==null)
-			return `IdSymbol(${this.args[0]})`;
+			return `IdSymbol(${this.name})`;
 
 		return this.val.toString();
+	}
+
+	builtinToString():string{
+		return this.val!.builtinToString();
 	}
 }
 
@@ -647,33 +612,40 @@ export class IdSymbol extends AST{
 export class ArrayAccess extends Expr{
 	arr: Expr;
 	ind: Expr;
-	constructor(arr:Expr,ind:Expr){
+	constructor(arr:Expr,ind:Expr){// TODO
 		super("arr",[arr,ind]);
 		this.arr=arr;
 		this.ind=ind;
 	}
 }
 
-export class FormulaFunc extends Expr{
-	constructor(name:Expr,args:Expr[]){
-		super("func",[name].concat(args));
-	}
-}
 
 export class NumberLiteral extends Expr{
 	val:number;
 	constructor(name:string){
-		super("NumberLiteral_"+name,[]);
+		super("NumberLiteral_"+name,[],new TypeAST("Int"));
 		this.val=Number(name);
-		this.type=new IntegerType();
 	}
 
-	applyType(buffer:IOBuffer,expectedType:Type = new DummyType()):void{
-		if(expectedType instanceof DummyType)
+	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
+		if(expectedType.instanceOf(TypeEnum.DUMMY))
 			return;
+
+		if(expectedType.instanceOf(TypeEnum.STRING)){
+			this.type=expectedType;
+			return;
+		}
+
 
 		if(!this.type.instanceOf(expectedType))
 			buffer.stderr(`Cannot treat number "${this.val}" as type ${expectedType.type}`);
+	}
+
+	override rval():Expr{
+		if(this.type.instanceOf(TypeEnum.STRING))
+			return new StringLiteral(""+this.val);
+
+		return this;
 	}
 
 	toString():string{
@@ -698,14 +670,6 @@ export class NumberLiteral extends Expr{
 
 
 
-
-
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// ~~~         PATTERN  ASTS         ~~~
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 

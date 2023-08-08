@@ -1,5 +1,5 @@
-str1: String = "Test";
-str2: String = "Hehe";
-println str1;
-str1 = str2;
-println str1;
+i: Integer = 10;
+while i {
+	i = i-1;
+	print i;
+}

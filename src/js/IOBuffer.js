@@ -17,4 +17,6 @@ export class IOBuffer {
         return this.errHistory.length > 0;
     }
 }
+function empty(input) { }
+export let silentBuffer = new IOBuffer(empty, empty);
 export let consoleBuffer = new IOBuffer(console.log, console.error);
