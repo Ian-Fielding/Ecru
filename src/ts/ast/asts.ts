@@ -279,6 +279,8 @@ export class WhileLoop extends Statement{
 
 }
 
+
+
 export class IfStmt extends Statement{
 	test: Expr;
 	stmts: Statement[];
@@ -467,6 +469,13 @@ export class Expr extends Statement{
 		return this.toString();
 	}
 }
+
+
+
+export class LogicalOr extends Expr{
+
+}
+
 
 export class StringLiteral extends Expr{
 	constructor(name:string){

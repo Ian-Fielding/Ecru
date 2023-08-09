@@ -318,6 +318,8 @@ export class Expr extends Statement {
         return this.toString();
     }
 }
+export class LogicalOr extends Expr {
+}
 export class StringLiteral extends Expr {
     constructor(name) {
         super(name, [], new TypeAST("String"));

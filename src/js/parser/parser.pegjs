@@ -40,6 +40,7 @@ statement "statement"
 	/ "pprint" _ val:expr _ ";" {return new AST.PrettyPrintStatement(val);}
 	/ ifStmt
 	/ whileLoop
+	/ forLoop
 	/ left:expr _ ";" {return left;}
 	/ ";" {return [];}
 
@@ -67,6 +68,10 @@ whileLoop "while loop"
 	= "while" _ test:expr _ "{" _ stmts:statements _ "}" {
 		return new AST.WhileLoop(test,stmts);
 	}
+forLoop "for loop"
+	= "for" _ test:expr _ "{" _ stmts:statements _ "}" {
+		return new AST.WhileLoop(test,stmts);
+	}
 
 ifStmt "if statement"
 	= "if" _ test:expr _ "{" _ stmts:statements _ "}" _ elsePart:("else" _ "{" _ statements _ "}")|0..1| {
@@ -75,9 +80,6 @@ ifStmt "if statement"
 
 		return new AST.IfStmt(test,stmts,elseStmts);
 	}
-
-
-
 
 
 
@@ -114,6 +116,7 @@ nonQuote
 
 
 
+
 exprs "list of expressions"
 	= left:expr rightList:( _ "," _ expr)*{
 		let newArr=Array(rightList.length+1);
@@ -125,6 +128,22 @@ exprs "list of expressions"
 	}
 
 expr = additive
+
+
+
+boolOr 
+	= left:boolAnd rightList:(_ ("||" / "or") _ boolAnd)* {
+		for(let expr of rightList){
+			let op=expr[1];
+			let right=expr[3];
+			left=new MATH.Add([left,right]);
+		}
+
+		return left;
+	}
+
+boolAnd = "3"
+
 
 
 additive

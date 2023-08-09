@@ -100,6 +100,7 @@ export class Mul extends BuiltinFunc {
 			throw new Error("Need at least two arguments for 'mul'");
 	}
 
+
 	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
 		let childTypes:TypeAST[] = this.params.map(function(c:Expr):TypeAST{
 			c.applyType(buffer);
@@ -118,6 +119,9 @@ export class Mul extends BuiltinFunc {
 			return;
 		}
 
+
+
+
 		// handles string multiplication
 		let containsString:boolean=false;
 		for(let t of childTypes){
@@ -126,6 +130,7 @@ export class Mul extends BuiltinFunc {
 				break;
 			}
 		}
+
 		if(containsString){
 			for(let c of this.params)
 				c.applyType(buffer,new TypeAST("String"));
