@@ -25,10 +25,6 @@ class AST{
 		return newObj;
 	}
 
-	getChildren(): AST[]{
-		return this.args;
-	}
-
 	toString(): string{
 		if(this.args.length==0)
 			return this.name+"()";
@@ -180,7 +176,7 @@ export class AssignmentStatement extends Statement{
 	override execute(buffer:IOBuffer):void{
 		// TODO replace id with Expr, support lval
 		let sym:IdSymbol = this.id.symbol!;
-		sym.val = this.expr.rval();
+		sym.val = this.expr.rval(buffer);
 	}
 
 }
@@ -198,7 +194,7 @@ export class PrintStatement extends Statement{
 	override execute(buffer:IOBuffer):void{
 		let term:string = this.isNewLine ? "\n" : "";
 
-		let str:Expr = this.expr.rval();
+		let str:Expr = this.expr.rval(buffer);
 		if(str instanceof StringLiteral){
 			buffer.stdout(str.name+term);
 		}else if(str instanceof NumberLiteral){
@@ -225,7 +221,7 @@ export class PrettyPrintStatement extends Statement{
 		// TODO handle latex
 		let term:string = this.isNewLine ? "\n" : "";
 
-		let str:Expr = this.expr.rval();
+		let str:Expr = this.expr.rval(buffer);
 		if(str instanceof StringLiteral){
 			buffer.stdout(str.name+term);
 		}else if(str instanceof NumberLiteral){
@@ -265,7 +261,7 @@ export class WhileLoop extends Statement{
 
 	override execute(buffer:IOBuffer):void{
 		while(true){
-			let compVal:NumberLiteral = this.test.rval() as NumberLiteral;
+			let compVal:NumberLiteral = this.test.rval(buffer) as NumberLiteral;
 
 			if(compVal.val == 0)
 				break;
@@ -316,9 +312,7 @@ export class IfStmt extends Statement{
 	}
 
 	override execute(buffer:IOBuffer):void{
-		let compVal:NumberLiteral = this.test.rval() as NumberLiteral;
-
-		console.log(compVal)
+		let compVal:NumberLiteral = this.test.rval(buffer) as NumberLiteral;
 
 		if(compVal.val != 0)
 			for(let child of this.stmts)
@@ -448,13 +442,21 @@ export class TypeAST extends AST{
 export class Expr extends Statement{
 	type:TypeAST;
 
-	constructor(name:string,args:AST[]=[],type:TypeAST = new TypeAST("Dummy")){
+	constructor(name:string,args:Expr[]=[],type:TypeAST = new TypeAST("Dummy")){
 		super(name,args);
 		this.type=type;
 	}
 
-	rval():Expr{
+	rval(buffer:IOBuffer):Expr{
 		return this;
+	}
+
+	getChildrenRVals(buffer:IOBuffer):Expr[]{
+		let childRVals:Expr[] = [];
+		for(let child of this.args){
+			childRVals.push((child as Expr).rval(buffer));
+		}
+		return childRVals;
 	}
 
 	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
@@ -469,13 +471,6 @@ export class Expr extends Statement{
 		return this.toString();
 	}
 }
-
-
-
-export class LogicalOr extends Expr{
-
-}
-
 
 export class StringLiteral extends Expr{
 	constructor(name:string){
@@ -506,8 +501,8 @@ export class IdExpr extends Expr{
 		this.id=id;
 	}
 
-	override rval():Expr{
-		return this.id.rval();
+	override rval(buffer:IOBuffer):Expr{
+		return this.id.rval(buffer);
 	}
 
 	override applyType(buffer:IOBuffer,parentType:TypeAST = new TypeAST("Dummy")):void{
@@ -535,8 +530,8 @@ export class Id extends Expr{
 		this.idName=idName;
 	}
 
-	rval():Expr{
-		return this.symbol!.rval();
+	rval(buffer:IOBuffer):Expr{
+		return this.symbol!.rval(buffer);
 	}
 
 	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
@@ -594,7 +589,7 @@ export class IdSymbol{
 		this.scope=null;
 	}
 
-	rval():Expr{
+	rval(buffer:IOBuffer):Expr{
 		return this.val!;
 	}
 
@@ -650,7 +645,7 @@ export class NumberLiteral extends Expr{
 			buffer.stderr(`Cannot treat number "${this.val}" as type ${expectedType.type}`);
 	}
 
-	override rval():Expr{
+	override rval(buffer:IOBuffer):Expr{
 		if(this.type.instanceOf(TypeEnum.STRING))
 			return new StringLiteral(""+this.val);
 

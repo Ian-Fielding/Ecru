@@ -32,8 +32,6 @@ export class Add extends BuiltinFunc {
 		if(gcdType.isMathType()){
 			this.type = gcdType;
 
-			for(let c of this.params)
-				c.applyType(buffer,gcdType);
 
 			return;
 		}
@@ -47,8 +45,6 @@ export class Add extends BuiltinFunc {
 			}
 		}
 		if(containsString){
-			for(let c of this.params)
-				c.applyType(buffer,new TypeAST("String"));
 			this.type=new TypeAST("String");
 
 
@@ -58,10 +54,10 @@ export class Add extends BuiltinFunc {
 		buffer.stderr("Unknown add type");
 	}
 
-	override rval():Expr{
+	override rval(buffer:IOBuffer):Expr{
 		let childRVals:Expr[] = [];
 		for(let child of this.params){
-			childRVals.push(child.rval());
+			childRVals.push(child.rval(buffer));
 		}
 
 		if(this.type.isMathType()){
@@ -113,8 +109,6 @@ export class Mul extends BuiltinFunc {
 		if(gcdType.isMathType()){
 			this.type = gcdType;
 
-			for(let c of this.params)
-				c.applyType(buffer,gcdType);
 
 			return;
 		}
@@ -132,10 +126,8 @@ export class Mul extends BuiltinFunc {
 		}
 
 		if(containsString){
-			for(let c of this.params)
-				c.applyType(buffer,new TypeAST("String"));
-			this.type=new TypeAST("String");
 
+			this.type=new TypeAST("String");
 
 			return;
 		}
@@ -143,10 +135,10 @@ export class Mul extends BuiltinFunc {
 		buffer.stderr("Unknown mul type");
 	}
 
-	override rval():Expr{
+	override rval(buffer:IOBuffer):Expr{
 		let childRVals:Expr[] = [];
 		for(let child of this.params){
-			childRVals.push(child.rval());
+			childRVals.push(child.rval(buffer));
 		}
 
 		if(this.type.isMathType()){
@@ -198,8 +190,6 @@ export class Sub extends BuiltinFunc {
 		if(gcdType.isMathType()){
 			this.type = gcdType;
 
-			for(let c of this.params)
-				c.applyType(buffer,gcdType);
 
 			return;
 		}
@@ -207,8 +197,8 @@ export class Sub extends BuiltinFunc {
 		buffer.stderr("Unknown sub type");
 	}
 
-	override rval():Expr{
-		let childRVals:Expr[] = [this.params[0].rval(),this.params[1].rval()];
+	override rval(buffer:IOBuffer):Expr{
+		let childRVals:Expr[] = [this.params[0].rval(buffer),this.params[1].rval(buffer)];
 
 		let v1:number = (childRVals[0] as NumberLiteral).val;
 		let v2:number = (childRVals[1] as NumberLiteral).val;
@@ -241,20 +231,233 @@ export class Div extends BuiltinFunc {
 		if(gcdType.isMathType()){
 			this.type = gcdType;
 
-			for(let c of this.params)
-				c.applyType(buffer,gcdType);
-
 			return;
 		}
 
 		buffer.stderr("Unknown div type");
 	}
 
-	override rval():Expr{
-		let childRVals:Expr[] = [this.params[0].rval(),this.params[1].rval()];
+	override rval(buffer:IOBuffer):Expr{
+		let childRVals:Expr[] = [this.params[0].rval(buffer),this.params[1].rval(buffer)];
 
 		let v1:number = (childRVals[0] as NumberLiteral).val;
 		let v2:number = (childRVals[1] as NumberLiteral).val;
 		return new NumberLiteral(""+(v1/v2));
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+export class LogicalNot extends BuiltinFunc {
+	params:Expr[];
+
+	constructor(args:Expr[]){
+		super("not",args);
+		this.params=args;
+
+		//TODO better error
+		if(args.length!=1)
+			throw new Error("Need exactly one arguments for 'not'");
+	}
+
+	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
+		this.type=new TypeAST("Integer");
+		if(!expectedType.instanceOf(TypeEnum.DUMMY) && !this.type.instanceOf(expectedType)){
+			buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type}`);
+			return;
+		}
+
+
+		this.params[0].applyType(buffer,this.type);
+
+	}
+
+	override rval(buffer:IOBuffer):Expr{
+		let childRVals:Expr[] = [this.params[0].rval(buffer)];
+
+		let v1:number = (childRVals[0] as NumberLiteral).val;
+
+		if(v1!=0)
+			v1=1;
+
+		return new NumberLiteral(v1==1 ? "0" : "1");
+	}
+}
+
+export class LogicalOr extends BuiltinFunc {
+	params:Expr[];
+
+	constructor(args:Expr[]){
+		super("or",args);
+		this.params=args;
+
+
+		//TODO better error
+		if(args.length!=2)
+			throw new Error("Need exactly two arguments for 'or'");
+	}
+
+	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
+		this.type=new TypeAST("Integer");
+		if(!expectedType.instanceOf(TypeEnum.DUMMY) && !this.type.instanceOf(expectedType)){
+			buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type}`);
+			return;
+		}
+
+
+		this.params[0].applyType(buffer,this.type);
+		this.params[1].applyType(buffer,this.type);
+
+	}
+
+	override rval(buffer:IOBuffer):Expr{
+		let childRVals:Expr[] = [this.params[0].rval(buffer),this.params[1].rval(buffer)];
+
+		let v1:number = (childRVals[0] as NumberLiteral).val;
+		let v2:number = (childRVals[1] as NumberLiteral).val;
+
+		if(v1!=0)
+			v1=1;
+		if(v2!=0)
+			v2=1;
+
+		return new NumberLiteral(""+Math.max(v1,v2));
+	}
+}
+
+
+export class LogicalAnd extends BuiltinFunc {
+	params:Expr[];
+
+	constructor(args:Expr[]){
+		super("and",args);
+		this.params=args;
+
+
+		//TODO better error
+		if(args.length!=2)
+			throw new Error("Need exactly two arguments for 'or'");
+	}
+
+	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
+		this.type=new TypeAST("Integer");
+		if(!expectedType.instanceOf(TypeEnum.DUMMY) && !this.type.instanceOf(expectedType)){
+			buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type}`);
+			return;
+		}
+
+
+		this.params[0].applyType(buffer,this.type);
+		this.params[1].applyType(buffer,this.type);
+
+	}
+
+	override rval(buffer:IOBuffer):Expr{
+		let childRVals:Expr[] = [this.params[0].rval(buffer),this.params[1].rval(buffer)];
+
+		let v1:number = (childRVals[0] as NumberLiteral).val;
+		let v2:number = (childRVals[1] as NumberLiteral).val;
+
+		if(v1!=0)
+			v1=1;
+		if(v2!=0)
+			v2=1;
+
+		return new NumberLiteral(""+(v1*v2));
+	}
+}
+
+
+export class LogicalEq extends BuiltinFunc {
+	params:Expr[];
+
+	constructor(args:Expr[]){
+		super("equals",args);
+		this.params=args;
+
+
+		//TODO better error
+		if(args.length!=2)
+			throw new Error("Need exactly two arguments for 'equals'");
+	}
+
+	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
+		this.type=new TypeAST("Integer");
+
+		if(!expectedType.instanceOf(TypeEnum.DUMMY) && !this.type.instanceOf(expectedType)){
+			buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type}`);
+			return;
+		}
+
+
+		this.params[0].applyType(buffer);
+		this.params[1].applyType(buffer);
+
+		if(!this.params[0].type.instanceOf(this.params[1].type)){
+			buffer.stderr(`Cannot treat "${this.params[0].toString()}" as type ${this.params[1].type}`);
+			return;
+		}
+
+		if(!this.params[1].type.instanceOf(this.params[0].type)){
+			buffer.stderr(`Cannot treat "${this.params[1].toString()}" as type ${this.params[0].type}`);
+			return;
+		}
+
+
+
+	}
+
+	override rval(buffer:IOBuffer):Expr{
+		let childRVals:Expr[] = [this.params[0].rval(buffer),this.params[1].rval(buffer)];
+
+		let v1:string|number;
+		let v2:string|number;
+
+		if(childRVals[0].type.instanceOf(TypeEnum.STRING)){
+			v1 = (childRVals[0] as StringLiteral).name;
+			v2 = (childRVals[1] as StringLiteral).name;
+		}else{
+			v1 = (childRVals[0] as NumberLiteral).val;
+			v2 = (childRVals[1] as NumberLiteral).val;
+		}
+
+		return new NumberLiteral(v1==v2? "1" : "0");
 	}
 }

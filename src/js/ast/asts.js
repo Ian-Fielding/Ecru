@@ -11,9 +11,6 @@ class AST {
             newObj.args.push(arg.copy());
         return newObj;
     }
-    getChildren() {
-        return this.args;
-    }
     toString() {
         if (this.args.length == 0)
             return this.name + "()";
@@ -115,7 +112,7 @@ export class AssignmentStatement extends Statement {
     execute(buffer) {
         // TODO replace id with Expr, support lval
         let sym = this.id.symbol;
-        sym.val = this.expr.rval();
+        sym.val = this.expr.rval(buffer);
     }
 }
 export class PrintStatement extends Statement {
@@ -126,7 +123,7 @@ export class PrintStatement extends Statement {
     }
     execute(buffer) {
         let term = this.isNewLine ? "\n" : "";
-        let str = this.expr.rval();
+        let str = this.expr.rval(buffer);
         if (str instanceof StringLiteral) {
             buffer.stdout(str.name + term);
         }
@@ -148,7 +145,7 @@ export class PrettyPrintStatement extends Statement {
     execute(buffer) {
         // TODO handle latex
         let term = this.isNewLine ? "\n" : "";
-        let str = this.expr.rval();
+        let str = this.expr.rval(buffer);
         if (str instanceof StringLiteral) {
             buffer.stdout(str.name + term);
         }
@@ -180,7 +177,7 @@ export class WhileLoop extends Statement {
     }
     execute(buffer) {
         while (true) {
-            let compVal = this.test.rval();
+            let compVal = this.test.rval(buffer);
             if (compVal.val == 0)
                 break;
             for (let child of this.stmts)
@@ -211,8 +208,7 @@ export class IfStmt extends Statement {
             child.applyBind(elseScope, buffer);
     }
     execute(buffer) {
-        let compVal = this.test.rval();
-        console.log(compVal);
+        let compVal = this.test.rval(buffer);
         if (compVal.val != 0)
             for (let child of this.stmts)
                 child.execute(buffer);
@@ -305,8 +301,15 @@ export class Expr extends Statement {
         super(name, args);
         this.type = type;
     }
-    rval() {
+    rval(buffer) {
         return this;
+    }
+    getChildrenRVals(buffer) {
+        let childRVals = [];
+        for (let child of this.args) {
+            childRVals.push(child.rval(buffer));
+        }
+        return childRVals;
     }
     applyType(buffer, expectedType = new TypeAST("Dummy")) {
         throw new Error("Must override this method!");
@@ -317,8 +320,6 @@ export class Expr extends Statement {
     builtinToString() {
         return this.toString();
     }
-}
-export class LogicalOr extends Expr {
 }
 export class StringLiteral extends Expr {
     constructor(name) {
@@ -339,8 +340,8 @@ export class IdExpr extends Expr {
         super("IdExpr", [id]);
         this.id = id;
     }
-    rval() {
-        return this.id.rval();
+    rval(buffer) {
+        return this.id.rval(buffer);
     }
     applyType(buffer, parentType = new TypeAST("Dummy")) {
         this.id.applyType(buffer, parentType);
@@ -359,8 +360,8 @@ export class Id extends Expr {
         this.symbol = null;
         this.idName = idName;
     }
-    rval() {
-        return this.symbol.rval();
+    rval(buffer) {
+        return this.symbol.rval(buffer);
     }
     applyType(buffer, expectedType = new TypeAST("Dummy")) {
         this.type = this.symbol.type;
@@ -398,7 +399,7 @@ export class IdSymbol {
         this.val = null;
         this.scope = null;
     }
-    rval() {
+    rval(buffer) {
         return this.val;
     }
     toLatex() {
@@ -437,7 +438,7 @@ export class NumberLiteral extends Expr {
         if (!this.type.instanceOf(expectedType))
             buffer.stderr(`Cannot treat number "${this.val}" as type ${expectedType.type}`);
     }
-    rval() {
+    rval(buffer) {
         if (this.type.instanceOf(6 /* TypeEnum.STRING */))
             return new StringLiteral("" + this.val);
         return this;

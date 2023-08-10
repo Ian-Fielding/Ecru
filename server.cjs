@@ -22,7 +22,7 @@ app.get("/",function(req,res){
 
 function onCompile(error,stdout,stderr){
 	if(error || stderr.length!=0){
-		console.error(`Errorr! ${error ? error.message : ""}\n${stderr}\n${stdout}`);
+		console.error(`Error! ${error ? error.message : ""}\n${stderr}\n${stdout}`);
 
 	}else
 		console.log("Success!");
@@ -36,7 +36,7 @@ fs.watch(srcDir, { recursive: true }, function(eventType, filename){
 	let diff=newTime-time;
 	time=newTime;
 
-	if (diff>250 && eventType == "change") {
+	if (diff>300 && eventType == "change") {
 
 		if(filename.endsWith(".ts")){
 			console.log(`Starting compilation of ${filename}...`);

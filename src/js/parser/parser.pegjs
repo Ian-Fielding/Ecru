@@ -22,6 +22,10 @@ statements "list of statements"
 
 statement "statement"
 	= "pattern" _ left:expr _ "->" _ right:expr _ ";" {return "TODO";}
+	/ "println" _ val:expr _ ";" {return new AST.PrintStatement(val,true);}
+	/ "pprintln" _ val:expr _ ";" {return new AST.PrettyPrintStatement(val,true);}
+	/ "print" _ val:expr _ ";" {return new AST.PrintStatement(val);}
+	/ "pprint" _ val:expr _ ";" {return new AST.PrettyPrintStatement(val);}
 	/ stmt: commentStatement {return stmt}
 	/ decl: declStatement _ assg:("=" _ expr)|0..1| _ ";" {
 		if(assg.length==0)
@@ -34,10 +38,6 @@ statement "statement"
 		
 		return new AST.AssignmentStatement(id,expr);
 	}
-	/ "println" _ val:expr _ ";" {return new AST.PrintStatement(val,true);}
-	/ "pprintln" _ val:expr _ ";" {return new AST.PrettyPrintStatement(val,true);}
-	/ "print" _ val:expr _ ";" {return new AST.PrintStatement(val);}
-	/ "pprint" _ val:expr _ ";" {return new AST.PrettyPrintStatement(val);}
 	/ ifStmt
 	/ whileLoop
 	/ forLoop
@@ -127,23 +127,70 @@ exprs "list of expressions"
 		return newArr;
 	}
 
-expr = additive
+expr = boolOr
 
 
 
 boolOr 
 	= left:boolAnd rightList:(_ ("||" / "or") _ boolAnd)* {
 		for(let expr of rightList){
-			let op=expr[1];
 			let right=expr[3];
-			left=new MATH.Add([left,right]);
+			//~(A u B) = ~A n ~B
+			
+			let notLeft = new MATH.LogicalNot(left);
+			let notRight = new MATH.LogicalNot(right);
+			left = new Math.LogicalNot([new Math.LogicalAnd([notLeft,notRight])])
+
+			//left=new MATH.LogicalOr([left,right]);
+		}
+
+
+		return left;
+	}
+
+boolAnd 
+	= left:boolEq rightList:(_ ("&&" / "and") _ boolEq)* {
+		for(let expr of rightList){
+			let right=expr[3];
+			left=new MATH.LogicalAnd([left,right]);
 		}
 
 		return left;
 	}
 
-boolAnd = "3"
 
+boolEq 
+	= left:boolNeq rightList:(_ "==" _ boolNeq)* {
+		for(let expr of rightList){
+			let right=expr[3];
+			left=new MATH.LogicalEq([left,right]);
+		}
+
+		return left;
+	}
+
+boolNeq 
+	= left:boolNeg rightList:(_ "~=" _ boolNeg)* {
+		for(let expr of rightList){
+			let right=expr[3];
+			left=new MATH.LogicalNot([new MATH.LogicalEq([left,right])]);
+		}
+
+		return left;
+	}
+
+
+
+
+
+boolNeg
+	= leftList:("~" _)* right:additive {
+		for(let i in leftList){
+			right=new MATH.LogicalNot(right);
+		}
+
+		return right;
+	}
 
 
 additive
@@ -181,7 +228,7 @@ multiplicative
 negation
 	= leftList:("-" _)* right:exponent {
 		for(let i in leftList){
-			right=new MATH.BuiltinFunc("neg",[right]);
+			//right=new MATH.BuiltinFunc("neg",[right]);
 		}
 
 		return right;
@@ -191,7 +238,7 @@ exponent
 	= leftList:(factorial _ "^" _)* right:factorial {
 		for(let i=leftList.length-1;i>=0;i--){
 			let left=leftList[i][0];
-			right=new MATH.BuiltinFunc("pow",[left,right]);
+			//right=new MATH.BuiltinFunc("pow",[left,right]);
 		}
 
 		return right;
@@ -202,11 +249,12 @@ exponent
 factorial
 	= left:func rightList:(_ "!")* {
 		for(let i in rightList){
-			left = new MATH.BuiltinFunc("fact",[left]);
+			//left = new MATH.BuiltinFunc("fact",[left]);
 		}
 
 		return left;
 	}
+
 
 func
 	= left:primary rightList:(("(" / "[") _ exprs _ (")" / "]"))* {
@@ -215,22 +263,19 @@ func
 			let exprs=l[2];
 			let p2=l[4];
 
-			if(p1=="(" && p2==")")
+			/*if(p1=="(" && p2==")")
 				left = new MATH.BuiltinFunc(left,exprs);
 			else if(p1=="[" && p2=="]" && exprs.length==1)
 				left = new AST.ArrayAccess(left,exprs[0]);
 			else if(exprs.length!=1)
 				throw new Error("only 1 expression allowed in []");
 			else
-				throw new Error("unbalanced () or []");
+				throw new Error("unbalanced () or []");*/
 
 		}
 
 		return left;
 	}
-	/*/ left:idExpr _ right:multiplicative {
-		return new MATH.BuiltinFunc(left,[right]);
-	}*/
 funcName
 	= "add" / "sub" / "mul" / "div" / "pow" / "root" / "sqrt" / "sum" / "prod" / "log" / "ln" / "sin" / "cos" / "tan" / "sec" / "csc" / "cot" / "arcsin" / "arccos" / "arctan" / "arcsec" / "arccsc" / "arctan" / "sinh" / "cosh" / "tanh" / "sech" / "csch" / "coth" / "arcsinh" / "arccosh" / "arctanh" / "arcsech" / "arccsch"
 
@@ -238,7 +283,7 @@ funcName
 
 primary
 	= number
-	/ "(" additive:additive ")" { return additive; }
+	/ "(" expr:expr ")" { return expr; }
 	/ idExpr
 	/ string
 
