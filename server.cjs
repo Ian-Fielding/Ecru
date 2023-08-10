@@ -1,5 +1,6 @@
 const express = require("express");
 const { exec } = require('child_process');
+const rateLimit = require('express-rate-limit');
 const fs = require('fs');
 const path = require('path');
 
@@ -11,9 +12,17 @@ let srcDir = path.join(__dirname, 'src');
 app.use('/projects/ecru', express.static(srcDir));
 app.use(express.json());
 
+// set up rate limiter: maximum of twenty requests per minute
+app.use(rateLimit({
+	windowMs: 1*60*1000, // 1 minute
+	max: 20
+}));
+
 app.listen(port, function() {
 	console.log(`App listening at http://localhost:${port}`);
 });
+
+
 
 app.get("/",function(req,res){
 	res.sendFile(__dirname+"/src/index/index.html");

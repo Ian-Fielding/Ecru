@@ -3,6 +3,7 @@
     "child_process": "^1.0.2",
     "child-process": "^1.0.2",
     "express": "^4.18.2",
+    "express-rate-limit": "^6.9.0",
     "fs": "^0.0.1-security",
     "node-fetch": "^3.3.2",
     "path": "^0.12.7",
