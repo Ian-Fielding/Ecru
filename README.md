@@ -1,4 +1,19 @@
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/Ian-Fielding/Ecru/badge)](https://securityscorecards.dev/viewer/?uri=github.com/Ian-Fielding/Ecru})
-
 # Ecru
-Ecru is an in-progress interactive, functional mathematics sandbox that doubles as a workspace and a computer algebra system. Many other CASs and graphing utilities I've used over the years have felt clunky and unituitive, and a lot of the time they never felt to me like they struck the proper balance between being "math"y and "programming"y, by which I mean that over the years studying mathematics and programming I've found myself jumping back and forth between a number of programs and wasting a lot of time converting the same data from one to another. Ecru will (hopefully) be a more integrated solution to these problems.
+
+Ecru is an open source Computer Algebra System (CAS), programming language, and Integrated Development Environment (IDE) project. Our mission is to provide a powerful platform for mathematical computation, symbolic manipulation, and general-purpose programming. 
+
+## Features
+
+- **Computer Algebra System (CAS)**: Ecru aims to provide a rich set of mathematical tools for algebraic operations, calculus, equation solving, and more.
+
+- **Expressive Programming Language**: With a clean and intuitive syntax, Ecru makes it easy to write concise and readable code for various computational tasks.
+
+- **Symbolic Manipulation**: Perform symbolic computations, algebraic simplifications, and equation transformations to facilitate complex mathematical analysis.
+
+- **Numeric Computations**: Utilize numeric capabilities for efficient calculations, scientific simulations, and data analysis.
+
+- **Integrated Development Environment (IDE)**: Our IDE will offer a seamless development experience with features like code editing, debugging, and visualization tools.
+
+## License
+
+Ecru is released under the [MIT License](LICENSE.md), which means you're free to use, modify, and distribute the code for both personal and commercial projects.
