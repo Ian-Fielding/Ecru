@@ -277,6 +277,75 @@ export class WhileLoop extends Statement{
 
 
 
+export class ForLoop extends Statement{
+	asg: Statement[];
+	test: Expr;
+	it: Statement[]; 
+	stmts: Statement[];
+
+	constructor(asg:Statement[], test:Expr, it:Statement[], stmts:Statement[]){
+		let other: AST[] = [];
+		for(let child of asg)
+			other.push(child);
+		other.push(test);
+		for(let child of it)
+			other.push(child);
+		for(let child of stmts)
+			other.push(child);
+
+		super("ForLoop",other);
+		this.asg=asg;
+		this.test=test;
+		this.it=it;
+		this.stmts=stmts;
+	}
+
+	override applyBind(scope:Scope, buffer:IOBuffer):void{
+
+		let mainScope:Scope = new Scope(scope);
+		let childScope:Scope = new Scope(mainScope);
+
+
+		for(let child of this.asg)
+			child.applyBind(mainScope,buffer);
+
+		this.test.applyBind(mainScope,buffer);
+
+		for(let child of this.it)
+			child.applyBind(mainScope,buffer);
+
+
+		for(let child of this.stmts)
+			child.applyBind(childScope,buffer);
+		
+	}
+
+	override execute(buffer:IOBuffer):void{
+		for(let child of this.asg)
+			child.execute(buffer);
+
+		while(true){
+			let compVal:NumberLiteral = this.test.rval(buffer) as NumberLiteral;
+
+			if(compVal.val == 0)
+				break;
+
+			for(let child of this.stmts)
+				child.execute(buffer);
+
+			for(let child of this.it)
+				child.execute(buffer);
+		}
+
+		
+	}
+
+}
+
+
+
+
+
 export class IfStmt extends Statement{
 	test: Expr;
 	stmts: Statement[];
@@ -331,7 +400,6 @@ export class IfStmt extends Statement{
 
 
 
-const PRIMES: number[] = [2,3,5];
 export const enum TypeEnum {
 	OBJECT		= 1,
 	FORMULA		= 2,
@@ -433,7 +501,6 @@ export class TypeAST extends AST{
 
 
 
-
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // ~~~           EXPR ASTS           ~~~
@@ -471,6 +538,16 @@ export class Expr extends Statement{
 		return this.toString();
 	}
 }
+
+
+export class TypeCast extends Expr {
+	constructor(name:string,args:Expr[]=[],type:TypeAST = new TypeAST("Dummy")){
+		super(name,args);
+		// TODO
+	}
+}
+
+
 
 export class StringLiteral extends Expr{
 	constructor(name:string){
@@ -650,6 +727,53 @@ export class NumberLiteral extends Expr{
 			return new StringLiteral(""+this.val);
 
 		return this;
+	}
+
+	toString():string{
+		return this.val+"";
+	}
+
+	toLatex():string{
+		return this.val+"";
+	}
+
+	equals(other:NumberLiteral){
+		return this.val==other.val;
+	}
+}
+
+
+
+export class IntegerLiteral extends Expr{
+	val:number;
+	constructor(name:string){
+		super("IntegerLiteral_"+name,[],new TypeAST("Int"));
+		this.val=Number(name);
+	}
+
+	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
+		if(expectedType.instanceOf(TypeEnum.DUMMY))
+			return;
+
+		if(expectedType.instanceOf(TypeEnum.STRING)){
+			this.type=expectedType;
+			return;
+		}
+
+
+		if(!this.type.instanceOf(expectedType))
+			buffer.stderr(`Cannot treat number "${this.val}" as type ${expectedType.type}`);
+	}
+
+	override rval(buffer:IOBuffer):Expr{
+		if(this.type.instanceOf(TypeEnum.STRING))
+			return new StringLiteral(""+this.val);
+
+		return this;
+	}
+
+	toLongString(){
+		return this.val+"";
 	}
 
 	toString():string{

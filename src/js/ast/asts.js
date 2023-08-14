@@ -185,6 +185,47 @@ export class WhileLoop extends Statement {
         }
     }
 }
+export class ForLoop extends Statement {
+    constructor(asg, test, it, stmts) {
+        let other = [];
+        for (let child of asg)
+            other.push(child);
+        other.push(test);
+        for (let child of it)
+            other.push(child);
+        for (let child of stmts)
+            other.push(child);
+        super("ForLoop", other);
+        this.asg = asg;
+        this.test = test;
+        this.it = it;
+        this.stmts = stmts;
+    }
+    applyBind(scope, buffer) {
+        let mainScope = new Scope(scope);
+        let childScope = new Scope(mainScope);
+        for (let child of this.asg)
+            child.applyBind(mainScope, buffer);
+        this.test.applyBind(mainScope, buffer);
+        for (let child of this.it)
+            child.applyBind(mainScope, buffer);
+        for (let child of this.stmts)
+            child.applyBind(childScope, buffer);
+    }
+    execute(buffer) {
+        for (let child of this.asg)
+            child.execute(buffer);
+        while (true) {
+            let compVal = this.test.rval(buffer);
+            if (compVal.val == 0)
+                break;
+            for (let child of this.stmts)
+                child.execute(buffer);
+            for (let child of this.it)
+                child.execute(buffer);
+        }
+    }
+}
 export class IfStmt extends Statement {
     constructor(test, stmts, elseStmts) {
         let other = [];
@@ -217,7 +258,6 @@ export class IfStmt extends Statement {
                 child.execute(buffer);
     }
 }
-const PRIMES = [2, 3, 5];
 export class TypeAST extends AST {
     constructor(name) {
         super("UncertainType");
@@ -319,6 +359,12 @@ export class Expr extends Statement {
     }
     builtinToString() {
         return this.toString();
+    }
+}
+export class TypeCast extends Expr {
+    constructor(name, args = [], type = new TypeAST("Dummy")) {
+        super(name, args);
+        // TODO
     }
 }
 export class StringLiteral extends Expr {
@@ -442,6 +488,39 @@ export class NumberLiteral extends Expr {
         if (this.type.instanceOf(6 /* TypeEnum.STRING */))
             return new StringLiteral("" + this.val);
         return this;
+    }
+    toString() {
+        return this.val + "";
+    }
+    toLatex() {
+        return this.val + "";
+    }
+    equals(other) {
+        return this.val == other.val;
+    }
+}
+export class IntegerLiteral extends Expr {
+    constructor(name) {
+        super("IntegerLiteral_" + name, [], new TypeAST("Int"));
+        this.val = Number(name);
+    }
+    applyType(buffer, expectedType = new TypeAST("Dummy")) {
+        if (expectedType.instanceOf(23456789 /* TypeEnum.DUMMY */))
+            return;
+        if (expectedType.instanceOf(6 /* TypeEnum.STRING */)) {
+            this.type = expectedType;
+            return;
+        }
+        if (!this.type.instanceOf(expectedType))
+            buffer.stderr(`Cannot treat number "${this.val}" as type ${expectedType.type}`);
+    }
+    rval(buffer) {
+        if (this.type.instanceOf(6 /* TypeEnum.STRING */))
+            return new StringLiteral("" + this.val);
+        return this;
+    }
+    toLongString() {
+        return this.val + "";
     }
     toString() {
         return this.val + "";

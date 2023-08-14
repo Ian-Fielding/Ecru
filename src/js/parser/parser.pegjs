@@ -22,27 +22,48 @@ statements "list of statements"
 
 statement "statement"
 	= "pattern" _ left:expr _ "->" _ right:expr _ ";" {return "TODO";}
-	/ "println" _ val:expr _ ";" {return new AST.PrintStatement(val,true);}
-	/ "pprintln" _ val:expr _ ";" {return new AST.PrettyPrintStatement(val,true);}
-	/ "print" _ val:expr _ ";" {return new AST.PrintStatement(val);}
-	/ "pprint" _ val:expr _ ";" {return new AST.PrettyPrintStatement(val);}
-	/ stmt: commentStatement {return stmt}
-	/ decl: declStatement _ assg:("=" _ expr)|0..1| _ ";" {
+	/ "println" _ val:expr _ ";" {return [new AST.PrintStatement(val,true)];}
+	/ "pprintln" _ val:expr _ ";" {return [new AST.PrettyPrintStatement(val,true)];}
+	/ "print" _ val:expr _ ";" {return [new AST.PrintStatement(val)];}
+	/ "pprint" _ val:expr _ ";" {return [new AST.PrettyPrintStatement(val)];}
+	/ commentStatement
+	/ ifStmt
+	/ whileLoop
+	/ forLoop
+	/ stmt:semicolonStatement _ ";" { return stmt; }
+	/ ";" {return [];}
+
+
+semicolonStatement
+	= decl: declStatement _ assg:("=" _ expr)|0..1| {
 		if(assg.length==0)
-			return decl;
+			return [decl];
 
 		let expr=assg[0][2];
 		return [decl,new AST.AssignmentStatement(decl.args[0],expr)];
 	}
-	/ id:identifier _ "=" _ expr:expr _ ";" {
+	/ id:identifier _ "=" _ expr:expr {
 		
-		return new AST.AssignmentStatement(id,expr);
+		return [new AST.AssignmentStatement(id,expr)];
 	}
-	/ ifStmt
-	/ whileLoop
-	/ forLoop
-	/ left:expr _ ";" {return left;}
-	/ ";" {return [];}
+	/ id:identifier _ "+=" _ expr:expr {
+		
+		return [new AST.AssignmentStatement(id,new MATH.Add([new AST.IdExpr(id),expr]))];
+	}
+	/ id:identifier _ "-=" _ expr:expr {
+		
+		return [new AST.AssignmentStatement(id,new MATH.Sub([new AST.IdExpr(id),expr]))];
+	}
+	/ id:identifier _ "*=" _ expr:expr {
+		
+		return [new AST.AssignmentStatement(id,new MATH.Mul([new AST.IdExpr(id),expr]))];
+	}
+	/ id:identifier _ "/=" _ expr:expr {
+		
+		return [new AST.AssignmentStatement(id,new MATH.Div([new AST.IdExpr(id),expr]))];
+	}
+	/ expr:expr {return [expr];}
+
 
 declStatement "declaration statement"
 	= id:identifier _ ":" _ type:type {return new AST.DeclarationStatement(id,type);}
@@ -69,8 +90,11 @@ whileLoop "while loop"
 		return new AST.WhileLoop(test,stmts);
 	}
 forLoop "for loop"
-	= "for" _ test:expr _ "{" _ stmts:statements _ "}" {
-		return new AST.WhileLoop(test,stmts);
+	= "for" _ asg:semicolonStatement _ ";" _ test:expr _ ";" _ it:semicolonStatement _ "{" _ stmts:statements _ "}" {
+		return new AST.ForLoop(asg,test,it,stmts);
+	}
+	/ "for" _ "(" _ asg:semicolonStatement _ ";" _ test:expr _ ";" _ it:semicolonStatement _ ")" _ "{" _ stmts:statements _ "}" {
+		return new AST.ForLoop(asg,test,it,stmts);
 	}
 
 ifStmt "if statement"

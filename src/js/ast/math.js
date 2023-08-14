@@ -180,7 +180,7 @@ export class LogicalNot extends BuiltinFunc {
     applyType(buffer, expectedType = new TypeAST("Dummy")) {
         this.type = new TypeAST("Integer");
         if (!expectedType.instanceOf(23456789 /* TypeEnum.DUMMY */) && !this.type.instanceOf(expectedType)) {
-            buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type}`);
+            buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type} in ~`);
             return;
         }
         this.params[0].applyType(buffer, this.type);
@@ -204,7 +204,7 @@ export class LogicalOr extends BuiltinFunc {
     applyType(buffer, expectedType = new TypeAST("Dummy")) {
         this.type = new TypeAST("Integer");
         if (!expectedType.instanceOf(23456789 /* TypeEnum.DUMMY */) && !this.type.instanceOf(expectedType)) {
-            buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type}`);
+            buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type} in ||`);
             return;
         }
         this.params[0].applyType(buffer, this.type);
@@ -232,7 +232,7 @@ export class LogicalAnd extends BuiltinFunc {
     applyType(buffer, expectedType = new TypeAST("Dummy")) {
         this.type = new TypeAST("Integer");
         if (!expectedType.instanceOf(23456789 /* TypeEnum.DUMMY */) && !this.type.instanceOf(expectedType)) {
-            buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type}`);
+            buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type} in &&`);
             return;
         }
         this.params[0].applyType(buffer, this.type);
@@ -260,17 +260,17 @@ export class LogicalEq extends BuiltinFunc {
     applyType(buffer, expectedType = new TypeAST("Dummy")) {
         this.type = new TypeAST("Integer");
         if (!expectedType.instanceOf(23456789 /* TypeEnum.DUMMY */) && !this.type.instanceOf(expectedType)) {
-            buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type}`);
+            buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type} in ==`);
             return;
         }
         this.params[0].applyType(buffer);
         this.params[1].applyType(buffer);
         if (!this.params[0].type.instanceOf(this.params[1].type)) {
-            buffer.stderr(`Cannot treat "${this.params[0].toString()}" as type ${this.params[1].type}`);
+            buffer.stderr(`Cannot treat "${this.params[0].toString()}" as type ${this.params[1].type} in ==`);
             return;
         }
         if (!this.params[1].type.instanceOf(this.params[0].type)) {
-            buffer.stderr(`Cannot treat "${this.params[1].toString()}" as type ${this.params[0].type}`);
+            buffer.stderr(`Cannot treat "${this.params[1].toString()}" as type ${this.params[0].type} in ==`);
             return;
         }
     }

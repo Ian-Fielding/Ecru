@@ -300,7 +300,7 @@ export class LogicalNot extends BuiltinFunc {
 	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
 		this.type=new TypeAST("Integer");
 		if(!expectedType.instanceOf(TypeEnum.DUMMY) && !this.type.instanceOf(expectedType)){
-			buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type}`);
+			buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type} in ~`);
 			return;
 		}
 
@@ -337,7 +337,7 @@ export class LogicalOr extends BuiltinFunc {
 	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
 		this.type=new TypeAST("Integer");
 		if(!expectedType.instanceOf(TypeEnum.DUMMY) && !this.type.instanceOf(expectedType)){
-			buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type}`);
+			buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type} in ||`);
 			return;
 		}
 
@@ -379,7 +379,7 @@ export class LogicalAnd extends BuiltinFunc {
 	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
 		this.type=new TypeAST("Integer");
 		if(!expectedType.instanceOf(TypeEnum.DUMMY) && !this.type.instanceOf(expectedType)){
-			buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type}`);
+			buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type} in &&`);
 			return;
 		}
 
@@ -422,7 +422,7 @@ export class LogicalEq extends BuiltinFunc {
 		this.type=new TypeAST("Integer");
 
 		if(!expectedType.instanceOf(TypeEnum.DUMMY) && !this.type.instanceOf(expectedType)){
-			buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type}`);
+			buffer.stderr(`Cannot treat "${this.name}" as type ${expectedType.type} in ==`);
 			return;
 		}
 
@@ -431,12 +431,12 @@ export class LogicalEq extends BuiltinFunc {
 		this.params[1].applyType(buffer);
 
 		if(!this.params[0].type.instanceOf(this.params[1].type)){
-			buffer.stderr(`Cannot treat "${this.params[0].toString()}" as type ${this.params[1].type}`);
+			buffer.stderr(`Cannot treat "${this.params[0].toString()}" as type ${this.params[1].type} in ==`);
 			return;
 		}
 
 		if(!this.params[1].type.instanceOf(this.params[0].type)){
-			buffer.stderr(`Cannot treat "${this.params[1].toString()}" as type ${this.params[0].type}`);
+			buffer.stderr(`Cannot treat "${this.params[1].toString()}" as type ${this.params[0].type} in ==`);
 			return;
 		}
 
