@@ -42,31 +42,31 @@ semicolonStatement
 		let expr=assg[0][2];
 		return [decl,new AST.AssignmentStatement(decl.args[0],expr)];
 	}
-	/ id:identifier _ "=" _ expr:expr {
+	/ id:idExpr _ "=" _ expr:expr {
 		
 		return [new AST.AssignmentStatement(id,expr)];
 	}
-	/ id:identifier _ "+=" _ expr:expr {
+	/ id:idExpr _ "+=" _ expr:expr {
 		
-		return [new AST.AssignmentStatement(id,new MATH.Add([new AST.IdExpr(id),expr]))];
+		return [new AST.AssignmentStatement(id,new MATH.Add([id,expr]))];
 	}
-	/ id:identifier _ "-=" _ expr:expr {
+	/ id:idExpr _ "-=" _ expr:expr {
 		
-		return [new AST.AssignmentStatement(id,new MATH.Sub([new AST.IdExpr(id),expr]))];
+		return [new AST.AssignmentStatement(id,new MATH.Sub([id,expr]))];
 	}
-	/ id:identifier _ "*=" _ expr:expr {
+	/ id:idExpr _ "*=" _ expr:expr {
 		
-		return [new AST.AssignmentStatement(id,new MATH.Mul([new AST.IdExpr(id),expr]))];
+		return [new AST.AssignmentStatement(id,new MATH.Mul([id,expr]))];
 	}
-	/ id:identifier _ "/=" _ expr:expr {
+	/ id:idExpr _ "/=" _ expr:expr {
 		
-		return [new AST.AssignmentStatement(id,new MATH.Div([new AST.IdExpr(id),expr]))];
+		return [new AST.AssignmentStatement(id,new MATH.Div([id,expr]))];
 	}
 	/ expr:expr {return [expr];}
 
 
 declStatement "declaration statement"
-	= id:identifier _ ":" _ type:type {return new AST.DeclarationStatement(id,type);}
+	= id:idExpr _ ":" _ type:type {return new AST.DeclarationStatement(id,type);}
 
 commentStatement "comment statement"
 	= "//" input:nonNewLine* "\n"  {
@@ -87,22 +87,24 @@ nonNewLine
 
 whileLoop "while loop"
 	= "while" _ test:expr _ "{" _ stmts:statements _ "}" {
-		return new AST.WhileLoop(test,stmts);
+		return [new AST.WhileLoop(test,stmts)];
 	}
 forLoop "for loop"
 	= "for" _ asg:semicolonStatement _ ";" _ test:expr _ ";" _ it:semicolonStatement _ "{" _ stmts:statements _ "}" {
-		return new AST.ForLoop(asg,test,it,stmts);
+		return [new AST.ForLoop(asg,test,it,stmts)];
 	}
 	/ "for" _ "(" _ asg:semicolonStatement _ ";" _ test:expr _ ";" _ it:semicolonStatement _ ")" _ "{" _ stmts:statements _ "}" {
-		return new AST.ForLoop(asg,test,it,stmts);
+		return [new AST.ForLoop(asg,test,it,stmts)];
 	}
 
 ifStmt "if statement"
-	= "if" _ test:expr _ "{" _ stmts:statements _ "}" _ elsePart:("else" _ "{" _ statements _ "}")|0..1| {
+	= "if" _ test:expr _ "{" _ stmts:statements _ "}" elsePart:(_ "else" _ "{" _ statements _ "}")|0..1| {
 
-		let elseStmts = elsePart.length==0 ? [] : elsePart[0][4];
 
-		return new AST.IfStmt(test,stmts,elseStmts);
+		let elseStmts = elsePart.length==0 ? [] : elsePart[0][5];
+
+
+		return [new AST.IfStmt(test,stmts,elseStmts)];
 	}
 
 

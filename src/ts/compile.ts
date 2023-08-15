@@ -21,7 +21,7 @@ export function compile(input:string, buffer:IOBuffer = consoleBuffer):CompileOb
 			console.log(evt);
 		}}});
 	}catch(e:any){
-		buffer.stderr(e.message);
+		buffer.stderr("Parse error! "+e.message);
 		retVal.parseTree="Error";
 		return retVal;
 	}

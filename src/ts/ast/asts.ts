@@ -107,10 +107,11 @@ class Statement extends AST{
 }
 
 export class CommentStatement extends Statement{
-	str: string;
+	str: StringLiteral;
 	constructor(str:string){
-		super("CommentStmt_"+str);
-		this.str=str;
+		let strlit:StringLiteral = new StringLiteral(str);
+		super("CommentStmt",[strlit]);
+		this.str=strlit;
 	}
 }
 
@@ -118,9 +119,10 @@ export class DeclarationStatement extends Statement{
 	id: Id;
 	type: TypeAST;
 
-	constructor(id:Id,type:TypeAST){
+	constructor(id:Expr,type:TypeAST){
 		super("DeclStmt",[id,type]);
-		this.id = id;
+		this.id = (id as IdExpr).id;
+
 		this.type = type;
 	}
 
@@ -148,9 +150,9 @@ export class AssignmentStatement extends Statement{
 	id: Id;
 	expr: Expr;
 
-	constructor(id: Id,expr: Expr){
+	constructor(id: Expr,expr: Expr){
 		super("AssignStmt",[id,expr]);
-		this.id=id;
+		this.id=(id as IdExpr).id;
 		this.expr=expr;
 	}
 
@@ -566,6 +568,10 @@ export class StringLiteral extends Expr{
 		return this.name;
 	}
 
+	override toString():string{
+		return `"${this.name}"`;
+	}
+
 }
 
 
@@ -585,6 +591,10 @@ export class IdExpr extends Expr{
 	override applyType(buffer:IOBuffer,parentType:TypeAST = new TypeAST("Dummy")):void{
 		this.id.applyType(buffer,parentType);
 		this.type = this.id.type;
+	}
+
+	override toString():string{
+		return this.id.toString();
 	}
 
 	override toLatex():string{

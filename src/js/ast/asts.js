@@ -67,14 +67,15 @@ class Statement extends AST {
 }
 export class CommentStatement extends Statement {
     constructor(str) {
-        super("CommentStmt_" + str);
-        this.str = str;
+        let strlit = new StringLiteral(str);
+        super("CommentStmt", [strlit]);
+        this.str = strlit;
     }
 }
 export class DeclarationStatement extends Statement {
     constructor(id, type) {
         super("DeclStmt", [id, type]);
-        this.id = id;
+        this.id = id.id;
         this.type = type;
     }
     applyBind(scope, buffer) {
@@ -94,7 +95,7 @@ export class DeclarationStatement extends Statement {
 export class AssignmentStatement extends Statement {
     constructor(id, expr) {
         super("AssignStmt", [id, expr]);
-        this.id = id;
+        this.id = id.id;
         this.expr = expr;
     }
     applyBind(scope, buffer) {
@@ -380,6 +381,9 @@ export class StringLiteral extends Expr {
     builtinToString() {
         return this.name;
     }
+    toString() {
+        return `"${this.name}"`;
+    }
 }
 export class IdExpr extends Expr {
     constructor(id) {
@@ -392,6 +396,9 @@ export class IdExpr extends Expr {
     applyType(buffer, parentType = new TypeAST("Dummy")) {
         this.id.applyType(buffer, parentType);
         this.type = this.id.type;
+    }
+    toString() {
+        return this.id.toString();
     }
     toLatex() {
         return this.id.toLatex();

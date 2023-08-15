@@ -14,7 +14,7 @@ export function compile(input, buffer = consoleBuffer) {
                 } } });
     }
     catch (e) {
-        buffer.stderr(e.message);
+        buffer.stderr("Parse error! " + e.message);
         retVal.parseTree = "Error";
         return retVal;
     }
