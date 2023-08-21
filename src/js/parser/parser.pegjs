@@ -307,7 +307,7 @@ funcName
 
 primary
 	= number
-	/ "(" expr:expr ")" { return expr; }
+	/ "(" _ expr:expr _ ")" { return expr; }
 	/ idExpr
 	/ string
 
