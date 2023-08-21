@@ -9,8 +9,14 @@ for(let test of parseTests){
 	if(result.parseTree == test.expected)
 		parseCount++;
 	else{
-		console.log(`Error on ${test.name}\n   Exp:${test.expected}\n   Saw:${result.parseTree}`);
+		console.log('\x1b[41m\x1b[37m%s\x1b[0m', `Error on ${test.name}`);
+		console.log(`---Exp:${test.expected}\n---Saw:${result.parseTree}`);
 	}
 }
 
-console.log(`Parse tree score: ${parseCount}/${parseTests.length}`)
+
+let out:string = `Parse tree score: ${parseCount}/${parseTests.length}`;
+if(parseCount!=parseTests.length)
+	console.log('\x1b[41m\x1b[37m%s\x1b[0m', out);
+else
+	console.log('\x1b[42m\x1b[30m%s\x1b[0m', out);

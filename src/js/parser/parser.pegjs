@@ -162,12 +162,10 @@ boolOr
 		for(let expr of rightList){
 			let right=expr[3];
 			//~(A u B) = ~A n ~B
-			
-			let notLeft = new MATH.LogicalNot(left);
-			let notRight = new MATH.LogicalNot(right);
-			left = new Math.LogicalNot([new Math.LogicalAnd([notLeft,notRight])])
-
-			//left=new MATH.LogicalOr([left,right]);
+			//let notLeft = new MATH.LogicalNot([left]);
+			//let notRight = new MATH.LogicalNot([right]);
+			//left = new MATH.LogicalNot([new MATH.LogicalAnd([notLeft,notRight])])
+			left=new MATH.LogicalOr([left,right]);
 		}
 
 
@@ -212,7 +210,7 @@ boolNeq
 boolNeg
 	= leftList:("~" _)* right:additive {
 		for(let i in leftList){
-			right=new MATH.LogicalNot(right);
+			right=new MATH.LogicalNot([right]);
 		}
 
 		return right;

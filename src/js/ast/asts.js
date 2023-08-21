@@ -67,7 +67,7 @@ class Statement extends AST {
 }
 export class CommentStatement extends Statement {
     constructor(str) {
-        let strlit = new StringLiteral(str);
+        let strlit = new StringLiteral(str.trim());
         super("CommentStmt", [strlit]);
         this.str = strlit;
     }
