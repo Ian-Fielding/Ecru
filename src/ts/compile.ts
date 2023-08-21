@@ -8,6 +8,7 @@ export interface CompileObj {
 }
 
 export function compile(input:string, buffer:IOBuffer = consoleBuffer):CompileObj{
+	buffer.clear();
 	input += "\n";
 	let retVal:CompileObj = {
 		parseTree: "",

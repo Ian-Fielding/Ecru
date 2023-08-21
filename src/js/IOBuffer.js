@@ -13,8 +13,18 @@ export class IOBuffer {
         this.errHistory.push(input);
         this.err(input);
     }
+    getOut() {
+        return this.outHistory.join("");
+    }
+    getErr() {
+        return this.errHistory.join("");
+    }
     hasSeenError() {
         return this.errHistory.length > 0;
+    }
+    clear() {
+        this.outHistory = [];
+        this.errHistory = [];
     }
 }
 function empty(input) { }

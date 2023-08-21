@@ -83,8 +83,8 @@ export let parseTests: ParseTest[] = [
 		expected: 'Program(DeclStmt(x,IntType()),CommentStmt("This is a cool comment!"),AssignStmt(x,3))',
 	},{
 		name: 'parse_test20',
-		input: 'while 1 {x: Z; y:String;}',
-		expected: 'Program(WhileLoop(1,DeclStmt(x,IntType()),DeclStmt(y,StrType())))',
+		input: 'while 0 {x: Z; y:String;}',
+		expected: 'Program(WhileLoop(0,DeclStmt(x,IntType()),DeclStmt(y,StrType())))',
 	},{
 		name: 'parse_test21',
 		input: 'while(x and y){}',

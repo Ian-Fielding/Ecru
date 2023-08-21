@@ -21,8 +21,21 @@ export class IOBuffer {
 		this.err(input);
 	}
 
+	getOut():string{
+		return this.outHistory.join("");
+	}
+
+	getErr():string{
+		return this.errHistory.join("");
+	}
+
 	hasSeenError():boolean{
 		return this.errHistory.length>0;
+	}
+
+	clear():void{
+		this.outHistory=[];
+		this.errHistory=[];
 	}
 }
 

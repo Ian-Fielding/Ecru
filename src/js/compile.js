@@ -2,6 +2,7 @@ import * as AST from "./ast/asts.js";
 import * as PARSE from "../js/parser/parser.js";
 import { consoleBuffer } from "./IOBuffer.js";
 export function compile(input, buffer = consoleBuffer) {
+    buffer.clear();
     input += "\n";
     let retVal = {
         parseTree: "",
