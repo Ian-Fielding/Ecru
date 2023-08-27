@@ -129,12 +129,12 @@ export let parseTests = [
         expected: 'Program(or(and(not(1),not(2)),not(3)))',
     }, {
         name: 'parse_test33',
-        input: '',
-        expected: 'Program()',
+        input: '// This is a test ',
+        expected: 'Program(CommentStmt("This is a test"))',
     }, {
         name: 'parse_test34',
-        input: '',
-        expected: 'Program()',
+        input: '// c1\nx:Z;// c2',
+        expected: 'Program(CommentStmt("c1"),DeclStmt(x,IntType()),CommentStmt("c2"))',
     }, {
         name: 'parse_test35',
         input: '',

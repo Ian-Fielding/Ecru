@@ -1,6 +1,7 @@
 import { Expr, TypeAST, TypeEnum, NumberLiteral, StringLiteral } from "./asts.js";
 import { IOBuffer } from "../IOBuffer.js";
 
+
 class BuiltinFunc extends Expr {
 	constructor(name:string,args:Expr[],type:TypeAST=new TypeAST("Dummy")){
 		super(name,args,type);
@@ -14,6 +15,7 @@ export class Add extends BuiltinFunc {
 	constructor(args:Expr[]){
 		super("add",args);
 		this.params=args;
+
 
 		//TODO better error
 		if(args.length<2)

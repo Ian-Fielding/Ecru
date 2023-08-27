@@ -22,7 +22,7 @@ statements "list of statements"
 
 statement "statement"
 	= "pattern" _ left:expr _ "->" _ right:expr _ ";" {return "TODO";}
-	/ "println" _ val:expr _ ";" {return [new AST.PrintStatement(val,true)];}
+	/ "println" _ val:expr _ ";" { return [new AST.PrintStatement(val,true)];}
 	/ "pprintln" _ val:expr _ ";" {return [new AST.PrettyPrintStatement(val,true)];}
 	/ "print" _ val:expr _ ";" {return [new AST.PrintStatement(val)];}
 	/ "pprint" _ val:expr _ ";" {return [new AST.PrettyPrintStatement(val)];}
@@ -30,17 +30,29 @@ statement "statement"
 	/ ifStmt
 	/ whileLoop
 	/ forLoop
+	/ funcDecl
 	/ stmt:semicolonStatement _ ";" { return stmt; }
 	/ ";" {return [];}
+	
 
 
 semicolonStatement
 	= decl: declStatement _ assg:("=" _ expr)|0..1| {
+		decl=decl[0];
+
 		if(assg.length==0)
 			return [decl];
 
+
+
 		let expr=assg[0][2];
 		return [decl,new AST.AssignmentStatement(decl.args[0],expr)];
+	}
+	/ "return" _ expr:expr {
+
+		if(expr)
+			return [new AST.ReturnStatement(expr)];
+		return [new AST.ReturnStatement(new AST.VoidObj())];
 	}
 	/ id:idExpr _ "=" _ expr:expr {
 		
@@ -66,17 +78,30 @@ semicolonStatement
 
 
 declStatement "declaration statement"
-	= id:idExpr _ ":" _ type:type {return new AST.DeclarationStatement(id,type);}
+	= id:idExpr _ ":" _ type:type {return [new AST.DeclarationStatement(id,type)];}
+
+funcDecl
+	= name:idExpr _ "(" _ id:idExpr _ ":" _ type:type _ ")" _ ":" _ retType:type _ "="|0..1| _ "{" _ stmts:statements _ "}" {
+		let funcType = new AST.FunctionType(type,retType);
+
+		return [
+			new AST.DeclarationStatement(name,funcType),
+			new AST.AssignmentStatement(
+				name,
+				new AST.FuncDecl([new AST.DeclarationStatement(id,type)],stmts,funcType)
+			)
+		];
+	}
 
 commentStatement "comment statement"
 	= "//" input:nonNewLine* "\n"  {
-		return new AST.CommentStatement(input.join("").trim());
+		return [new AST.CommentStatement(input.join("").trim())];
 	}
 	/ "/*" input:commentStatementHelper+ "/" {
 
 		let filteredInput=input.join("");
 
-		return new AST.CommentStatement(filteredInput.substring(0,filteredInput.length-1));
+		return [new AST.CommentStatement(filteredInput.substring(0,filteredInput.length-1))];
 	}
 commentStatementHelper
 	= input:nonAsterisk* "*" {return input.join("")+"*";}
@@ -287,14 +312,16 @@ func
 			let exprs=l[2];
 			let p2=l[4];
 
-			/*if(p1=="(" && p2==")")
-				left = new MATH.BuiltinFunc(left,exprs);
+			// TODO Sucks!
+
+			if(p1=="(" && p2==")" && left instanceof AST.IdExpr)
+				left = new AST.FuncCall(left,exprs);
 			else if(p1=="[" && p2=="]" && exprs.length==1)
 				left = new AST.ArrayAccess(left,exprs[0]);
 			else if(exprs.length!=1)
 				throw new Error("only 1 expression allowed in []");
 			else
-				throw new Error("unbalanced () or []");*/
+				throw new Error("unbalanced () or []");
 
 		}
 
@@ -334,6 +361,20 @@ identifier
 	
 
 type
+	= leftList:(typePrimary _ "->" _)* right:typePrimary {
+		for(let i=leftList.length-1;i>=0;i--){
+			let left=leftList[i][0];
+			right=new AST.FunctionType(left,right);
+		}
+
+		return right;
+	}
+
+typePrimary
+	= "(" _ type:typeTerminal _ ")" { return type; }
+	/ typeTerminal;
+
+typeTerminal
 	= left:("Object" / 
 		"Obj" / 
 		"Formula" / 

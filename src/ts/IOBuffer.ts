@@ -1,3 +1,4 @@
+
 export class IOBuffer {
 	out: (input: string) => void;
 	err: (input: string) => void;

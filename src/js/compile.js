@@ -3,7 +3,7 @@ import * as PARSE from "../js/parser/parser.js";
 import { consoleBuffer } from "./IOBuffer.js";
 export function compile(input, buffer = consoleBuffer) {
     buffer.clear();
-    input += "\n";
+    input += "\n\n";
     let retVal = {
         parseTree: "",
         buffer: buffer
@@ -15,7 +15,7 @@ export function compile(input, buffer = consoleBuffer) {
                 } } });
     }
     catch (e) {
-        buffer.stderr("Parse error! " + e.message);
+        buffer.stderr(`Parse error! ${e.message}`);
         retVal.parseTree = "Error";
         return retVal;
     }

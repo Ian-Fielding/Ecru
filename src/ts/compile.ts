@@ -9,11 +9,13 @@ export interface CompileObj {
 
 export function compile(input:string, buffer:IOBuffer = consoleBuffer):CompileObj{
 	buffer.clear();
-	input += "\n";
+
+	input += "\n\n";
 	let retVal:CompileObj = {
 		parseTree: "",
 		buffer: buffer
 	}
+
 
 	let prog:AST.Program = new AST.Program();
 
@@ -22,7 +24,7 @@ export function compile(input:string, buffer:IOBuffer = consoleBuffer):CompileOb
 			console.log(evt);
 		}}});
 	}catch(e:any){
-		buffer.stderr("Parse error! "+e.message);
+		buffer.stderr(`Parse error! ${e.message}`);
 		retVal.parseTree="Error";
 		return retVal;
 	}

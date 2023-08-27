@@ -4,9 +4,13 @@ class AST {
         this.name = name;
         this.args = args;
     }
-    // deep copy of this AST
+    /**
+     * Performs a deep copy
+     *
+     * @returns Deep copy of this node
+     */
     copy() {
-        let newObj = this.constructor(name);
+        let newObj = this.constructor(this.name);
         for (const arg of this.args)
             newObj.args.push(arg.copy());
         return newObj;
@@ -72,6 +76,9 @@ export class CommentStatement extends Statement {
         this.str = strlit;
     }
 }
+/**
+ * A sample
+ */
 export class DeclarationStatement extends Statement {
     constructor(id, type) {
         super("DeclStmt", [id, type]);
@@ -90,6 +97,7 @@ export class DeclarationStatement extends Statement {
     }
     applyType(buffer, expectedType = new TypeAST("Dummy")) {
         this.id.symbol.type = this.type;
+        this.id.type = this.type;
     }
 }
 export class AssignmentStatement extends Statement {
@@ -133,7 +141,7 @@ export class PrintStatement extends Statement {
         }
         else {
             // TODO better comparison to string.
-            buffer.stderr("Error");
+            buffer.stderr(`Error! Weird string comparison at ${str} whose type is ${str.type}`);
         }
     }
 }
@@ -259,6 +267,28 @@ export class IfStmt extends Statement {
                 child.execute(buffer);
     }
 }
+export class ReturnStatement extends Statement {
+    constructor(expr) {
+        super("ReturnStmt", [expr]);
+        this.expr = expr;
+    }
+    applyType(buffer, expectedType = new TypeAST("Dummy")) {
+        if (!(this.expr instanceof VoidObj)) {
+            this.expr.applyType(buffer, expectedType);
+            if (!this.expr.type.instanceOf(expectedType)) {
+                buffer.stderr(`return statement types don't match. Saw type ${this.expr.type} but expected ${expectedType}`);
+                return;
+            }
+            //TODO Better error handling
+        }
+        else {
+            if (!expectedType.instanceOf(5 /* TypeEnum.VOID */)) {
+                buffer.stderr("return statement must return value");
+                return;
+            }
+        }
+    }
+}
 export class TypeAST extends AST {
     constructor(name) {
         super("UncertainType");
@@ -312,6 +342,10 @@ export class TypeAST extends AST {
                 this.type = 5 /* TypeEnum.VOID */;
                 this.name = "VoidType";
                 break;
+            case "Map":
+                this.type = 7 /* TypeEnum.MAP */;
+                this.name = "MapType";
+                break;
             default:
                 this.type = 23456789 /* TypeEnum.DUMMY */;
                 this.name = "DummyType";
@@ -330,6 +364,16 @@ export class TypeAST extends AST {
     }
     isMathType() {
         return this.type % 4 /* TypeEnum.REAL */ == 0;
+    }
+    isFunction() {
+        return this.type % 7 /* TypeEnum.MAP */ == 0;
+    }
+}
+export class FunctionType extends TypeAST {
+    constructor(domain, codomain) {
+        super("Map");
+        this.domain = domain;
+        this.codomain = codomain;
     }
 }
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -366,6 +410,35 @@ export class TypeCast extends Expr {
     constructor(name, args = [], type = new TypeAST("Dummy")) {
         super(name, args);
         // TODO
+    }
+}
+export class FuncDecl extends Expr {
+    constructor(params, stmts, type) {
+        let other = [];
+        for (let child of params)
+            other.push(child);
+        for (let child of stmts)
+            other.push(child);
+        super("FuncDecl", other, type);
+        this.params = params;
+        this.stmts = stmts;
+    }
+    applyBind(scope, buffer) {
+        let aScope = new Scope(scope);
+        let bScope = new Scope(aScope);
+        for (let param of this.params)
+            param.applyBind(aScope, buffer);
+        for (let child of this.stmts)
+            child.applyBind(bScope, buffer);
+    }
+    applyType(buffer, expectedType = new TypeAST("Dummy")) {
+        for (let child of this.params)
+            child.applyType(buffer, expectedType);
+        for (let child of this.stmts)
+            child.applyType(buffer, this.type.codomain);
+    }
+    rval(buffer) {
+        return this; //TODO
     }
 }
 export class StringLiteral extends Expr {
@@ -407,6 +480,55 @@ export class IdExpr extends Expr {
         return this.id.builtinToString();
     }
 }
+export class VoidObj extends Expr {
+    constructor() {
+        super("Void", [], new TypeAST("void"));
+    }
+    applyType(buffer, expectedType = new TypeAST("Dummy")) {
+        return;
+    }
+}
+export class FuncCall extends Expr {
+    constructor(funcName, params) {
+        let other = [];
+        other.push(funcName);
+        for (let child of params)
+            other.push(child);
+        super("FuncCall", other);
+        this.funcName = funcName;
+        this.params = params;
+    }
+    rval(buffer) {
+        let func = this.funcName.rval(buffer);
+        for (let i = 0; i < func.params.length; i++) {
+            let decl = func.params[i];
+            let param = this.params[i];
+            let id = decl.id;
+            // TODO does not support recursion
+            id.symbol.val = param.rval(buffer);
+        }
+        for (let stmt of func.stmts) {
+            if (stmt instanceof ReturnStatement)
+                return stmt.expr.rval(buffer);
+            else
+                stmt.execute(buffer);
+        }
+        if (!func.type.codomain.instanceOf(5 /* TypeEnum.VOID */))
+            buffer.stderr(`Function ${func} does not return!`);
+        return new VoidObj();
+    }
+    applyType(buffer, parentType = new TypeAST("Dummy")) {
+        this.funcName.applyType(buffer, new TypeAST("Map"));
+        if (!this.funcName.type.instanceOf(7 /* TypeEnum.MAP */)) {
+            buffer.stderr(`${this.funcName} is not a function`);
+            return;
+        }
+        let funcType = this.funcName.type;
+        this.params[0].applyType(buffer, funcType.domain);
+        this.type = funcType.codomain;
+        console.log("my type is " + this.type);
+    }
+}
 export class Id extends Expr {
     constructor(idName) {
         super("Id_" + idName, [], new TypeAST("Dummy"));
@@ -425,7 +547,7 @@ export class Id extends Expr {
             return;
         }
         if (!this.type.instanceOf(expectedType))
-            buffer.stderr(`Cannot treat ${this.idName} as type ${expectedType.type}`);
+            buffer.stderr(`Cannot treat ${this.idName} as type ${expectedType}`);
     }
     applyBind(scope, buffer) {
         let name = this.idName;

@@ -1,3 +1,9 @@
-if 1 {
-	print "hi";
+
+ f ( x : Z) : Z {
+ 	y: Z = 2;
+ 	return x*y;
 }
+
+g(x:Z):Z{ return x-1; }
+
+print f(g(2+2));

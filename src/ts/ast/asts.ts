@@ -17,9 +17,13 @@ class AST{
 		this.args = args;
 	}
 
-	// deep copy of this AST
+	/**
+	 * Performs a deep copy
+	 * 
+	 * @returns Deep copy of this node
+	 */
 	copy(): AST{
-		let newObj: AST = this.constructor(name);
+		let newObj: AST = this.constructor(this.name);
 		for(const arg of this.args)
 			newObj.args.push(arg.copy());
 		return newObj;
@@ -95,6 +99,7 @@ export class Program extends AST{
 		for(let i:number=0;i<this.args.length;i++){
 			str+=`---\n${i}. ${this.args[i].toString()}\n`;
 		}
+
 		return str;
 	}
 
@@ -115,6 +120,9 @@ export class CommentStatement extends Statement{
 	}
 }
 
+/**
+ * A sample 
+ */
 export class DeclarationStatement extends Statement{
 	id: Id;
 	type: TypeAST;
@@ -142,6 +150,7 @@ export class DeclarationStatement extends Statement{
 	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
 
 		this.id.symbol!.type = this.type;
+		this.id.type=this.type;
 	}
 
 }
@@ -203,7 +212,7 @@ export class PrintStatement extends Statement{
 			buffer.stdout(str.val+term);
 		}else{
 			// TODO better comparison to string.
-			buffer.stderr("Error");
+			buffer.stderr(`Error! Weird string comparison at ${str} whose type is ${str.type}`);
 		}
 	}
 
@@ -322,6 +331,8 @@ export class ForLoop extends Statement{
 		
 	}
 
+
+
 	override execute(buffer:IOBuffer):void{
 		for(let child of this.asg)
 			child.execute(buffer);
@@ -397,6 +408,44 @@ export class IfStmt extends Statement{
 }
 
 
+export class ReturnStatement extends Statement{
+	expr: Expr;
+
+	constructor(expr:Expr){
+		super("ReturnStmt",[expr]);
+		this.expr=expr;
+	}
+
+	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
+		if(!(this.expr instanceof VoidObj)){
+
+			this.expr.applyType(buffer,expectedType);
+
+
+			if(!this.expr.type.instanceOf(expectedType)){
+				buffer.stderr(`return statement types don't match. Saw type ${this.expr.type} but expected ${expectedType}`);
+				return;
+			}
+
+			//TODO Better error handling
+		}else{
+			if(!expectedType.instanceOf(TypeEnum.VOID)){
+				buffer.stderr("return statement must return value");
+				return;
+			}
+
+
+		}
+
+	}
+}
+
+
+
+
+
+
+
 
 
 
@@ -412,6 +461,7 @@ export const enum TypeEnum {
 	BOOLEAN		= 2*2*2*2*2*2,
 	STRING		= 2*3,
 	VOID		= 5,
+	MAP			= 7,
 	DUMMY		= 23456789,
 }
 
@@ -473,6 +523,10 @@ export class TypeAST extends AST{
 			this.type=TypeEnum.VOID;
 			this.name="VoidType";
 			break;
+		case "Map":
+			this.type=TypeEnum.MAP;
+			this.name="MapType";
+			break;
 		default:
 			this.type=TypeEnum.DUMMY;
 			this.name="DummyType";
@@ -496,9 +550,24 @@ export class TypeAST extends AST{
 	isMathType():boolean{
 		return this.type%TypeEnum.REAL==0;
 	}
+
+	isFunction():boolean{
+		return this.type%TypeEnum.MAP==0;
+	}
 }
 
 
+
+export class FunctionType extends TypeAST {
+	domain: TypeAST;
+	codomain: TypeAST;
+
+	constructor(domain: TypeAST, codomain: TypeAST){
+		super("Map");
+		this.domain=domain;
+		this.codomain=codomain;
+	}
+}
 
 
 
@@ -511,7 +580,7 @@ export class TypeAST extends AST{
 export class Expr extends Statement{
 	type:TypeAST;
 
-	constructor(name:string,args:Expr[]=[],type:TypeAST = new TypeAST("Dummy")){
+	constructor(name:string,args:AST[]=[],type:TypeAST = new TypeAST("Dummy")){
 		super(name,args);
 		this.type=type;
 	}
@@ -547,6 +616,56 @@ export class TypeCast extends Expr {
 		super(name,args);
 		// TODO
 	}
+}
+
+
+
+export class FuncDecl extends Expr{
+	params:DeclarationStatement[];
+	stmts: Statement[];
+
+	constructor(params:DeclarationStatement[],stmts: Statement[],type: TypeAST){
+
+		let other: AST[] = [];
+		for(let child of params)
+			other.push(child);
+		for(let child of stmts)
+			other.push(child);
+
+
+		super("FuncDecl",other,type);
+		this.params=params;
+		this.stmts=stmts;
+		
+	}
+
+	override applyBind(scope:Scope, buffer:IOBuffer):void{
+		let aScope:Scope = new Scope(scope);
+		let bScope:Scope = new Scope(aScope);
+
+
+		for(let param of this.params)
+			param.applyBind(aScope,buffer);
+		
+		for(let child of this.stmts)
+			child.applyBind(bScope,buffer);
+		
+	}
+
+
+	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
+		for(let child of this.params)
+			child.applyType(buffer,expectedType);
+		for(let child of this.stmts)
+			child.applyType(buffer,(this.type as FunctionType).codomain);
+	}
+
+	override rval(buffer:IOBuffer):Expr{
+		
+		return this;//TODO
+	}
+
+
 }
 
 
@@ -606,6 +725,77 @@ export class IdExpr extends Expr{
 	}
 }
 
+export class VoidObj extends Expr{
+	constructor(){
+		super("Void",[],new TypeAST("void"));
+	}
+
+	override applyType(buffer:IOBuffer,expectedType:TypeAST = new TypeAST("Dummy")):void{
+		return;
+	}
+}
+
+
+export class FuncCall extends Expr{
+	funcName: Expr;
+	params: Expr[];
+
+	constructor(funcName: Expr, params: Expr[]){
+
+		let other: AST[] = [];
+		other.push(funcName);
+		for(let child of params)
+			other.push(child);
+		super("FuncCall",other);
+
+		this.funcName=funcName;
+		this.params=params;
+	}
+
+	override rval(buffer:IOBuffer):Expr{
+		let func:FuncDecl = this.funcName.rval(buffer) as FuncDecl;
+
+		for(let i=0; i<func.params.length;i++){
+			let decl:DeclarationStatement = func.params[i];
+			let param:Expr = this.params[i];
+
+			let id:Id = decl.id;
+			// TODO does not support recursion
+			id.symbol!.val = param.rval(buffer);
+		}
+
+
+		for(let stmt of func.stmts){
+			if(stmt instanceof ReturnStatement)
+				return stmt.expr.rval(buffer);
+			else
+				stmt.execute(buffer);
+		}
+
+		if(!(func.type as FunctionType).codomain.instanceOf(TypeEnum.VOID))
+			buffer.stderr(`Function ${func} does not return!`);
+		
+		return new VoidObj();
+	}
+
+	override applyType(buffer:IOBuffer,parentType:TypeAST = new TypeAST("Dummy")):void{
+		this.funcName.applyType(buffer,new TypeAST("Map"));
+
+		if(!this.funcName.type.instanceOf(TypeEnum.MAP)){
+			buffer.stderr(`${this.funcName} is not a function`);
+			return;
+		}
+
+		let funcType:FunctionType = (this.funcName.type as FunctionType);
+
+		this.params[0].applyType(buffer,funcType.domain);
+		this.type = funcType.codomain;
+
+		console.log("my type is "+this.type)
+	}
+
+}
+
 
 export class Id extends Expr{
 	symbol: IdSymbol|null;
@@ -633,7 +823,7 @@ export class Id extends Expr{
 		}
 
 		if(!this.type.instanceOf(expectedType))
-			buffer.stderr(`Cannot treat ${this.idName} as type ${expectedType.type}`);
+			buffer.stderr(`Cannot treat ${this.idName} as type ${expectedType}`);
 	}
 
 	override applyBind(scope:Scope, buffer:IOBuffer):void{
