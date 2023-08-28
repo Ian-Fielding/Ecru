@@ -1,4 +1,5 @@
 import * as AST from "./ast/asts.js";
+// @ts-ignore
 import * as PARSE from "../js/parser.js";
 import { IOBuffer, consoleBuffer } from "./IOBuffer.js";
 
