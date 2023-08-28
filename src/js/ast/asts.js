@@ -1,5 +1,15 @@
 import { divides, gcd } from "../utils.js";
+// Should remove?
+// declare let MathJax: any;
+/**
+ * Represents an abstract syntax tree (AST) node.
+ */
 class AST {
+    /**
+     *
+     * @param name the simple name
+     * @param args all child nodes
+     */
     constructor(name, args = []) {
         this.name = name;
         this.args = args;
@@ -15,6 +25,10 @@ class AST {
             newObj.args.push(arg.copy());
         return newObj;
     }
+    /**
+     * Converts this node into human readable format, as in name(arg,arg,...,arg)
+     * @returns human readable string
+     */
     toString() {
         if (this.args.length == 0)
             return this.name + "()";
@@ -23,6 +37,11 @@ class AST {
             str += "," + this.args[i];
         return str + ")";
     }
+    /**
+     * Applies variable binding to all children
+     * @param scope
+     * @param buffer
+     */
     applyBind(scope, buffer) {
         for (let child of this.args) {
             child.applyBind(scope, buffer);
@@ -440,6 +459,36 @@ export class FuncDecl extends Expr {
     rval(buffer) {
         return this; //TODO
     }
+    onCall(buffer, inputs) {
+        let backup = [];
+        let retVal = new VoidObj();
+        for (let i = 0; i < this.params.length; i++) {
+            let decl = this.params[i];
+            let param = inputs[i];
+            let id = decl.id;
+            backup.push(id.symbol.val);
+            id.symbol.val = param;
+        }
+        for (let stmt of this.stmts) {
+            buffer.stdout(`Executing ${stmt}`);
+            buffer.stdout(`backup is ${backup}`);
+            if (stmt instanceof ReturnStatement) {
+                retVal = stmt.expr.rval(buffer);
+                break;
+            }
+            else
+                stmt.execute(buffer);
+        }
+        if (!this.type.codomain.instanceOf(5 /* TypeEnum.VOID */) && retVal instanceof VoidObj)
+            buffer.stderr(`Function ${this} does not return!`);
+        // restore params
+        for (let i = 0; i < this.params.length; i++) {
+            let decl = this.params[i];
+            let id = decl.id;
+            id.symbol.val = backup[i];
+        }
+        return retVal;
+    }
 }
 export class StringLiteral extends Expr {
     constructor(name) {
@@ -499,23 +548,17 @@ export class FuncCall extends Expr {
         this.params = params;
     }
     rval(buffer) {
+        if (buffer.maxRecursionDepth <= 0) {
+            buffer.stderr(`Max recursion depth reached!`);
+            return new VoidObj();
+        }
+        buffer.maxRecursionDepth--;
         let func = this.funcName.rval(buffer);
-        for (let i = 0; i < func.params.length; i++) {
-            let decl = func.params[i];
-            let param = this.params[i];
-            let id = decl.id;
-            // TODO does not support recursion
-            id.symbol.val = param.rval(buffer);
+        if (func.params.length != this.params.length) {
+            buffer.stderr(`Function call has ${this.params.length} parameters while definition has ${func.params.length}.`);
+            return new VoidObj();
         }
-        for (let stmt of func.stmts) {
-            if (stmt instanceof ReturnStatement)
-                return stmt.expr.rval(buffer);
-            else
-                stmt.execute(buffer);
-        }
-        if (!func.type.codomain.instanceOf(5 /* TypeEnum.VOID */))
-            buffer.stderr(`Function ${func} does not return!`);
-        return new VoidObj();
+        return func.onCall(buffer, this.params.map(param => param.rval(buffer)));
     }
     applyType(buffer, parentType = new TypeAST("Dummy")) {
         this.funcName.applyType(buffer, new TypeAST("Map"));
@@ -526,7 +569,6 @@ export class FuncCall extends Expr {
         let funcType = this.funcName.type;
         this.params[0].applyType(buffer, funcType.domain);
         this.type = funcType.codomain;
-        console.log("my type is " + this.type);
     }
 }
 export class Id extends Expr {
@@ -678,5 +720,12 @@ export class Scope {
         if (this.parent != null)
             return this.parent.lookup(name);
         return null;
+    }
+    toString() {
+        let str = parent == null ? "" : this.parent.toString();
+        for (let [k, v] of this.symtab) {
+            str += `${k} --- ${v}\n`;
+        }
+        return str;
     }
 }

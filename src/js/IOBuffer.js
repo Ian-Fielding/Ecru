@@ -1,7 +1,8 @@
 export class IOBuffer {
-    constructor(out, err) {
+    constructor(out, err, maxRecursionDepth = 10) {
         this.out = out;
         this.err = err;
+        this.maxRecursionDepth = maxRecursionDepth;
         this.outHistory = [];
         this.errHistory = [];
     }

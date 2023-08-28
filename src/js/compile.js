@@ -1,5 +1,5 @@
 import * as AST from "./ast/asts.js";
-import * as PARSE from "../js/parser/parser.js";
+import * as PARSE from "../js/parser.js";
 import { consoleBuffer } from "./IOBuffer.js";
 export function compile(input, buffer = consoleBuffer) {
     buffer.clear();
@@ -10,9 +10,13 @@ export function compile(input, buffer = consoleBuffer) {
     };
     let prog = new AST.Program();
     try {
-        prog = PARSE.parse(input, { tracer: { trace: function (evt) {
+        prog = PARSE.parse(input, {
+            tracer: {
+                trace: function (evt) {
                     console.log(evt);
-                } } });
+                }
+            }
+        });
     }
     catch (e) {
         buffer.stderr(`Parse error! ${e.message}`);

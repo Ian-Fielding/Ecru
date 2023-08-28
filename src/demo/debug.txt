@@ -1,9 +1,8 @@
-
- f ( x : Z) : Z {
- 	y: Z = 2;
- 	return x*y;
+f(x:Z):Z{
+	if(x==0){
+		return 1;
+	}
+	return 1+f(x-1);
 }
 
-g(x:Z):Z{ return x-1; }
-
-print f(g(2+2));
+print f(3);

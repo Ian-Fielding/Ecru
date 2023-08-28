@@ -137,8 +137,14 @@ export let parseTests = [
         expected: 'Program(CommentStmt("c1"),DeclStmt(x,IntType()),CommentStmt("c2"))',
     }, {
         name: 'parse_test35',
-        input: '',
-        expected: 'Program()',
+        input: `
+				if(x == 0){
+					return 1;
+				}
+				
+				return x;
+				`,
+        expected: 'Program(IfStmt(equals(x,0),ReturnStmt(1)),ReturnStmt(x))',
     }, {
         name: 'parse_test36',
         input: '',

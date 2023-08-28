@@ -1,5 +1,5 @@
 import * as AST from "./ast/asts.js";
-import * as PARSE from "../js/parser/parser.js";
+import * as PARSE from "../js/parser.js";
 import { IOBuffer, consoleBuffer } from "./IOBuffer.js";
 
 export interface CompileObj {
@@ -7,41 +7,45 @@ export interface CompileObj {
 	buffer: IOBuffer,
 }
 
-export function compile(input:string, buffer:IOBuffer = consoleBuffer):CompileObj{
+export function compile(input: string, buffer: IOBuffer = consoleBuffer): CompileObj {
 	buffer.clear();
 
 	input += "\n\n";
-	let retVal:CompileObj = {
+	let retVal: CompileObj = {
 		parseTree: "",
 		buffer: buffer
 	}
 
 
-	let prog:AST.Program = new AST.Program();
+	let prog: AST.Program = new AST.Program();
 
-	try{
-		prog=PARSE.parse(input,{ tracer: { trace: function(evt: any): void{
-			console.log(evt);
-		}}});
-	}catch(e:any){
+	try {
+		prog = PARSE.parse(input, {
+			tracer: {
+				trace: function (evt: any): void {
+					console.log(evt);
+				}
+			}
+		});
+	} catch (e: any) {
 		buffer.stderr(`Parse error! ${e.message}`);
-		retVal.parseTree="Error";
+		retVal.parseTree = "Error";
 		return retVal;
 	}
-	
+
 
 
 
 	retVal.parseTree = prog.toString();
-	let scope=new AST.Scope();
+	let scope = new AST.Scope();
 
-	prog.applyBind(scope,buffer);
+	prog.applyBind(scope, buffer);
 
-	if(buffer.hasSeenError())
+	if (buffer.hasSeenError())
 		return retVal;
 	prog.applyType(buffer);
 
-	if(buffer.hasSeenError())
+	if (buffer.hasSeenError())
 		return retVal;
 	prog.execute(buffer);
 
