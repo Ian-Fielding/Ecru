@@ -1,6 +1,6 @@
 import { Span, Token } from "./token.js";
 
-const punctuation: string[] = [
+const reserved: string[] = [
 	"(",
 	")",
 	".",
@@ -28,6 +28,11 @@ const punctuation: string[] = [
 	"&&",
 	"||",
 	"%",
+	"if",
+	"else",
+	"for",
+	"while",
+	"return",
 ];
 
 const enum TokenState {
@@ -48,7 +53,13 @@ function isNumeric(c: string): boolean {
 }
 
 function isIdable(c: string): boolean {
-	return ("a" <= c && c <= "z") || ("A" <= c && c <= "Z") || ("0" <= c && c <= "9") || c == "$" || c == "_";
+	return (
+		("a" <= c && c <= "z") ||
+		("A" <= c && c <= "Z") ||
+		("0" <= c && c <= "9") ||
+		c == "$" ||
+		c == "_"
+	);
 }
 
 export class Scanner {
@@ -56,20 +67,20 @@ export class Scanner {
 	input: string;
 
 	constructor(input: string) {
-		this.input = input + "\n";
+		this.input = `${input}\n`;
 		this.tokens = [];
 		this.generateTokens();
 	}
 
 	generateTokens() {
-		let start: number = 0, ind: number = 0;
+		let start: number = 0,
+			ind: number = 0;
 		let section: string;
 
 		let state: TokenState = TokenState.ANY;
 
 		let c: string;
 		let cc: string;
-		let span: Span;
 
 		while (ind < this.input.length) {
 			switch (+state) {
@@ -102,27 +113,27 @@ export class Scanner {
 						state = TokenState.ID;
 						break;
 					}
-					if (c == "\"") {
+					if (c == '"') {
 						start = ind;
 						ind++;
 						state = TokenState.STRING;
 						break;
 					}
 
-					if (punctuation.includes(cc) && cc.length == 2) {
-						this.addToken(cc, ind, ind + 2);
-						ind += 2;
-						break;
-					}
-
-					if (punctuation.includes(c)) {
-						this.addToken(c, ind, ind + 1);
-						ind++;
-						break;
-					}
-
 					if (isWhitespace(c)) {
 						ind++;
+						break;
+					}
+
+					let resLength: number = this.greedyGet(ind);
+
+					if (resLength != -1) {
+						this.addToken(
+							this.sub(ind, ind + resLength),
+							ind,
+							ind + resLength
+						);
+						ind += resLength;
 						break;
 					}
 
@@ -151,8 +162,8 @@ export class Scanner {
 					state = TokenState.ANY;
 					break;
 				case TokenState.STRING:
-					if (this.sub(ind, ind + 1) == "\"") {
-						this.addToken("STR", start, ind);
+					if (this.sub(ind, ind + 1) == '"') {
+						this.addToken("STR", start, ind + 1);
 						state = TokenState.ANY;
 						ind++;
 						break;
@@ -161,9 +172,9 @@ export class Scanner {
 					break;
 				case TokenState.BLOCK_COMMENT:
 					if (this.sub(ind, ind + 2) == "*/") {
-						this.addToken("COM", start, ind);
+						this.addToken("COM", start, ind + 2);
 						state = TokenState.ANY;
-						ind++;
+						ind += 2;
 						break;
 					}
 					ind++;
@@ -177,28 +188,75 @@ export class Scanner {
 					}
 					ind++;
 					break;
-
 			}
-
 		}
 
-		let EOF: Token = new Token("EOF", "EOF", new Span(this.input, this.input.length, this.input.length));
+		let EOF: Token = new Token(
+			"EOF",
+			"EOF",
+			this.createSpan(this.input.length - 1, this.input.length - 1)
+		);
 		this.tokens.push(EOF);
 	}
 
-
 	addToken(label: string, start: number, end: number): void {
-		let span: Span = new Span(this.input, start, end);
+		let span: Span = this.createSpan(start, end);
 		this.tokens.push(new Token(label, this.sub(start, end), span));
 	}
 
+	/**
+	 * Determines whether starting at ind, a substring of the input exists that is in reserved.
+	 * Returns the largest such length of string, -1 if no string can be found.
+	 * @param ind current index
+	 * @returns length of substring [ind,ind+length] if substring is in reserved, otherwise -1
+	 */
+	greedyGet(ind: number): number {
+		let maxLen: number = 0;
+		for (let res of reserved) {
+			if (maxLen < res.length) {
+				maxLen = res.length;
+			}
+		}
+
+		for (let count = maxLen; count >= 1; count--) {
+			let section: string = this.sub(ind, ind + count);
+
+			if (reserved.includes(section)) return count;
+		}
+		return -1;
+	}
 
 	sub(start: number, end: number): string {
-		if (end > this.input.length)
-			end = this.input.length;
-		if (start < 0)
-			start = 0;
+		if (end > this.input.length) end = this.input.length;
+		if (start < 0) start = 0;
 		return this.input.substring(start, end);
+	}
+
+	createSpan(start: number, end: number): Span {
+		let startLine = 1;
+		let startCol = 1;
+		for (let i = 0; i < start; i++) {
+			if (this.input.charAt(i) == "\n") {
+				startLine++;
+				startCol = 1;
+			} else {
+				startCol++;
+			}
+		}
+
+		let endLine = startLine;
+		let endCol = startCol;
+
+		for (let i = start; i < end; i++) {
+			if (this.input.charAt(i) == "\n") {
+				endLine++;
+				endCol = 1;
+			} else {
+				endCol++;
+			}
+		}
+
+		return new Span(startLine, startCol, endLine, endCol);
 	}
 
 	toString(): string {
@@ -208,6 +266,8 @@ export class Scanner {
 		}
 		return str;
 	}
-}
 
-console.log(new Scanner("x:3;\n 24y z32").toString());
+	peek() {}
+
+	lookahead(n: number) {}
+}
