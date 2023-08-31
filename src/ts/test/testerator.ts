@@ -3,7 +3,7 @@ import { ParseTest, parseTests } from "./parseTests.js";
 import { BasicTest, basicTests } from "./basicTests.js";
 import { tokenTests } from "./tokenTests.js";
 import { silentBuffer } from "../IOBuffer.js";
-import { Scanner } from "../parser/tokenizer.js";
+import { Tokenizer } from "../parser/tokenizer.js";
 
 function printGood(str: string): void {
 	console.log("\x1b[42m\x1b[30m%s\x1b[0m", str);
@@ -14,7 +14,7 @@ function printBad(str: string): void {
 
 let tokenCount: number = 0;
 for (let test of tokenTests) {
-	let scan: Scanner = new Scanner(test.input);
+	let scan: Tokenizer = new Tokenizer(test.input);
 
 	let tokenError: boolean = scan.tokens.length != test.tokens.length;
 	for (let i = 0; i < scan.tokens.length && !tokenError; i++) {
@@ -42,8 +42,10 @@ for (let test of parseTests) {
 	if (result.parseTree == test.expected) parseCount++;
 	else {
 		printBad(`Error on ${test.name}`);
+		console.log(`---Inp: ${test.input}`);
+		console.log(`---Tok: ${new Tokenizer(test.input)}`);
 		console.log(
-			`---Exp: "${test.expected}"\n---Saw: "${result.parseTree}"`
+			`---Exp: "${test.expected}"\n---Saw: "${result.parseTree} ${result.errorMsg}"`
 		);
 	}
 }

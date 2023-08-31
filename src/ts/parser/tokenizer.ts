@@ -19,20 +19,33 @@ const reserved: string[] = [
 	"==",
 	"~=",
 	"=",
+	"+=",
+	"-=",
+	"*=",
+	"/=",
+	"%=",
 	"~",
 	":",
+	"->",
 	";",
 	",",
 	"[",
 	"]",
 	"&&",
+	"and",
 	"||",
+	"or",
 	"%",
+	"mod",
 	"if",
 	"else",
 	"for",
 	"while",
 	"return",
+	"println",
+	"print",
+	"pprintln",
+	"pprint",
 ];
 
 const enum TokenState {
@@ -62,9 +75,10 @@ function isIdable(c: string): boolean {
 	);
 }
 
-export class Scanner {
+export class Tokenizer {
 	tokens: Token[];
 	input: string;
+	pointer: number = 0;
 
 	constructor(input: string) {
 		this.input = `${input}\n`;
@@ -107,12 +121,6 @@ export class Scanner {
 						state = TokenState.NUMBER;
 						break;
 					}
-					if (isIdable(c)) {
-						start = ind;
-						ind++;
-						state = TokenState.ID;
-						break;
-					}
 					if (c == '"') {
 						start = ind;
 						ind++;
@@ -134,6 +142,13 @@ export class Scanner {
 							ind + resLength
 						);
 						ind += resLength;
+						break;
+					}
+
+					if (isIdable(c)) {
+						start = ind;
+						ind++;
+						state = TokenState.ID;
 						break;
 					}
 
@@ -267,7 +282,18 @@ export class Scanner {
 		return str;
 	}
 
-	peek() {}
+	peek(n?: number): Token {
+		if (!n) n = 1;
 
-	lookahead(n: number) {}
+		if (this.pointer + n - 1 >= this.tokens.length)
+			return this.tokens[this.tokens.length - 1];
+
+		return this.tokens[this.pointer + n - 1];
+	}
+
+	pop(): Token {
+		let ret: Token = this.peek();
+		this.pointer++;
+		return ret;
+	}
 }

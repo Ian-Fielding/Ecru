@@ -54,23 +54,23 @@ semicolonStatement
 			return [new AST.ReturnStatement(expr)];
 		return [new AST.ReturnStatement(new AST.VoidObj())];
 	}
-	/ id:idExpr _ "=" _ expr:expr {
+	/ id:identifier _ "=" _ expr:expr {
 		
 		return [new AST.AssignmentStatement(id,expr)];
 	}
-	/ id:idExpr _ "+=" _ expr:expr {
+	/ id:identifier _ "+=" _ expr:expr {
 		
 		return [new AST.AssignmentStatement(id,new MATH.Add([id,expr]))];
 	}
-	/ id:idExpr _ "-=" _ expr:expr {
+	/ id:identifier _ "-=" _ expr:expr {
 		
 		return [new AST.AssignmentStatement(id,new MATH.Sub([id,expr]))];
 	}
-	/ id:idExpr _ "*=" _ expr:expr {
+	/ id:identifier _ "*=" _ expr:expr {
 		
 		return [new AST.AssignmentStatement(id,new MATH.Mul([id,expr]))];
 	}
-	/ id:idExpr _ "/=" _ expr:expr {
+	/ id:identifier _ "/=" _ expr:expr {
 		
 		return [new AST.AssignmentStatement(id,new MATH.Div([id,expr]))];
 	}
@@ -78,10 +78,10 @@ semicolonStatement
 
 
 declStatement "declaration statement"
-	= id:idExpr _ ":" _ type:type {return [new AST.DeclarationStatement(id,type)];}
+	= id:identifier _ ":" _ type:type {return [new AST.DeclarationStatement(id,type)];}
 
 funcDecl
-	= name:idExpr _ "(" _ id:idExpr _ ":" _ type:type _ ")" _ ":" _ retType:type _ "="|0..1| _ "{" _ stmts:statements _ "}" {
+	= name:identifier _ "(" _ id:identifier _ ":" _ type:type _ ")" _ ":" _ retType:type _ "="|0..1| _ "{" _ stmts:statements _ "}" {
 		let funcType = new AST.FunctionType(type,retType);
 
 		return [
@@ -314,7 +314,7 @@ func
 
 			// TODO Sucks!
 
-			if(p1=="(" && p2==")" && left instanceof AST.IdExpr)
+			if(p1=="(" && p2==")" && left instanceof AST.Id)
 				left = new AST.FuncCall(left,exprs);
 			else if(p1=="[" && p2=="]" && exprs.length==1)
 				left = new AST.ArrayAccess(left,exprs[0]);
@@ -335,12 +335,8 @@ funcName
 primary
 	= number
 	/ "(" _ expr:expr _ ")" { return expr; }
-	/ idExpr
+	/ identifier
 	/ string
-
-
-idExpr = id:identifier {return new AST.IdExpr(id);}
-
 
 
 

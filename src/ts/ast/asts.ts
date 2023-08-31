@@ -4,7 +4,6 @@ import { divides, gcd } from "../utils.js";
 // Should remove?
 // declare let MathJax: any;
 
-
 /**
  * Represents an abstract syntax tree (AST) node.
  */
@@ -20,7 +19,7 @@ class AST {
 	args: AST[];
 
 	/**
-	 * 
+	 *
 	 * @param name the simple name
 	 * @param args all child nodes
 	 */
@@ -31,13 +30,12 @@ class AST {
 
 	/**
 	 * Performs a deep copy
-	 * 
+	 *
 	 * @returns Deep copy of this node
 	 */
 	copy(): AST {
 		let newObj: AST = this.constructor(this.name);
-		for (const arg of this.args)
-			newObj.args.push(arg.copy());
+		for (const arg of this.args) newObj.args.push(arg.copy());
 		return newObj;
 	}
 
@@ -46,8 +44,7 @@ class AST {
 	 * @returns human readable string
 	 */
 	toString(): string {
-		if (this.args.length == 0)
-			return this.name + "()";
+		if (this.args.length == 0) return this.name + "()";
 		let str: string = `${this.name}(${this.args[0]}`;
 		for (let i: number = 1; i < this.args.length; i++)
 			str += "," + this.args[i];
@@ -56,8 +53,8 @@ class AST {
 
 	/**
 	 * Applies variable binding to all children
-	 * @param scope 
-	 * @param buffer 
+	 * @param scope
+	 * @param buffer
 	 */
 	applyBind(scope: Scope, buffer: IOBuffer): void {
 		for (let child of this.args) {
@@ -65,7 +62,10 @@ class AST {
 		}
 	}
 
-	applyType(buffer: IOBuffer, expectedType: TypeAST = new TypeAST("Dummy")): void {
+	applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
 		for (let child of this.args) {
 			child.applyType(buffer, expectedType);
 		}
@@ -77,29 +77,16 @@ class AST {
 		}
 	}
 
-
 	equals(other: AST): boolean {
-
 		if (this.name != other.name || this.args.length != other.args.length)
 			return false;
 
 		for (let i: number = 0; i < this.args.length; i++)
-			if (!this.args[i].equals(other.args[i]))
-				return false;
+			if (!this.args[i].equals(other.args[i])) return false;
 
 		return true;
 	}
 }
-
-
-
-
-
-
-
-
-
-
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -107,13 +94,10 @@ class AST {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-
 export class Program extends AST {
 	constructor(stmts: Statement[] = []) {
 		super("Program", stmts);
 	}
-
 
 	toLongString(): string {
 		let str: string = "";
@@ -123,10 +107,9 @@ export class Program extends AST {
 
 		return str;
 	}
-
 }
 
-class Statement extends AST {
+export class Statement extends AST {
 	constructor(name: string, args: AST[] = []) {
 		super(name, args);
 	}
@@ -142,15 +125,15 @@ export class CommentStatement extends Statement {
 }
 
 /**
- * A sample 
+ * A sample
  */
 export class DeclarationStatement extends Statement {
 	id: Id;
 	type: TypeAST;
 
-	constructor(id: Expr, type: TypeAST) {
+	constructor(id: Id, type: TypeAST) {
 		super("DeclStmt", [id, type]);
-		this.id = (id as IdExpr).id;
+		this.id = id;
 
 		this.type = type;
 	}
@@ -168,21 +151,22 @@ export class DeclarationStatement extends Statement {
 		this.id.symbol = sym;
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST = new TypeAST("Dummy")): void {
-
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
 		this.id.symbol!.type = this.type;
 		this.id.type = this.type;
 	}
-
 }
 
 export class AssignmentStatement extends Statement {
 	id: Id;
 	expr: Expr;
 
-	constructor(id: Expr, expr: Expr) {
+	constructor(id: Id, expr: Expr) {
 		super("AssignStmt", [id, expr]);
-		this.id = (id as IdExpr).id;
+		this.id = id;
 		this.expr = expr;
 	}
 
@@ -199,18 +183,60 @@ export class AssignmentStatement extends Statement {
 		this.id.symbol = sym;
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST = new TypeAST("Dummy")): void {
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
 		this.expr.applyType(buffer, this.id.symbol!.type);
-
 	}
-
 
 	override execute(buffer: IOBuffer): void {
 		// TODO replace id with Expr, support lval
 		let sym: IdSymbol = this.id.symbol!;
 		sym.val = this.expr.rval(buffer);
 	}
+}
 
+export class DeclarationAndAssignmentStatement extends Statement {
+	id: Id;
+	type: TypeAST;
+	expr: Expr;
+	dec: DeclarationStatement;
+	asg: AssignmentStatement;
+
+	constructor(id: Id, type: TypeAST, expr: Expr) {
+		let dec = new DeclarationStatement(id, type);
+		let asg = new AssignmentStatement(id, expr);
+		super("DAA", [dec, asg]);
+		this.id = id;
+		this.type = type;
+		this.expr = expr;
+		this.dec = dec;
+		this.asg = asg;
+		//TODO?
+	}
+
+	override toString(): string {
+		return this.dec.toString() + "," + this.asg.toString();
+	}
+}
+
+export class ExprAsStatement extends Statement {
+	expr: Expr;
+
+	constructor(expr: Expr) {
+		super("", [expr]);
+		this.expr = expr;
+		//TODO
+	}
+
+	override toString(): string {
+		return this.expr.toString();
+	}
+
+	override execute(buffer: IOBuffer): void {
+		this.expr.rval(buffer);
+	}
 }
 
 export class PrintStatement extends Statement {
@@ -233,10 +259,11 @@ export class PrintStatement extends Statement {
 			buffer.stdout(str.val + term);
 		} else {
 			// TODO better comparison to string.
-			buffer.stderr(`Error! Weird string comparison at ${str} whose type is ${str.type}`);
+			buffer.stderr(
+				`Error! Weird string comparison at ${str} whose type is ${str.type}`
+			);
 		}
 	}
-
 }
 
 export class PrettyPrintStatement extends Statement {
@@ -263,7 +290,6 @@ export class PrettyPrintStatement extends Statement {
 			buffer.stderr("Error");
 		}
 	}
-
 }
 
 export class WhileLoop extends Statement {
@@ -273,8 +299,7 @@ export class WhileLoop extends Statement {
 	constructor(test: Expr, stmts: Statement[]) {
 		let other: AST[] = [];
 		other.push(test);
-		for (let child of stmts)
-			other.push(child);
+		for (let child of stmts) other.push(child);
 
 		super("WhileLoop", other);
 		this.test = test;
@@ -293,21 +318,16 @@ export class WhileLoop extends Statement {
 
 	override execute(buffer: IOBuffer): void {
 		while (true) {
-			let compVal: NumberLiteral = this.test.rval(buffer) as NumberLiteral;
+			let compVal: NumberLiteral = this.test.rval(
+				buffer
+			) as NumberLiteral;
 
-			if (compVal.val == 0)
-				break;
+			if (compVal.val == 0) break;
 
-			for (let child of this.stmts)
-				child.execute(buffer);
+			for (let child of this.stmts) child.execute(buffer);
 		}
-
-
 	}
-
 }
-
-
 
 export class ForLoop extends Statement {
 	asg: Statement[];
@@ -315,15 +335,17 @@ export class ForLoop extends Statement {
 	it: Statement[];
 	stmts: Statement[];
 
-	constructor(asg: Statement[], test: Expr, it: Statement[], stmts: Statement[]) {
+	constructor(
+		asg: Statement[],
+		test: Expr,
+		it: Statement[],
+		stmts: Statement[]
+	) {
 		let other: AST[] = [];
-		for (let child of asg)
-			other.push(child);
+		for (let child of asg) other.push(child);
 		other.push(test);
-		for (let child of it)
-			other.push(child);
-		for (let child of stmts)
-			other.push(child);
+		for (let child of it) other.push(child);
+		for (let child of stmts) other.push(child);
 
 		super("ForLoop", other);
 		this.asg = asg;
@@ -333,52 +355,34 @@ export class ForLoop extends Statement {
 	}
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {
-
 		let mainScope: Scope = new Scope(scope);
 		let childScope: Scope = new Scope(mainScope);
 
-
-		for (let child of this.asg)
-			child.applyBind(mainScope, buffer);
+		for (let child of this.asg) child.applyBind(mainScope, buffer);
 
 		this.test.applyBind(mainScope, buffer);
 
-		for (let child of this.it)
-			child.applyBind(mainScope, buffer);
+		for (let child of this.it) child.applyBind(mainScope, buffer);
 
-
-		for (let child of this.stmts)
-			child.applyBind(childScope, buffer);
-
+		for (let child of this.stmts) child.applyBind(childScope, buffer);
 	}
-
-
 
 	override execute(buffer: IOBuffer): void {
-		for (let child of this.asg)
-			child.execute(buffer);
+		for (let child of this.asg) child.execute(buffer);
 
 		while (true) {
-			let compVal: NumberLiteral = this.test.rval(buffer) as NumberLiteral;
+			let compVal: NumberLiteral = this.test.rval(
+				buffer
+			) as NumberLiteral;
 
-			if (compVal.val == 0)
-				break;
+			if (compVal.val == 0) break;
 
-			for (let child of this.stmts)
-				child.execute(buffer);
+			for (let child of this.stmts) child.execute(buffer);
 
-			for (let child of this.it)
-				child.execute(buffer);
+			for (let child of this.it) child.execute(buffer);
 		}
-
-
 	}
-
 }
-
-
-
-
 
 export class IfStmt extends Statement {
 	test: Expr;
@@ -386,14 +390,10 @@ export class IfStmt extends Statement {
 	elseStmts: Statement[];
 
 	constructor(test: Expr, stmts: Statement[], elseStmts: Statement[]) {
-
 		let other: AST[] = [];
 		other.push(test);
-		for (let child of stmts)
-			other.push(child);
-		for (let child of elseStmts)
-			other.push(child);
-
+		for (let child of stmts) other.push(child);
+		for (let child of elseStmts) other.push(child);
 
 		super("IfStmt", other);
 		this.test = test;
@@ -407,27 +407,18 @@ export class IfStmt extends Statement {
 		let ifScope: Scope = new Scope(scope);
 		let elseScope: Scope = new Scope(scope);
 
-		for (let child of this.stmts)
-			child.applyBind(ifScope, buffer);
-		for (let child of this.elseStmts)
-			child.applyBind(elseScope, buffer);
-
+		for (let child of this.stmts) child.applyBind(ifScope, buffer);
+		for (let child of this.elseStmts) child.applyBind(elseScope, buffer);
 	}
 
 	override execute(buffer: IOBuffer): void {
 		let compVal: NumberLiteral = this.test.rval(buffer) as NumberLiteral;
 
 		if (compVal.val != 0)
-			for (let child of this.stmts)
-				child.execute(buffer);
-		else
-			for (let child of this.elseStmts)
-				child.execute(buffer);
-
+			for (let child of this.stmts) child.execute(buffer);
+		else for (let child of this.elseStmts) child.execute(buffer);
 	}
-
 }
-
 
 export class ReturnStatement extends Statement {
 	expr: Expr;
@@ -437,14 +428,17 @@ export class ReturnStatement extends Statement {
 		this.expr = expr;
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST = new TypeAST("Dummy")): void {
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
 		if (!(this.expr instanceof VoidObj)) {
-
 			this.expr.applyType(buffer, expectedType);
 
-
 			if (!this.expr.type.instanceOf(expectedType)) {
-				buffer.stderr(`return statement types don't match. Saw type ${this.expr.type} but expected ${expectedType}`);
+				buffer.stderr(
+					`return statement types don't match. Saw type ${this.expr.type} but expected ${expectedType}`
+				);
 				return;
 			}
 
@@ -454,23 +448,9 @@ export class ReturnStatement extends Statement {
 				buffer.stderr("return statement must return value");
 				return;
 			}
-
-
 		}
-
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
 
 export const enum TypeEnum {
 	OBJECT = 1,
@@ -485,7 +465,6 @@ export const enum TypeEnum {
 	MAP = 7,
 	DUMMY = 23456789,
 }
-
 
 export class TypeAST extends AST {
 	type: TypeEnum;
@@ -548,23 +527,27 @@ export class TypeAST extends AST {
 				this.type = TypeEnum.MAP;
 				this.name = "MapType";
 				break;
-			default:
+			case "dummy":
+			case "Dummy":
 				this.type = TypeEnum.DUMMY;
 				this.name = "DummyType";
 				break;
+			default:
+				this.type = TypeEnum.DUMMY;
+				this.name = "ErrorType";
+				throw new Error("Bestie idk what the type " + name + " is");
+			//break;
 		}
 	}
 
 	instanceOf(t: TypeAST | number): boolean {
-		if (t instanceof TypeAST)
-			return divides(t.type, this.type);
+		if (t instanceof TypeAST) return divides(t.type, this.type);
 
 		return divides(t, this.type);
 	}
 
 	closestParent(t: TypeAST | number): TypeAST {
-		if (t instanceof TypeAST)
-			return new TypeAST(gcd(this.type, t.type));
+		if (t instanceof TypeAST) return new TypeAST(gcd(this.type, t.type));
 		return new TypeAST(gcd(this.type, t));
 	}
 
@@ -577,8 +560,6 @@ export class TypeAST extends AST {
 	}
 }
 
-
-
 export class FunctionType extends TypeAST {
 	domain: TypeAST;
 	codomain: TypeAST;
@@ -590,27 +571,25 @@ export class FunctionType extends TypeAST {
 	}
 }
 
-
-
-
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // ~~~           EXPR ASTS           ~~~
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-export class Expr extends Statement {
+export class Expr extends AST {
 	type: TypeAST;
 
-	constructor(name: string, args: AST[] = [], type: TypeAST = new TypeAST("Dummy")) {
+	constructor(
+		name: string,
+		args: AST[] = [],
+		type: TypeAST = new TypeAST("Dummy")
+	) {
 		super(name, args);
 		this.type = type;
 	}
 
-
-
 	rval(buffer: IOBuffer): Expr {
 		return this;
-
 	}
 
 	getChildrenRVals(buffer: IOBuffer): Expr[] {
@@ -621,7 +600,10 @@ export class Expr extends Statement {
 		return childRVals;
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST = new TypeAST("Dummy")): void {
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
 		throw new Error("Must override this method!");
 	}
 
@@ -634,59 +616,55 @@ export class Expr extends Statement {
 	}
 }
 
-
 export class TypeCast extends Expr {
-	constructor(name: string, args: Expr[] = [], type: TypeAST = new TypeAST("Dummy")) {
+	constructor(
+		name: string,
+		args: Expr[] = [],
+		type: TypeAST = new TypeAST("Dummy")
+	) {
 		super(name, args);
 		// TODO
 	}
 }
 
-
-
 export class FuncDecl extends Expr {
 	params: DeclarationStatement[];
 	stmts: Statement[];
 
-	constructor(params: DeclarationStatement[], stmts: Statement[], type: TypeAST) {
-
+	constructor(
+		params: DeclarationStatement[],
+		stmts: Statement[],
+		type: TypeAST
+	) {
 		let other: AST[] = [];
-		for (let child of params)
-			other.push(child);
-		for (let child of stmts)
-			other.push(child);
-
+		for (let child of params) other.push(child);
+		for (let child of stmts) other.push(child);
 
 		super("FuncDecl", other, type);
 		this.params = params;
 		this.stmts = stmts;
-
 	}
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {
 		let aScope: Scope = new Scope(scope);
 		let bScope: Scope = new Scope(aScope);
 
+		for (let param of this.params) param.applyBind(aScope, buffer);
 
-		for (let param of this.params)
-			param.applyBind(aScope, buffer);
-
-		for (let child of this.stmts)
-			child.applyBind(bScope, buffer);
-
+		for (let child of this.stmts) child.applyBind(bScope, buffer);
 	}
 
-
-	override applyType(buffer: IOBuffer, expectedType: TypeAST = new TypeAST("Dummy")): void {
-		for (let child of this.params)
-			child.applyType(buffer, expectedType);
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
+		for (let child of this.params) child.applyType(buffer, expectedType);
 		for (let child of this.stmts)
 			child.applyType(buffer, (this.type as FunctionType).codomain);
 	}
 
 	override rval(buffer: IOBuffer): Expr {
-
-		return this;//TODO
+		return this; //TODO
 	}
 
 	onCall(buffer: IOBuffer, inputs: Expr[]): Expr {
@@ -702,7 +680,6 @@ export class FuncDecl extends Expr {
 			id.symbol!.val = param;
 		}
 
-
 		for (let stmt of this.stmts) {
 			buffer.stdout(`Executing ${stmt}`);
 			buffer.stdout(`backup is ${backup}`);
@@ -710,13 +687,13 @@ export class FuncDecl extends Expr {
 			if (stmt instanceof ReturnStatement) {
 				retVal = stmt.expr.rval(buffer);
 				break;
-			}
-
-			else
-				stmt.execute(buffer);
+			} else stmt.execute(buffer);
 		}
 
-		if (!(this.type as FunctionType).codomain.instanceOf(TypeEnum.VOID) && retVal instanceof VoidObj)
+		if (
+			!(this.type as FunctionType).codomain.instanceOf(TypeEnum.VOID) &&
+			retVal instanceof VoidObj
+		)
 			buffer.stderr(`Function ${this} does not return!`);
 
 		// restore params
@@ -728,23 +705,23 @@ export class FuncDecl extends Expr {
 
 		return retVal;
 	}
-
-
 }
-
-
 
 export class StringLiteral extends Expr {
 	constructor(name: string) {
 		super(name, [], new TypeAST("String"));
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST = new TypeAST("Dummy")): void {
-		if (expectedType.instanceOf(TypeEnum.DUMMY))
-			return;
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
+		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
 
 		if (!this.type.instanceOf(expectedType))
-			buffer.stderr(`Cannot treat string "${this.name}" as type ${expectedType.type}`);
+			buffer.stderr(
+				`Cannot treat string "${this.name}" as type ${expectedType.type}`
+			);
 	}
 
 	override builtinToString(): string {
@@ -754,39 +731,6 @@ export class StringLiteral extends Expr {
 	override toString(): string {
 		return `"${this.name}"`;
 	}
-
-}
-
-
-
-export class IdExpr extends Expr {
-	id: Id;
-
-	constructor(id: Id) {
-		super("IdExpr", [id]);
-		this.id = id;
-	}
-
-	override rval(buffer: IOBuffer): Expr {
-		return this.id.rval(buffer);
-	}
-
-	override applyType(buffer: IOBuffer, parentType: TypeAST = new TypeAST("Dummy")): void {
-		this.id.applyType(buffer, parentType);
-		this.type = this.id.type;
-	}
-
-	override toString(): string {
-		return this.id.toString();
-	}
-
-	override toLatex(): string {
-		return this.id.toLatex();
-	}
-
-	override builtinToString(): string {
-		return this.id.builtinToString();
-	}
 }
 
 export class VoidObj extends Expr {
@@ -794,22 +738,22 @@ export class VoidObj extends Expr {
 		super("Void", [], new TypeAST("void"));
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST = new TypeAST("Dummy")): void {
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
 		return;
 	}
 }
-
 
 export class FuncCall extends Expr {
 	funcName: Expr;
 	params: Expr[];
 
 	constructor(funcName: Expr, params: Expr[]) {
-
 		let other: AST[] = [];
 		other.push(funcName);
-		for (let child of params)
-			other.push(child);
+		for (let child of params) other.push(child);
 		super("FuncCall", other);
 
 		this.funcName = funcName;
@@ -825,17 +769,23 @@ export class FuncCall extends Expr {
 
 		let func: FuncDecl = this.funcName.rval(buffer) as FuncDecl;
 
-
 		if (func.params.length != this.params.length) {
-			buffer.stderr(`Function call has ${this.params.length} parameters while definition has ${func.params.length}.`);
+			buffer.stderr(
+				`Function call has ${this.params.length} parameters while definition has ${func.params.length}.`
+			);
 			return new VoidObj();
 		}
 
-
-		return func.onCall(buffer, this.params.map(param => param.rval(buffer)));
+		return func.onCall(
+			buffer,
+			this.params.map((param) => param.rval(buffer))
+		);
 	}
 
-	override applyType(buffer: IOBuffer, parentType: TypeAST = new TypeAST("Dummy")): void {
+	override applyType(
+		buffer: IOBuffer,
+		parentType: TypeAST = new TypeAST("Dummy")
+	): void {
 		this.funcName.applyType(buffer, new TypeAST("Map"));
 
 		if (!this.funcName.type.instanceOf(TypeEnum.MAP)) {
@@ -843,14 +793,12 @@ export class FuncCall extends Expr {
 			return;
 		}
 
-		let funcType: FunctionType = (this.funcName.type as FunctionType);
+		let funcType: FunctionType = this.funcName.type as FunctionType;
 
 		this.params[0].applyType(buffer, funcType.domain);
 		this.type = funcType.codomain;
 	}
-
 }
-
 
 export class Id extends Expr {
 	symbol: IdSymbol | null;
@@ -866,11 +814,13 @@ export class Id extends Expr {
 		return this.symbol!.rval(buffer);
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST = new TypeAST("Dummy")): void {
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
 		this.type = this.symbol!.type;
 
-		if (expectedType.instanceOf(TypeEnum.DUMMY))
-			return;
+		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
 
 		if (expectedType.instanceOf(TypeEnum.STRING)) {
 			this.type = expectedType;
@@ -878,7 +828,9 @@ export class Id extends Expr {
 		}
 
 		if (!this.type.instanceOf(expectedType))
-			buffer.stderr(`Cannot treat ${this.idName} as type ${expectedType}`);
+			buffer.stderr(
+				`Cannot treat ${this.idName} as type ${expectedType}`
+			);
 	}
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {
@@ -892,9 +844,8 @@ export class Id extends Expr {
 		this.symbol = sym;
 	}
 
-
-
-	override toLatex(): string {//TODO sucks
+	override toLatex(): string {
+		//TODO sucks
 
 		return this.symbol!.toLatex();
 	}
@@ -926,15 +877,13 @@ export class IdSymbol {
 	}
 
 	toLatex(): string {
-		if (this.val == null)
-			return "\\text{UNDEFINED}";
+		if (this.val == null) return "\\text{UNDEFINED}";
 
 		return this.val.toLatex();
 	}
 
 	toString(): string {
-		if (this.val == null)
-			return `IdSymbol(${this.name})`;
+		if (this.val == null) return `IdSymbol(${this.name})`;
 
 		return this.val.toString();
 	}
@@ -944,17 +893,16 @@ export class IdSymbol {
 	}
 }
 
-
 export class ArrayAccess extends Expr {
 	arr: Expr;
 	ind: Expr;
-	constructor(arr: Expr, ind: Expr) {// TODO
+	constructor(arr: Expr, ind: Expr) {
+		// TODO
 		super("arr", [arr, ind]);
 		this.arr = arr;
 		this.ind = ind;
 	}
 }
-
 
 export class NumberLiteral extends Expr {
 	val: number;
@@ -963,18 +911,21 @@ export class NumberLiteral extends Expr {
 		this.val = Number(name);
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST = new TypeAST("Dummy")): void {
-		if (expectedType.instanceOf(TypeEnum.DUMMY))
-			return;
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
+		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
 
 		if (expectedType.instanceOf(TypeEnum.STRING)) {
 			this.type = expectedType;
 			return;
 		}
 
-
 		if (!this.type.instanceOf(expectedType))
-			buffer.stderr(`Cannot treat number "${this.val}" as type ${expectedType.type}`);
+			buffer.stderr(
+				`Cannot treat number "${this.val}" as type ${expectedType.type}`
+			);
 	}
 
 	override rval(buffer: IOBuffer): Expr {
@@ -997,8 +948,6 @@ export class NumberLiteral extends Expr {
 	}
 }
 
-
-
 export class IntegerLiteral extends Expr {
 	val: number;
 	constructor(name: string) {
@@ -1006,18 +955,21 @@ export class IntegerLiteral extends Expr {
 		this.val = Number(name);
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST = new TypeAST("Dummy")): void {
-		if (expectedType.instanceOf(TypeEnum.DUMMY))
-			return;
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
+		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
 
 		if (expectedType.instanceOf(TypeEnum.STRING)) {
 			this.type = expectedType;
 			return;
 		}
 
-
 		if (!this.type.instanceOf(expectedType))
-			buffer.stderr(`Cannot treat number "${this.val}" as type ${expectedType.type}`);
+			buffer.stderr(
+				`Cannot treat number "${this.val}" as type ${expectedType.type}`
+			);
 	}
 
 	override rval(buffer: IOBuffer): Expr {
@@ -1044,19 +996,6 @@ export class IntegerLiteral extends Expr {
 	}
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 export class Scope {
 	parent: Scope | null;
 	symtab: Map<string, IdSymbol>;
@@ -1067,8 +1006,7 @@ export class Scope {
 	}
 
 	depth(): number {
-		if (this.parent == null)
-			return 0;
+		if (this.parent == null) return 0;
 
 		return 1 + this.parent.depth();
 	}
@@ -1076,10 +1014,8 @@ export class Scope {
 	lookup(name: string): IdSymbol | null {
 		let val: IdSymbol | undefined = this.symtab.get(name);
 
-		if (val)
-			return val;
-		if (this.parent != null)
-			return this.parent.lookup(name);
+		if (val) return val;
+		if (this.parent != null) return this.parent.lookup(name);
 		return null;
 	}
 

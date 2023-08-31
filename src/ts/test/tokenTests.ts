@@ -114,4 +114,15 @@ export let tokenTests: TokenTest[] = [
 			new Token("EOF", "EOF", new Span(1, 7, 1, 7)),
 		],
 	},
+
+	{
+		name: "token11",
+		input: "print \n x;",
+		tokens: [
+			new Token("print", "print", new Span(1, 1, 1, 6)),
+			new Token("ID", "x", new Span(2, 2, 2, 3)),
+			new Token(";", ";", new Span(2, 3, 2, 4)),
+			new Token("EOF", "EOF", new Span(2, 4, 2, 4)),
+		],
+	},
 ];
