@@ -16,4 +16,4 @@ Ecru is an open source Computer Algebra System (CAS), programming language, and 
 
 ## License
 
-Ecru is released under the [MIT License](LICENSE.md), which means you're free to use, modify, and distribute the code for both personal and commercial projects.
+Ecru is released under the [MIT License with the Commons Clause](LICENSE.md), which means you're free to use, modify, and distribute the code for both personal projects, excluding any commercial use.
