@@ -1,12 +1,37 @@
-import * as AST from "../ast/asts.js";
+import {
+	VoidObj,
+	Expr,
+	Id,
+	FuncDecl,
+	StringLiteral,
+	FuncCall,
+	ArrayAccess,
+	NumberLiteral,
+} from "../ast/exprs.js";
 import * as MATH from "../ast/math.js";
+import {
+	Program,
+	ReturnStatement,
+	ExprAsStatement,
+	AssignmentStatement,
+	DeclarationAndAssignmentStatement,
+	DeclarationStatement,
+	CommentStatement,
+	PrintStatement,
+	PrettyPrintStatement,
+	IfStmt,
+	WhileLoop,
+	ForLoop,
+	Statement,
+} from "../ast/stmts.js";
+import { FunctionType, TypeAST } from "../ast/type.js";
 import { Token } from "./token.js";
 import { Tokenizer } from "./tokenizer.js";
 
 export class Parser {
 	input: string;
 	scan: Tokenizer;
-	root: AST.Program;
+	root: Program;
 	error: boolean;
 
 	constructor(input: string) {
@@ -34,19 +59,19 @@ export class Parser {
 	}
 
 	// program -> stmt*
-	program(): AST.Program {
-		let stmts: AST.Statement[] = [];
+	program(): Program {
+		let stmts: Statement[] = [];
 
 		while (this.current() != "EOF") {
 			stmts.push(this.stmt());
 		}
 		this.match("EOF");
-		return new AST.Program(stmts);
+		return new Program(stmts);
 	}
 
 	// stmts -> { stmt* }
-	stmts(): AST.Statement[] {
-		let stmts: AST.Statement[] = [];
+	stmts(): Statement[] {
+		let stmts: Statement[] = [];
 
 		this.match("{");
 		while (this.current() != "}") {
@@ -56,7 +81,7 @@ export class Parser {
 		return stmts;
 	}
 
-	stmt(): AST.Statement {
+	stmt(): Statement {
 		// removes unnecessary semicolons
 		if (this.current() == ";") {
 			this.match(";");
@@ -79,7 +104,7 @@ export class Parser {
 		return ret;
 	}
 
-	semicolonStmt(): AST.Statement {
+	semicolonStmt(): Statement {
 		if (this.current(1) == "ID" && this.current(2) == ":")
 			return this.varDecl();
 
@@ -101,145 +126,126 @@ export class Parser {
 		if (this.current() == "return") {
 			this.match("return");
 			if (this.current() == ";")
-				return new AST.ReturnStatement(new AST.VoidObj());
+				return new ReturnStatement(new VoidObj());
 			let expr = this.expr();
-			return new AST.ReturnStatement(expr);
+			return new ReturnStatement(expr);
 		}
 
-		let lhs: AST.Expr = this.expr();
+		let lhs: Expr = this.expr();
 		if (this.current() == ";") {
-			return new AST.ExprAsStatement(lhs);
+			return new ExprAsStatement(lhs);
 		}
-		let id: AST.Id = lhs as AST.Id; //TODO sucks
-		let expr: AST.Expr;
+		let id: Id = lhs as Id; //TODO sucks
+		let expr: Expr;
 		switch (this.current()) {
 			case "=":
 				this.match("=");
 				expr = this.expr();
-				return new AST.AssignmentStatement(id, expr);
+				return new AssignmentStatement(id, expr);
 			case "+=":
 				this.match("+=");
 				expr = this.expr();
-				return new AST.AssignmentStatement(
-					id,
-					new MATH.Add([id, expr])
-				);
+				return new AssignmentStatement(id, new MATH.Add([id, expr]));
 
 			case "-=":
 				this.match("-=");
 				expr = this.expr();
-				return new AST.AssignmentStatement(
-					id,
-					new MATH.Sub([id, expr])
-				);
+				return new AssignmentStatement(id, new MATH.Sub([id, expr]));
 
 			case "*=":
 				this.match("*=");
 				expr = this.expr();
-				return new AST.AssignmentStatement(
-					id,
-					new MATH.Mul([id, expr])
-				);
+				return new AssignmentStatement(id, new MATH.Mul([id, expr]));
 
 			default:
 				this.match("/=");
 				expr = this.expr();
-				return new AST.AssignmentStatement(
-					id,
-					new MATH.Div([id, expr])
-				);
+				return new AssignmentStatement(id, new MATH.Div([id, expr]));
 		}
 
 		//expr = this.expr();
-		//return new AST.ExprAsStatement(expr);
+		//return new ExprAsStatement(expr);
 	}
 
-	varDecl(): AST.Statement {
-		let idName: AST.Id = this.id(); // TODO token replacement
+	varDecl(): Statement {
+		let idName: Id = this.id(); // TODO token replacement
 		this.match(":");
-		let type: AST.TypeAST = this.type();
+		let type: TypeAST = this.type();
 
 		if (this.current() == "=") {
 			this.match("=");
 			let expr = this.expr();
-			return new AST.DeclarationAndAssignmentStatement(
-				idName,
-				type,
-				expr
-			);
+			return new DeclarationAndAssignmentStatement(idName, type, expr);
 		}
 
-		return new AST.DeclarationStatement(idName, type);
+		return new DeclarationStatement(idName, type);
 	}
 
-	funcDecl(): AST.Statement {
-		let id: AST.Id = this.id();
+	funcDecl(): Statement {
+		let id: Id = this.id();
 		this.match("(");
 
 		//TODO add optional parameters
-		let params: AST.DeclarationStatement[] = [];
+		let params: DeclarationStatement[] = [];
 		while (this.current() != ")") {
-			params.push(this.varDecl() as AST.DeclarationStatement);
+			params.push(this.varDecl() as DeclarationStatement);
 		}
 
 		this.match(":");
-		let funcType: AST.TypeAST = this.type();
+		let funcType: TypeAST = this.type();
 
 		if (this.current() == "=") this.match("=");
 
-		let stmts: AST.Statement[] = this.stmts();
+		let stmts: Statement[] = this.stmts();
 
-		return new AST.DeclarationAndAssignmentStatement(
+		return new DeclarationAndAssignmentStatement(
 			id,
 			funcType,
-			new AST.FuncDecl(params, stmts, funcType)
+			new FuncDecl(params, stmts, funcType)
 		);
 	}
 
-	commentStmt(): AST.Statement {
+	commentStmt(): Statement {
 		let mat: Token = this.match("COM");
 		let str = mat.value;
 		if (str.substring(0, 2) == "//") str = str.substring(2);
 		else if (str.substring(0, 2) == "/*")
 			str = str.substring(2, str.length - 2);
 		str = str.trim();
-		return new AST.CommentStatement(str);
+		return new CommentStatement(str);
 	}
 
-	printStmt(): AST.Statement {
+	printStmt(): Statement {
 		if (this.current() == "print") {
 			this.match("print");
-			let ret: AST.Statement = new AST.PrintStatement(this.expr());
+			let ret: Statement = new PrintStatement(this.expr());
 			this.match(";");
 			return ret;
 		}
 		if (this.current() == "pprint") {
 			this.match("pprint");
-			let ret: AST.Statement = new AST.PrettyPrintStatement(this.expr());
+			let ret: Statement = new PrettyPrintStatement(this.expr());
 			this.match(";");
 			return ret;
 		}
 		if (this.current() == "println") {
 			this.match("println");
-			let ret: AST.Statement = new AST.PrintStatement(this.expr(), true);
+			let ret: Statement = new PrintStatement(this.expr(), true);
 			this.match(";");
 			return ret;
 		}
 
 		this.match("pprintln");
-		let ret: AST.Statement = new AST.PrettyPrintStatement(
-			this.expr(),
-			true
-		);
+		let ret: Statement = new PrettyPrintStatement(this.expr(), true);
 		this.match(";");
 		return ret;
 	}
 
-	ifStmt(): AST.IfStmt {
+	ifStmt(): IfStmt {
 		this.match("if");
-		let test: AST.Expr = this.expr();
-		let stmts: AST.Statement[] = [];
-		let elseStmts: AST.Statement[] = [];
+		let test: Expr = this.expr();
+		let stmts: Statement[] = [];
+		let elseStmts: Statement[] = [];
 
 		if (this.current() == "{") {
 			stmts = this.stmts();
@@ -256,51 +262,51 @@ export class Parser {
 			}
 		}
 
-		return new AST.IfStmt(test, stmts, elseStmts);
+		return new IfStmt(test, stmts, elseStmts);
 	}
 
-	whileLoop(): AST.WhileLoop {
+	whileLoop(): WhileLoop {
 		this.match("while");
-		let test: AST.Expr = this.expr();
-		let stmts: AST.Statement[] = [];
+		let test: Expr = this.expr();
+		let stmts: Statement[] = [];
 		if (this.current() == "{") {
 			stmts = this.stmts();
 		} else {
 			stmts = [this.stmt()];
 		}
-		return new AST.WhileLoop(test, stmts);
+		return new WhileLoop(test, stmts);
 	}
 
-	forLoop(): AST.ForLoop {
+	forLoop(): ForLoop {
 		this.match("for");
 		let hasParens: boolean = this.current() == "(";
 
 		if (hasParens) this.match("(");
 
-		let asg: AST.Statement = this.semicolonStmt();
+		let asg: Statement = this.semicolonStmt();
 		this.match(";");
-		let test: AST.Expr = this.expr();
+		let test: Expr = this.expr();
 		this.match(";");
-		let it: AST.Statement = this.semicolonStmt();
+		let it: Statement = this.semicolonStmt();
 
 		if (hasParens) this.match(")");
-		let stmts: AST.Statement[] = [];
+		let stmts: Statement[] = [];
 
 		if (this.current() == "{") {
 			stmts = this.stmts();
 		} else {
 			stmts = [this.stmt()];
 		}
-		return new AST.ForLoop([asg], test, [it], stmts);
+		return new ForLoop([asg], test, [it], stmts);
 	}
 
-	str(): AST.StringLiteral {
+	str(): StringLiteral {
 		let val: string = this.match("STR").value;
-		return new AST.StringLiteral(val.substring(1, val.length - 1));
+		return new StringLiteral(val.substring(1, val.length - 1));
 	}
 
-	exprs(): AST.Expr[] {
-		let exprs: AST.Expr[] = [this.expr()];
+	exprs(): Expr[] {
+		let exprs: Expr[] = [this.expr()];
 		while (this.current() == ",") {
 			this.match(",");
 			exprs.push(this.expr());
@@ -308,11 +314,11 @@ export class Parser {
 		return exprs;
 	}
 
-	expr(): AST.Expr {
+	expr(): Expr {
 		return this.boolOr();
 	}
 
-	boolOr(): AST.Expr {
+	boolOr(): Expr {
 		let left = this.boolAnd();
 		while (["||", "or"].includes(this.current())) {
 			this.match(this.current());
@@ -323,7 +329,7 @@ export class Parser {
 		return left;
 	}
 
-	boolAnd(): AST.Expr {
+	boolAnd(): Expr {
 		let left = this.boolEq();
 		while (["&&", "and"].includes(this.current())) {
 			this.match(this.current());
@@ -334,7 +340,7 @@ export class Parser {
 		return left;
 	}
 
-	boolEq(): AST.Expr {
+	boolEq(): Expr {
 		let left = this.boolNeq();
 		while (this.current() == "==") {
 			this.match("==");
@@ -345,7 +351,7 @@ export class Parser {
 		return left;
 	}
 
-	boolNeq(): AST.Expr {
+	boolNeq(): Expr {
 		let left = this.boolNeg();
 		while (this.current() == "~=") {
 			this.match("~=");
@@ -356,7 +362,7 @@ export class Parser {
 		return left;
 	}
 
-	boolNeg(): AST.Expr {
+	boolNeg(): Expr {
 		if (this.current() == "~") {
 			this.match("~");
 			return new MATH.LogicalNot([this.boolNeg()]);
@@ -364,7 +370,7 @@ export class Parser {
 		return this.additive();
 	}
 
-	additive(): AST.Expr {
+	additive(): Expr {
 		let left = this.multiplicative();
 		while (["+", "-"].includes(this.current())) {
 			if (this.current() == "+") {
@@ -380,7 +386,7 @@ export class Parser {
 		return left;
 	}
 
-	multiplicative(): AST.Expr {
+	multiplicative(): Expr {
 		let left = this.negation();
 		while (["*", "/"].includes(this.current())) {
 			if (this.current() == "*") {
@@ -396,7 +402,7 @@ export class Parser {
 		return left;
 	}
 
-	negation(): AST.Expr {
+	negation(): Expr {
 		if (this.current() == "-") {
 			this.match("-");
 			return new MATH.Negate(this.negation());
@@ -404,23 +410,23 @@ export class Parser {
 		return this.exponent();
 	}
 
-	exponent(): AST.Expr {
-		let childs: AST.Expr[] = [this.factorial()];
+	exponent(): Expr {
+		let childs: Expr[] = [this.factorial()];
 		while (this.current() == "^") {
 			this.match("^");
 			childs.push(this.factorial());
 		}
 
-		let right: AST.Expr = childs[childs.length - 1];
+		let right: Expr = childs[childs.length - 1];
 		for (let i = childs.length - 2; i >= 0; i--) {
-			let left: AST.Expr = childs[i];
+			let left: Expr = childs[i];
 			right = new MATH.Exponent(left, right);
 		}
 		return right;
 	}
 
-	factorial(): AST.Expr {
-		let child: AST.Expr = this.funcCall();
+	factorial(): Expr {
+		let child: Expr = this.funcCall();
 		while (this.current() == "!") {
 			this.match("!");
 			child = new MATH.Factorial(child);
@@ -428,55 +434,54 @@ export class Parser {
 		return child;
 	}
 
-	funcCall(): AST.Expr {
-		let left: AST.Expr = this.primary();
+	funcCall(): Expr {
+		let left: Expr = this.primary();
 		while (["(", "["].includes(this.current())) {
 			if (this.current() == "(") {
 				this.match("(");
-				let exprs: AST.Expr[] =
-					this.current() == ")" ? [] : this.exprs();
+				let exprs: Expr[] = this.current() == ")" ? [] : this.exprs();
 				this.match(")");
-				left = new AST.FuncCall(left, exprs);
+				left = new FuncCall(left, exprs);
 			} else {
 				this.match("[");
-				let expr: AST.Expr = this.expr();
+				let expr: Expr = this.expr();
 				this.match("]");
-				left = new AST.ArrayAccess(left, expr);
+				left = new ArrayAccess(left, expr);
 			}
 		}
 		return left;
 	}
 
-	primary(): AST.Expr {
+	primary(): Expr {
 		if (this.current() == "NUM") return this.num();
 		if (this.current() == "ID") return this.id();
 		if (this.current() == "STR") return this.str();
 		this.match("(");
-		let ret: AST.Expr = this.expr();
+		let ret: Expr = this.expr();
 		this.match(")");
 		return ret;
 	}
 
-	type(): AST.TypeAST {
+	type(): TypeAST {
 		return this.typeFunctional();
 	}
 
-	typeFunctional(): AST.TypeAST {
-		let childs: AST.TypeAST[] = [this.typeMultiplicative()];
+	typeFunctional(): TypeAST {
+		let childs: TypeAST[] = [this.typeMultiplicative()];
 		while (this.current() == "->") {
 			this.match("->");
 			childs.push(this.typeMultiplicative());
 		}
 
-		let right: AST.TypeAST = childs[childs.length - 1];
+		let right: TypeAST = childs[childs.length - 1];
 		for (let i = childs.length - 2; i >= 0; i--) {
-			let left: AST.TypeAST = childs[i];
-			right = new AST.FunctionType(left, right);
+			let left: TypeAST = childs[i];
+			right = new FunctionType(left, right);
 		}
 		return right;
 	}
 
-	typeMultiplicative(): AST.TypeAST {
+	typeMultiplicative(): TypeAST {
 		//TODO
 		if (this.current() == "(") {
 			this.match("(");
@@ -487,18 +492,18 @@ export class Parser {
 		return this.typePrimary();
 	}
 
-	typePrimary(): AST.TypeAST {
+	typePrimary(): TypeAST {
 		let tok: Token = this.match(this.current());
-		return new AST.TypeAST(tok.value);
+		return new TypeAST(tok.value);
 	}
 
-	id(): AST.Id {
+	id(): Id {
 		let token: Token = this.match("ID");
-		return new AST.Id(token.value);
+		return new Id(token.value);
 	}
 
-	num(): AST.NumberLiteral {
+	num(): NumberLiteral {
 		let token: Token = this.match("NUM");
-		return new AST.NumberLiteral(token.value);
+		return new NumberLiteral(token.value);
 	}
 }

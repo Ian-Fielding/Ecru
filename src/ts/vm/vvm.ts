@@ -1,4 +1,4 @@
-import { IOBuffer } from "./IOBuffer";
+import { IOBuffer } from "../IOBuffer";
 import { Halt, Insn, PushImmediate, PushLabel } from "./insns";
 
 export abstract class VVM {

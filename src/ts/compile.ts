@@ -1,8 +1,7 @@
 import * as AST from "./ast/asts.js";
-// @ts-ignore
-import * as PARSE from "../js/parser.js";
 import { Parser } from "./parser/betterParser.js";
 import { IOBuffer, consoleBuffer } from "./IOBuffer.js";
+import { Program } from "./ast/stmts.js";
 
 export interface CompileObj {
 	parseTree: string;
@@ -16,14 +15,15 @@ export function compile(
 ): CompileObj {
 	buffer.clear();
 
-	input += "\n\n";
+	input;
 	let retVal: CompileObj = {
 		parseTree: "",
 		buffer: buffer,
 		errorMsg: "",
 	};
 
-	let prog: AST.Program = new AST.Program();
+	let parser: Parser;
+	let prog: Program;
 
 	try {
 		/*prog = PARSE.parse(input, {
@@ -33,7 +33,8 @@ export function compile(
 				}
 			}
 		});*/
-		prog = new Parser(input).root;
+		parser = new Parser(input);
+		prog = parser.root;
 	} catch (e: any) {
 		buffer.stderr(`Parse error! ${e.message}`);
 		retVal.parseTree = "Error";

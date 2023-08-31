@@ -1,11 +1,7 @@
-import {
-	Expr,
-	TypeAST,
-	TypeEnum,
-	NumberLiteral,
-	StringLiteral,
-} from "./asts.js";
+
 import { IOBuffer } from "../IOBuffer.js";
+import { Expr, NumberLiteral, StringLiteral } from "./exprs.js";
+import { TypeAST, TypeEnum } from "./type.js";
 
 class BuiltinFunc extends Expr {
 	constructor(
