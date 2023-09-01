@@ -4,7 +4,7 @@ Ecru is an open source Computer Algebra System (CAS), programming language, and 
 
 ## Features
 
-- **Computer Algebra System (CAS)**: Ecru aims to provide a rich set of mathematical tools for algebraic operations, calculus, equation solving, and more.
+- **Computer Algebra System**: Ecru aims to provide a rich set of mathematical tools for algebraic operations, calculus, equation solving, and more.
 
 - **Expressive Programming Language**: With a clean and intuitive syntax, Ecru makes it easy to write concise and readable code for various computational tasks.
 
@@ -12,8 +12,8 @@ Ecru is an open source Computer Algebra System (CAS), programming language, and 
 
 - **Numeric Computations**: Utilize numeric capabilities for efficient calculations, scientific simulations, and data analysis.
 
-- **Integrated Development Environment (IDE)**: Our IDE will offer a seamless development experience with features like code editing, debugging, and visualization tools.
+- **Integrated Development Environment**: Our IDE will offer a seamless development experience with features like code editing, debugging, and visualization tools.
 
 ## License
 
-Ecru is released under the [MIT License with the Commons Clause](LICENSE.md), which means you're free to use, modify, and distribute the code for both personal projects, excluding any commercial use.
+Ecru is released under the [MIT License with the Commons Clause](LICENSE.md), which means you're free to use, modify, and distribute the code for personal projects, excluding any commercial use.
