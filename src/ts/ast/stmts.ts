@@ -1,5 +1,5 @@
 import { IOBuffer } from "../IOBuffer.js";
-import { AST, IdSymbol, Scope } from "./asts.js";
+import { AST, IdSymbol, ReturnObject, Scope } from "./asts.js";
 import { StringLiteral, Id, Expr, NumberLiteral, VoidObj } from "./exprs.js";
 import { TypeAST, TypeEnum } from "./type.js";
 
@@ -59,7 +59,7 @@ export class DeclarationStatement extends Statement {
 			return;
 		}
 
-		let sym: IdSymbol = new IdSymbol(name);
+		let sym: IdSymbol = new IdSymbol(name, scope);
 		scope.symtab.set(name, sym);
 		this.id.symbol = sym;
 	}
@@ -103,10 +103,11 @@ export class AssignmentStatement extends Statement {
 		this.expr.applyType(buffer, this.id.symbol!.type);
 	}
 
-	override execute(buffer: IOBuffer): void {
+	override execute(buffer: IOBuffer): ReturnObject {
 		// TODO replace id with Expr, support lval
 		let sym: IdSymbol = this.id.symbol!;
 		sym.val = this.expr.rval(buffer);
+		return { break: false };
 	}
 }
 
@@ -147,8 +148,9 @@ export class ExprAsStatement extends Statement {
 		return this.expr.toString();
 	}
 
-	override execute(buffer: IOBuffer): void {
+	override execute(buffer: IOBuffer): ReturnObject {
 		this.expr.rval(buffer);
+		return { break: false };
 	}
 }
 
@@ -162,7 +164,7 @@ export class PrintStatement extends Statement {
 		this.isNewLine = isNewLine;
 	}
 
-	override execute(buffer: IOBuffer): void {
+	override execute(buffer: IOBuffer): ReturnObject {
 		let term: string = this.isNewLine ? "\n" : "";
 
 		let str: Expr = this.expr.rval(buffer);
@@ -176,6 +178,7 @@ export class PrintStatement extends Statement {
 				`Error! Weird string comparison at ${str} whose type is ${str.type}`
 			);
 		}
+		return { break: false };
 	}
 }
 
@@ -189,7 +192,7 @@ export class PrettyPrintStatement extends Statement {
 		this.isNewLine = isNewLine;
 	}
 
-	override execute(buffer: IOBuffer): void {
+	override execute(buffer: IOBuffer): ReturnObject {
 		// TODO handle latex
 		let term: string = this.isNewLine ? "\n" : "";
 
@@ -202,6 +205,7 @@ export class PrettyPrintStatement extends Statement {
 			// TODO better conversion to string.
 			buffer.stderr("Error");
 		}
+		return { break: false };
 	}
 }
 
@@ -229,7 +233,7 @@ export class WhileLoop extends Statement {
 		}
 	}
 
-	override execute(buffer: IOBuffer): void {
+	override execute(buffer: IOBuffer): ReturnObject {
 		while (true) {
 			let compVal: NumberLiteral = this.test.rval(
 				buffer
@@ -237,8 +241,12 @@ export class WhileLoop extends Statement {
 
 			if (compVal.val == 0) break;
 
-			for (let child of this.stmts) child.execute(buffer);
+			for (let child of this.stmts) {
+				let result: ReturnObject = child.execute(buffer);
+				if (result.break) return result;
+			}
 		}
+		return { break: false };
 	}
 }
 
@@ -280,8 +288,11 @@ export class ForLoop extends Statement {
 		for (let child of this.stmts) child.applyBind(childScope, buffer);
 	}
 
-	override execute(buffer: IOBuffer): void {
-		for (let child of this.asg) child.execute(buffer);
+	override execute(buffer: IOBuffer): ReturnObject {
+		for (let child of this.asg) {
+			let result: ReturnObject = child.execute(buffer);
+			if (result.break) return result;
+		}
 
 		while (true) {
 			let compVal: NumberLiteral = this.test.rval(
@@ -290,10 +301,17 @@ export class ForLoop extends Statement {
 
 			if (compVal.val == 0) break;
 
-			for (let child of this.stmts) child.execute(buffer);
+			for (let child of this.stmts) {
+				let result: ReturnObject = child.execute(buffer);
+				if (result.break) return result;
+			}
 
-			for (let child of this.it) child.execute(buffer);
+			for (let child of this.it) {
+				let result: ReturnObject = child.execute(buffer);
+				if (result.break) return result;
+			}
 		}
+		return { break: false };
 	}
 }
 
@@ -324,12 +342,20 @@ export class IfStmt extends Statement {
 		for (let child of this.elseStmts) child.applyBind(elseScope, buffer);
 	}
 
-	override execute(buffer: IOBuffer): void {
+	override execute(buffer: IOBuffer): ReturnObject {
 		let compVal: NumberLiteral = this.test.rval(buffer) as NumberLiteral;
 
 		if (compVal.val != 0)
-			for (let child of this.stmts) child.execute(buffer);
-		else for (let child of this.elseStmts) child.execute(buffer);
+			for (let child of this.stmts) {
+				let result: ReturnObject = child.execute(buffer);
+				if (result.break) return result;
+			}
+		else
+			for (let child of this.elseStmts) {
+				let result: ReturnObject = child.execute(buffer);
+				if (result.break) return result;
+			}
+		return { break: false };
 	}
 }
 
@@ -362,5 +388,12 @@ export class ReturnStatement extends Statement {
 				return;
 			}
 		}
+	}
+
+	override execute(buffer: IOBuffer): ReturnObject {
+		return {
+			retVal: this.expr.rval(buffer),
+			break: true,
+		};
 	}
 }

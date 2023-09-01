@@ -1,15 +1,12 @@
-
 export class IOBuffer {
 	out: (input: string) => void;
 	err: (input: string) => void;
-	maxRecursionDepth: number;
 	outHistory: string[];
 	errHistory: string[];
 
 	constructor(out, err, maxRecursionDepth = 10) {
 		this.out = out;
 		this.err = err;
-		this.maxRecursionDepth = maxRecursionDepth;
 		this.outHistory = [];
 		this.errHistory = [];
 	}
@@ -42,7 +39,7 @@ export class IOBuffer {
 	}
 }
 
-function empty(input: string): void { }
+function empty(input: string): void {}
 
 export let silentBuffer: IOBuffer = new IOBuffer(empty, empty);
 

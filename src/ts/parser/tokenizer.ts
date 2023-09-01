@@ -41,6 +41,7 @@ const reserved: string[] = [
 	"else",
 	"for",
 	"while",
+	"break",
 	"return",
 	"println",
 	"print",

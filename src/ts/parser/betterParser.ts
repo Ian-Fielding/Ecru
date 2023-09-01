@@ -24,7 +24,7 @@ import {
 	ForLoop,
 	Statement,
 } from "../ast/stmts.js";
-import { FunctionType, TypeAST } from "../ast/type.js";
+import { FunctionType, ProductType, TypeAST } from "../ast/type.js";
 import { Token } from "./token.js";
 import { Tokenizer } from "./tokenizer.js";
 
@@ -98,16 +98,6 @@ export class Parser {
 		if (this.current() == "if") return this.ifStmt();
 		if (this.current() == "for") return this.forLoop();
 		if (this.current() == "while") return this.whileLoop();
-
-		let ret = this.semicolonStmt();
-		this.match(";");
-		return ret;
-	}
-
-	semicolonStmt(): Statement {
-		if (this.current(1) == "ID" && this.current(2) == ":")
-			return this.varDecl();
-
 		if (
 			this.current(1) == "ID" &&
 			this.current(2) == "(" &&
@@ -122,6 +112,15 @@ export class Parser {
 			this.current(4) == ":"
 		)
 			return this.funcDecl();
+
+		let ret = this.semicolonStmt();
+		this.match(";");
+		return ret;
+	}
+
+	semicolonStmt(): Statement {
+		if (this.current(1) == "ID" && this.current(2) == ":")
+			return this.varDecl();
 
 		if (this.current() == "return") {
 			this.match("return");
@@ -191,8 +190,17 @@ export class Parser {
 			params.push(this.varDecl() as DeclarationStatement);
 		}
 
+		let domainTypes: TypeAST[] = params.map((x) => x.type);
+		let domain: TypeAST;
+		if (domainTypes.length == 0) domain = new TypeAST("void");
+		else if (domainTypes.length == 1) domain = domainTypes[0];
+		else domain = new ProductType(domainTypes);
+
+		this.match(")");
 		this.match(":");
-		let funcType: TypeAST = this.type();
+		let codomain: TypeAST = this.type();
+
+		let funcType: FunctionType = new FunctionType(domain, codomain);
 
 		if (this.current() == "=") this.match("=");
 

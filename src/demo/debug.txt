@@ -2,7 +2,8 @@ f(x:Z):Z{
 	if(x==0){
 		return 1;
 	}
-	return 1+f(x-1);
+	return x*f(x-1);
 }
 
-print f(3);
+for(i:Z = 0; i~=8; i+=1)
+	print i+"! is "+f(i);

@@ -2,8 +2,16 @@ import { IOBuffer } from "../IOBuffer.js";
 import { Expr } from "./exprs.js";
 import * as TYPE from "./type.js";
 
-// Should remove?
-// declare let MathJax: any;
+/**
+ * Representation of the "return status" of a return or break after execution
+ * @param retVal optional parameter representing return value (if returning void, should set to VoidObj)
+ * @param break boolean representing whether to continue execution or to break
+ */
+export interface ReturnObject {
+	retVal?: Expr;
+	// error?: EcruError;
+	break: boolean;
+}
 
 /**
  * Represents an abstract syntax tree (AST) node.
@@ -54,8 +62,8 @@ export class AST {
 
 	/**
 	 * Applies variable binding to all children
-	 * @param scope
-	 * @param buffer
+	 * @param scope The current scope
+	 * @param buffer for handling error messaging
 	 */
 	applyBind(scope: Scope, buffer: IOBuffer): void {
 		for (let child of this.args) {
@@ -63,6 +71,11 @@ export class AST {
 		}
 	}
 
+	/**
+	 * Applies type assignment and consistency checking to all children
+	 * @param buffer for handling error messaging
+	 * @param expectedType optional parameter for specifying the type that the parent node is expecting this node to be
+	 */
 	applyType(
 		buffer: IOBuffer,
 		expectedType: TYPE.TypeAST = new TYPE.TypeAST("Dummy")
@@ -72,12 +85,24 @@ export class AST {
 		}
 	}
 
-	execute(buffer: IOBuffer): void {
+	/**
+	 * Executes code at this node and its children
+	 * @param buffer for handling error messaging
+	 */
+	execute(buffer: IOBuffer): ReturnObject {
 		for (let child of this.args) {
-			child.execute(buffer);
+			let result: ReturnObject = child.execute(buffer);
+			if (result.break) return result;
 		}
+
+		return { break: false };
 	}
 
+	/**
+	 * Determines if another node equals this one
+	 * @param other node for checking
+	 * @returns equality
+	 */
 	equals(other: AST): boolean {
 		if (this.name != other.name || this.args.length != other.args.length)
 			return false;
@@ -89,35 +114,74 @@ export class AST {
 	}
 }
 
+/**
+ * Represents symbol from symbol table
+ */
 export class IdSymbol {
+	/**
+	 * Represents symbol's value. Default value is null and stays null until execution. Will become obsolete once VM is functional
+	 */
 	val: Expr | null;
-	scope: Scope | null;
+
+	/**
+	 * The scope of this symbol
+	 */
+	scope: Scope;
+
+	/**
+	 * The type of this symbol. Default value is DummyType()
+	 */
 	type: TYPE.TypeAST;
+
+	/**
+	 * Name of this symbol (not necessarily unique)
+	 */
 	name: string;
 
-	constructor(name: string) {
+	/**
+	 *
+	 * @param name name of this symbol (not necessarily unique)
+	 * @param scope scope the symbol exists in
+	 */
+	constructor(name: string, scope: Scope) {
 		this.name = name;
 		this.type = new TYPE.TypeAST("Dummy");
 		this.val = null;
-		this.scope = null;
+		this.scope = scope;
 	}
 
+	/**
+	 * Getter for this symbol's value
+	 * @param buffer for handling error messaging
+	 * @returns val
+	 */
 	rval(buffer: IOBuffer): Expr {
 		return this.val!;
 	}
 
+	/**
+	 * Converts symbol to LaTeX. TODO
+	 */
 	toLatex(): string {
 		if (this.val == null) return "\\text{UNDEFINED}";
 
 		return this.val.toLatex();
 	}
 
+	/**
+	 *
+	 * @returns Internal representation in string form
+	 */
 	toString(): string {
 		if (this.val == null) return `IdSymbol(${this.name})`;
 
 		return this.val.toString();
 	}
 
+	/**
+	 *
+	 * @returns Representation in Ecru after type conversion to string
+	 */
 	builtinToString(): string {
 		return this.val!.builtinToString();
 	}

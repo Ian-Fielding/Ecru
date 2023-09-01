@@ -11,6 +11,7 @@ export const enum TypeEnum {
 	STRING = 2 * 3,
 	VOID = 5,
 	MAP = 7,
+	PROD = 11,
 	DUMMY = 23456789,
 }
 
@@ -76,6 +77,10 @@ export class TypeAST {
 				this.type = TypeEnum.MAP;
 				this.name = "MapType";
 				break;
+			case "CartProd":
+				this.type = TypeEnum.PROD;
+				this.name = "ProdType";
+				break;
 			case "dummy":
 			case "Dummy":
 				this.type = TypeEnum.DUMMY;
@@ -110,6 +115,14 @@ export class TypeAST {
 
 	toString(): string {
 		return `${this.name}()`;
+	}
+}
+
+export class ProductType extends TypeAST {
+	types: TypeAST[];
+	constructor(types: TypeAST[]) {
+		super("CartProd");
+		this.types = types;
 	}
 }
 

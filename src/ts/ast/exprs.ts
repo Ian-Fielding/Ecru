@@ -1,5 +1,5 @@
 import { IOBuffer } from "../IOBuffer.js";
-import { AST, IdSymbol, Scope } from "./asts.js";
+import { AST, IdSymbol, ReturnObject, Scope } from "./asts.js";
 import { DeclarationStatement, ReturnStatement, Statement } from "./stmts.js";
 import { TypeAST, FunctionType, TypeEnum } from "./type.js";
 
@@ -61,7 +61,7 @@ export class FuncDecl extends Expr {
 	constructor(
 		params: DeclarationStatement[],
 		stmts: Statement[],
-		type: TypeAST
+		type: FunctionType
 	) {
 		let other: AST[] = [];
 		for (let child of params) other.push(child);
@@ -91,7 +91,11 @@ export class FuncDecl extends Expr {
 	}
 
 	override rval(buffer: IOBuffer): Expr {
-		return this; //TODO
+		return this;
+	}
+
+	override execute(buffer: IOBuffer): ReturnObject {
+		return { break: false };
 	}
 
 	onCall(buffer: IOBuffer, inputs: Expr[]): Expr {
@@ -108,20 +112,16 @@ export class FuncDecl extends Expr {
 		}
 
 		for (let stmt of this.stmts) {
-			buffer.stdout(`Executing ${stmt}`);
-			buffer.stdout(`backup is ${backup}`);
-
-			if (stmt instanceof ReturnStatement) {
-				retVal = stmt.expr.rval(buffer);
-				break;
-			} else stmt.execute(buffer);
+			let result: ReturnObject = stmt.execute(buffer);
+			if (result.break && result.retVal) return result.retVal;
 		}
 
-		if (
+		/*if (
 			!(this.type as FunctionType).codomain.instanceOf(TypeEnum.VOID) &&
 			retVal instanceof VoidObj
 		)
 			buffer.stderr(`Function ${this} does not return!`);
+            */
 
 		// restore params
 		for (let i = 0; i < this.params.length; i++) {
@@ -147,7 +147,7 @@ export class StringLiteral extends Expr {
 
 		if (!this.type.instanceOf(expectedType))
 			buffer.stderr(
-				`Cannot treat string "${this.name}" as type ${expectedType.type}`
+				`Cannot treat string "${this.name}" as type ${expectedType}`
 			);
 	}
 
@@ -188,20 +188,23 @@ export class FuncCall extends Expr {
 	}
 
 	override rval(buffer: IOBuffer): Expr {
-		if (buffer.maxRecursionDepth <= 0) {
+		/*if (buffer.maxRecursionDepth <= 0) {
 			buffer.stderr(`Max recursion depth reached!`);
 			return new VoidObj();
 		}
 		buffer.maxRecursionDepth--;
+        */
 
 		let func: FuncDecl = this.funcName.rval(buffer) as FuncDecl;
 
+		/*
 		if (func.params.length != this.params.length) {
 			buffer.stderr(
 				`Function call has ${this.params.length} parameters while definition has ${func.params.length}.`
 			);
 			return new VoidObj();
 		}
+        */
 
 		return func.onCall(
 			buffer,
@@ -286,8 +289,6 @@ export class Id extends Expr {
 	}
 }
 
-
-
 export class ArrayAccess extends Expr {
 	arr: Expr;
 	ind: Expr;
@@ -319,7 +320,7 @@ export class NumberLiteral extends Expr {
 
 		if (!this.type.instanceOf(expectedType))
 			buffer.stderr(
-				`Cannot treat number "${this.val}" as type ${expectedType.type}`
+				`Cannot treat number "${this.val}" as type ${expectedType}`
 			);
 	}
 
@@ -363,7 +364,7 @@ export class IntegerLiteral extends Expr {
 
 		if (!this.type.instanceOf(expectedType))
 			buffer.stderr(
-				`Cannot treat number "${this.val}" as type ${expectedType.type}`
+				`Cannot treat number "${this.val}" as type ${expectedType}`
 			);
 	}
 
