@@ -1,11 +1,12 @@
 import { IOBuffer } from "../IOBuffer.js";
+import { Span } from "../parser/token.js";
 import { AST, IdSymbol, ReturnObject, Scope } from "./asts.js";
 import { StringLiteral, Id, Expr, NumberLiteral, VoidObj } from "./exprs.js";
 import { TypeAST, TypeEnum } from "./type.js";
 
 export class Program extends AST {
-	constructor(stmts: Statement[] = []) {
-		super("Program", stmts);
+	constructor(stmts: Statement[] = [], span: Span) {
+		super("Program", span, stmts);
 	}
 
 	toLongString(): string {
@@ -19,16 +20,16 @@ export class Program extends AST {
 }
 
 export class Statement extends AST {
-	constructor(name: string, args: AST[] = []) {
-		super(name, args);
+	constructor(name: string, span: Span, args: AST[] = []) {
+		super(name, span, args);
 	}
 }
 
 export class CommentStatement extends Statement {
 	str: StringLiteral;
-	constructor(str: string) {
-		let strlit: StringLiteral = new StringLiteral(str.trim());
-		super("CommentStmt", [strlit]);
+	constructor(str: string, span: Span) {
+		let strlit: StringLiteral = new StringLiteral(str.trim(), span);
+		super("CommentStmt", span, [strlit]);
 		this.str = strlit;
 	}
 }
@@ -40,8 +41,8 @@ export class DeclarationStatement extends Statement {
 	id: Id;
 	type: TypeAST;
 
-	constructor(id: Id, type: TypeAST) {
-		super("DeclStmt", [id]);
+	constructor(id: Id, type: TypeAST, span: Span) {
+		super("DeclStmt", span, [id]);
 		this.id = id;
 
 		this.type = type;
@@ -77,8 +78,8 @@ export class AssignmentStatement extends Statement {
 	id: Id;
 	expr: Expr;
 
-	constructor(id: Id, expr: Expr) {
-		super("AssignStmt", [id, expr]);
+	constructor(id: Id, expr: Expr, span: Span) {
+		super("AssignStmt", span, [id, expr]);
 		this.id = id;
 		this.expr = expr;
 	}
@@ -121,10 +122,10 @@ export class DeclarationAndAssignmentStatement extends Statement {
 	dec: DeclarationStatement;
 	asg: AssignmentStatement;
 
-	constructor(id: Id, type: TypeAST, expr: Expr) {
-		let dec = new DeclarationStatement(id, type);
-		let asg = new AssignmentStatement(id, expr);
-		super("DAA", [dec, asg]);
+	constructor(id: Id, type: TypeAST, expr: Expr, span: Span) {
+		let dec = new DeclarationStatement(id, type, span);
+		let asg = new AssignmentStatement(id, expr, span);
+		super("DAA", span, [dec, asg]);
 		this.id = id;
 		this.type = type;
 		this.expr = expr;
@@ -141,8 +142,8 @@ export class DeclarationAndAssignmentStatement extends Statement {
 export class ExprAsStatement extends Statement {
 	expr: Expr;
 
-	constructor(expr: Expr) {
-		super("", [expr]);
+	constructor(expr: Expr, span: Span) {
+		super("", span, [expr]);
 		this.expr = expr;
 		//TODO
 	}
@@ -161,8 +162,8 @@ export class PrintStatement extends Statement {
 	expr: Expr;
 	isNewLine: boolean;
 
-	constructor(expr: Expr, isNewLine: boolean = false) {
-		super("PrintStmt", [expr]);
+	constructor(expr: Expr, span: Span, isNewLine: boolean = false) {
+		super("PrintStmt", span, [expr]);
 		this.expr = expr;
 		this.isNewLine = isNewLine;
 	}
@@ -195,8 +196,8 @@ export class PrettyPrintStatement extends Statement {
 	expr: Expr;
 	isNewLine: boolean;
 
-	constructor(expr: Expr, isNewLine: boolean = false) {
-		super("PrettyPrintStmt", [expr]);
+	constructor(expr: Expr, span: Span, isNewLine: boolean = false) {
+		super("PrettyPrintStmt", span, [expr]);
 		this.expr = expr;
 		this.isNewLine = isNewLine;
 	}
@@ -222,12 +223,12 @@ export class WhileLoop extends Statement {
 	test: Expr;
 	stmts: Statement[];
 
-	constructor(test: Expr, stmts: Statement[]) {
+	constructor(test: Expr, stmts: Statement[], span: Span) {
 		let other: AST[] = [];
 		other.push(test);
 		for (let child of stmts) other.push(child);
 
-		super("WhileLoop", other);
+		super("WhileLoop", span, other);
 		this.test = test;
 		this.stmts = stmts;
 	}
@@ -269,7 +270,8 @@ export class ForLoop extends Statement {
 		asg: Statement[],
 		test: Expr,
 		it: Statement[],
-		stmts: Statement[]
+		stmts: Statement[],
+		span: Span
 	) {
 		let other: AST[] = [];
 		for (let child of asg) other.push(child);
@@ -277,7 +279,7 @@ export class ForLoop extends Statement {
 		for (let child of it) other.push(child);
 		for (let child of stmts) other.push(child);
 
-		super("ForLoop", other);
+		super("ForLoop", span, other);
 		this.asg = asg;
 		this.test = test;
 		this.it = it;
@@ -329,13 +331,18 @@ export class IfStmt extends Statement {
 	stmts: Statement[];
 	elseStmts: Statement[];
 
-	constructor(test: Expr, stmts: Statement[], elseStmts: Statement[]) {
+	constructor(
+		test: Expr,
+		stmts: Statement[],
+		elseStmts: Statement[],
+		span: Span
+	) {
 		let other: AST[] = [];
 		other.push(test);
 		for (let child of stmts) other.push(child);
 		for (let child of elseStmts) other.push(child);
 
-		super("IfStmt", other);
+		super("IfStmt", span, other);
 		this.test = test;
 		this.stmts = stmts;
 		this.elseStmts = elseStmts;
@@ -371,8 +378,8 @@ export class IfStmt extends Statement {
 export class ReturnStatement extends Statement {
 	expr: Expr;
 
-	constructor(expr: Expr) {
-		super("ReturnStmt", [expr]);
+	constructor(expr: Expr, span: Span) {
+		super("ReturnStmt", span, [expr]);
 		this.expr = expr;
 	}
 

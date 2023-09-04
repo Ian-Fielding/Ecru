@@ -1,4 +1,5 @@
 import { IOBuffer } from "../IOBuffer.js";
+import { Span } from "../parser/token.js";
 import { Expr } from "./exprs.js";
 import * as TYPE from "./type.js";
 
@@ -28,13 +29,19 @@ export class AST {
 	args: AST[];
 
 	/**
+	 * Represents the span of this node
+	 */
+	span: Span;
+
+	/**
 	 *
 	 * @param name the simple name
 	 * @param args all child nodes
 	 */
-	constructor(name: string, args: AST[] = []) {
+	constructor(name: string, span: Span, args: AST[] = []) {
 		this.name = name;
 		this.args = args;
+		this.span = span;
 	}
 
 	/**

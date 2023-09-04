@@ -1,3 +1,4 @@
+import { Span } from "../parser/token.js";
 import { divides, gcd } from "../utils.js";
 
 export const enum TypeEnum {
@@ -18,9 +19,11 @@ export const enum TypeEnum {
 export class TypeAST {
 	name: string;
 	type: TypeEnum;
+	span: Span;
 
-	constructor(name: string | number) {
+	constructor(name: string | number, span: Span = new Span(0, 0, 0, 0)) {
 		this.name = "uncertain";
+		this.span = span;
 
 		if (typeof name == "number") {
 			this.type = <TypeEnum>name;
@@ -101,8 +104,9 @@ export class TypeAST {
 	}
 
 	closestParent(t: TypeAST | number): TypeAST {
-		if (t instanceof TypeAST) return new TypeAST(gcd(this.type, t.type));
-		return new TypeAST(gcd(this.type, t));
+		if (t instanceof TypeAST)
+			return new TypeAST(gcd(this.type, t.type), this.span);
+		return new TypeAST(gcd(this.type, t), this.span);
 	}
 
 	isMathType(): boolean {
@@ -120,8 +124,8 @@ export class TypeAST {
 
 export class ProductType extends TypeAST {
 	types: TypeAST[];
-	constructor(types: TypeAST[]) {
-		super("CartProd");
+	constructor(types: TypeAST[], span: Span = new Span(0, 0, 0, 0)) {
+		super("CartProd", span);
 		this.types = types;
 	}
 }
@@ -130,8 +134,12 @@ export class FunctionType extends TypeAST {
 	domain: TypeAST;
 	codomain: TypeAST;
 
-	constructor(domain: TypeAST, codomain: TypeAST) {
-		super("Map");
+	constructor(
+		domain: TypeAST,
+		codomain: TypeAST,
+		span: Span = new Span(0, 0, 0, 0)
+	) {
+		super("Map", span);
 		this.domain = domain;
 		this.codomain = codomain;
 	}

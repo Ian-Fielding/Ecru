@@ -1,3 +1,4 @@
+import { IOBuffer } from "../IOBuffer.js";
 import {
 	VoidObj,
 	Expr,
@@ -25,7 +26,9 @@ import {
 	Statement,
 } from "../ast/stmts.js";
 import { FunctionType, ProductType, TypeAST } from "../ast/type.js";
-import { Token } from "./token.js";
+import { ParserError } from "../error.js";
+import { unionSpan } from "../utils.js";
+import { Span, Token } from "./token.js";
 import { Tokenizer } from "./tokenizer.js";
 
 export class Parser {
@@ -33,10 +36,12 @@ export class Parser {
 	scan: Tokenizer;
 	root: Program;
 	error: boolean;
+	buffer: IOBuffer;
 
-	constructor(input: string) {
+	constructor(input: string, buffer: IOBuffer) {
 		this.input = input;
-		this.scan = new Tokenizer(input);
+		this.scan = new Tokenizer(input, buffer);
+		this.buffer = buffer;
 		this.root = this.program();
 		this.error = false;
 	}
@@ -49,13 +54,10 @@ export class Parser {
 		if (kind == this.current()) return this.scan.pop();
 
 		this.error = true;
-		throw new Error(
-			`Expected ${kind} but saw ${this.current()} at ${
-				this.scan.peek().span
-			}`
+		this.buffer.throwError(
+			new ParserError(kind, this.current(), this.scan.peek().span)
 		);
-
-		//return this.scan.peek();
+		return this.scan.peek();
 	}
 
 	// program -> stmt*
@@ -66,7 +68,7 @@ export class Parser {
 			stmts.push(this.stmt());
 		}
 		this.match("EOF");
-		return new Program(stmts);
+		return new Program(stmts, unionSpan(stmts.map((s) => s.span)));
 	}
 
 	// stmts -> { stmt* }
@@ -123,16 +125,16 @@ export class Parser {
 			return this.varDecl();
 
 		if (this.current() == "return") {
-			this.match("return");
+			let tok: Token = this.match("return");
 			if (this.current() == ";")
-				return new ReturnStatement(new VoidObj());
+				return new ReturnStatement(new VoidObj(), tok.span);
 			let expr = this.expr();
-			return new ReturnStatement(expr);
+			return new ReturnStatement(expr, unionSpan([tok.span, expr.span]));
 		}
 
 		let lhs: Expr = this.expr();
 		if (this.current() == ";") {
-			return new ExprAsStatement(lhs);
+			return new ExprAsStatement(lhs, lhs.span);
 		}
 		let id: Id = lhs as Id; //TODO sucks
 		let expr: Expr;
@@ -140,26 +142,46 @@ export class Parser {
 			case "=":
 				this.match("=");
 				expr = this.expr();
-				return new AssignmentStatement(id, expr);
+				return new AssignmentStatement(
+					id,
+					expr,
+					unionSpan([id.span, expr.span])
+				);
 			case "+=":
 				this.match("+=");
 				expr = this.expr();
-				return new AssignmentStatement(id, new MATH.Add([id, expr]));
+				return new AssignmentStatement(
+					id,
+					new MATH.Add([id, expr], unionSpan([id.span, expr.span])),
+					unionSpan([id.span, expr.span])
+				);
 
 			case "-=":
 				this.match("-=");
 				expr = this.expr();
-				return new AssignmentStatement(id, new MATH.Sub([id, expr]));
+				return new AssignmentStatement(
+					id,
+					new MATH.Sub([id, expr], unionSpan([id.span, expr.span])),
+					unionSpan([id.span, expr.span])
+				);
 
 			case "*=":
 				this.match("*=");
 				expr = this.expr();
-				return new AssignmentStatement(id, new MATH.Mul([id, expr]));
+				return new AssignmentStatement(
+					id,
+					new MATH.Mul([id, expr], unionSpan([id.span, expr.span])),
+					unionSpan([id.span, expr.span])
+				);
 
 			default:
 				this.match("/=");
 				expr = this.expr();
-				return new AssignmentStatement(id, new MATH.Div([id, expr]));
+				return new AssignmentStatement(
+					id,
+					new MATH.Div([id, expr], unionSpan([id.span, expr.span])),
+					unionSpan([id.span, expr.span])
+				);
 		}
 
 		//expr = this.expr();
@@ -174,10 +196,19 @@ export class Parser {
 		if (this.current() == "=") {
 			this.match("=");
 			let expr = this.expr();
-			return new DeclarationAndAssignmentStatement(idName, type, expr);
+			return new DeclarationAndAssignmentStatement(
+				idName,
+				type,
+				expr,
+				unionSpan([idName.span, type.span, expr.span])
+			);
 		}
 
-		return new DeclarationStatement(idName, type);
+		return new DeclarationStatement(
+			idName,
+			type,
+			unionSpan([idName.span, type.span])
+		);
 	}
 
 	funcDecl(): Statement {
@@ -191,26 +222,44 @@ export class Parser {
 			if (this.current() == ",") this.match(",");
 		}
 
+		let endPar: Token = this.match(")");
+		this.match(":");
+
 		let domainTypes: TypeAST[] = params.map((x) => x.type);
 		let domain: TypeAST;
-		if (domainTypes.length == 0) domain = new TypeAST("void");
+		if (domainTypes.length == 0) domain = new TypeAST("void", endPar.span);
 		else if (domainTypes.length == 1) domain = domainTypes[0];
-		else domain = new ProductType(domainTypes);
+		else
+			domain = new ProductType(
+				domainTypes,
+				unionSpan(domainTypes.map((t) => t.span))
+			);
 
-		this.match(")");
-		this.match(":");
 		let codomain: TypeAST = this.type();
 
-		let funcType: FunctionType = new FunctionType(domain, codomain);
+		let funcType: FunctionType = new FunctionType(
+			domain,
+			codomain,
+			unionSpan([domain.span, codomain.span])
+		);
 
 		if (this.current() == "=") this.match("=");
 
 		let stmts: Statement[] = this.stmts();
 
+		let span1: Span[] = params.map((p) => p.span);
+		let span2: Span[] = stmts.map((p) => p.span);
+
 		return new DeclarationAndAssignmentStatement(
 			id,
 			funcType,
-			new FuncDecl(params, stmts, funcType)
+			new FuncDecl(
+				params,
+				stmts,
+				funcType,
+				unionSpan(span1.concat(span2))
+			),
+			unionSpan([id.span].concat(span2))
 		);
 	}
 
@@ -221,31 +270,49 @@ export class Parser {
 		else if (str.substring(0, 2) == "/*")
 			str = str.substring(2, str.length - 2);
 		str = str.trim();
-		return new CommentStatement(str);
+		return new CommentStatement(str, mat.span);
 	}
 
 	printStmt(): Statement {
 		if (this.current() == "print") {
-			this.match("print");
-			let ret: Statement = new PrintStatement(this.expr());
+			let start: Token = this.match("print");
+			let expr: Expr = this.expr();
+			let ret: Statement = new PrintStatement(
+				expr,
+				unionSpan([start.span, expr.span])
+			);
 			this.match(";");
 			return ret;
 		}
 		if (this.current() == "pprint") {
-			this.match("pprint");
-			let ret: Statement = new PrettyPrintStatement(this.expr());
+			let start: Token = this.match("pprint");
+			let expr: Expr = this.expr();
+			let ret: Statement = new PrettyPrintStatement(
+				expr,
+				unionSpan([start.span, expr.span])
+			);
 			this.match(";");
 			return ret;
 		}
 		if (this.current() == "println") {
-			this.match("println");
-			let ret: Statement = new PrintStatement(this.expr(), true);
+			let start: Token = this.match("println");
+			let expr: Expr = this.expr();
+			let ret: Statement = new PrintStatement(
+				expr,
+				unionSpan([start.span, expr.span]),
+				true
+			);
 			this.match(";");
 			return ret;
 		}
 
-		this.match("pprintln");
-		let ret: Statement = new PrettyPrintStatement(this.expr(), true);
+		let start: Token = this.match("pprintln");
+		let expr: Expr = this.expr();
+		let ret: Statement = new PrettyPrintStatement(
+			expr,
+			unionSpan([start.span, expr.span]),
+			true
+		);
 		this.match(";");
 		return ret;
 	}
@@ -271,7 +338,16 @@ export class Parser {
 			}
 		}
 
-		return new IfStmt(test, stmts, elseStmts);
+		let span1: Span[] = [test.span];
+		let span2: Span[] = stmts.map((s) => s.span);
+		let span3: Span[] = elseStmts.map((s) => s.span);
+
+		return new IfStmt(
+			test,
+			stmts,
+			elseStmts,
+			unionSpan(span1.concat(span2).concat(span3))
+		);
 	}
 
 	whileLoop(): WhileLoop {
@@ -283,11 +359,13 @@ export class Parser {
 		} else {
 			stmts = [this.stmt()];
 		}
-		return new WhileLoop(test, stmts);
+		let span1: Span[] = [test.span];
+		let span2: Span[] = stmts.map((s) => s.span);
+		return new WhileLoop(test, stmts, unionSpan(span1.concat(span2)));
 	}
 
 	forLoop(): ForLoop {
-		this.match("for");
+		let start: Token = this.match("for");
 		let hasParens: boolean = this.current() == "(";
 
 		if (hasParens) this.match("(");
@@ -306,12 +384,19 @@ export class Parser {
 		} else {
 			stmts = [this.stmt()];
 		}
-		return new ForLoop([asg], test, [it], stmts);
+		return new ForLoop(
+			[asg],
+			test,
+			[it],
+			stmts,
+			unionSpan([start.span].concat(stmts.map((s) => s.span)))
+		);
 	}
 
 	str(): StringLiteral {
-		let val: string = this.match("STR").value;
-		return new StringLiteral(val.substring(1, val.length - 1));
+		let tok: Token = this.match("STR");
+		let val: string = tok.value;
+		return new StringLiteral(val.substring(1, val.length - 1), tok.span);
 	}
 
 	exprs(): Expr[] {
@@ -333,7 +418,10 @@ export class Parser {
 			this.match(this.current());
 
 			let right = this.boolAnd();
-			left = new MATH.LogicalOr([left, right]);
+			left = new MATH.LogicalOr(
+				[left, right],
+				unionSpan([left.span, right.span])
+			);
 		}
 		return left;
 	}
@@ -344,7 +432,10 @@ export class Parser {
 			this.match(this.current());
 
 			let right = this.boolEq();
-			left = new MATH.LogicalAnd([left, right]);
+			left = new MATH.LogicalAnd(
+				[left, right],
+				unionSpan([left.span, right.span])
+			);
 		}
 		return left;
 	}
@@ -355,7 +446,10 @@ export class Parser {
 			this.match("==");
 
 			let right = this.boolNeq();
-			left = new MATH.LogicalEq([left, right]);
+			left = new MATH.LogicalEq(
+				[left, right],
+				unionSpan([left.span, right.span])
+			);
 		}
 		return left;
 	}
@@ -366,15 +460,26 @@ export class Parser {
 			this.match("~=");
 
 			let right = this.boolNeg();
-			left = new MATH.LogicalNot([new MATH.LogicalEq([left, right])]);
+			left = new MATH.LogicalNot(
+				[
+					new MATH.LogicalEq(
+						[left, right],
+						unionSpan([left.span, right.span])
+					),
+				],
+				unionSpan([left.span, right.span])
+			);
 		}
 		return left;
 	}
 
 	boolNeg(): Expr {
 		if (this.current() == "~") {
-			this.match("~");
-			return new MATH.LogicalNot([this.boolNeg()]);
+			let tok: Token = this.match("~");
+
+			let ins: Expr = this.boolNeg();
+
+			return new MATH.LogicalNot([ins], unionSpan([tok.span, ins.span]));
 		}
 		return this.additive();
 	}
@@ -385,11 +490,17 @@ export class Parser {
 			if (this.current() == "+") {
 				this.match("+");
 				let right = this.multiplicative();
-				left = new MATH.Add([left, right]);
+				left = new MATH.Add(
+					[left, right],
+					unionSpan([left.span, right.span])
+				);
 			} else if (this.current() == "-") {
 				this.match("-");
 				let right = this.multiplicative();
-				left = new MATH.Sub([left, right]);
+				left = new MATH.Sub(
+					[left, right],
+					unionSpan([left.span, right.span])
+				);
 			}
 		}
 		return left;
@@ -401,11 +512,17 @@ export class Parser {
 			if (this.current() == "*") {
 				this.match("*");
 				let right = this.negation();
-				left = new MATH.Mul([left, right]);
+				left = new MATH.Mul(
+					[left, right],
+					unionSpan([left.span, right.span])
+				);
 			} else if (this.current() == "/") {
 				this.match("/");
 				let right = this.negation();
-				left = new MATH.Div([left, right]);
+				left = new MATH.Div(
+					[left, right],
+					unionSpan([left.span, right.span])
+				);
 			}
 		}
 		return left;
@@ -413,8 +530,9 @@ export class Parser {
 
 	negation(): Expr {
 		if (this.current() == "-") {
-			this.match("-");
-			return new MATH.Negate(this.negation());
+			let tok: Token = this.match("-");
+			let ins: Expr = this.negation();
+			return new MATH.Negate(ins, unionSpan([tok.span, ins.span]));
 		}
 		return this.exponent();
 	}
@@ -429,7 +547,11 @@ export class Parser {
 		let right: Expr = childs[childs.length - 1];
 		for (let i = childs.length - 2; i >= 0; i--) {
 			let left: Expr = childs[i];
-			right = new MATH.Exponent(left, right);
+			right = new MATH.Exponent(
+				left,
+				right,
+				unionSpan([left.span, right.span])
+			);
 		}
 		return right;
 	}
@@ -437,8 +559,11 @@ export class Parser {
 	factorial(): Expr {
 		let child: Expr = this.funcCall();
 		while (this.current() == "!") {
-			this.match("!");
-			child = new MATH.Factorial(child);
+			let tok: Token = this.match("!");
+			child = new MATH.Factorial(
+				child,
+				unionSpan([tok.span, child.span])
+			);
 		}
 		return child;
 	}
@@ -451,12 +576,20 @@ export class Parser {
 				let exprs: Expr[] = this.current() == ")" ? [] : this.exprs();
 				this.match(")");
 
-				left = new FuncCall(left, exprs);
+				left = new FuncCall(
+					left,
+					exprs,
+					unionSpan([left.span].concat(exprs.map((e) => e.span)))
+				);
 			} else {
 				this.match("[");
 				let expr: Expr = this.expr();
-				this.match("]");
-				left = new ArrayAccess(left, expr);
+				let endTok: Token = this.match("]");
+				left = new ArrayAccess(
+					left,
+					expr,
+					unionSpan([left.span, endTok.span])
+				);
 			}
 		}
 		return left;
@@ -486,7 +619,11 @@ export class Parser {
 		let right: TypeAST = childs[childs.length - 1];
 		for (let i = childs.length - 2; i >= 0; i--) {
 			let left: TypeAST = childs[i];
-			right = new FunctionType(left, right);
+			right = new FunctionType(
+				left,
+				right,
+				unionSpan([left.span, right.span])
+			);
 		}
 		return right;
 	}
@@ -504,16 +641,16 @@ export class Parser {
 
 	typePrimary(): TypeAST {
 		let tok: Token = this.match(this.current());
-		return new TypeAST(tok.value);
+		return new TypeAST(tok.value, tok.span);
 	}
 
 	id(): Id {
 		let token: Token = this.match("ID");
-		return new Id(token.value);
+		return new Id(token.value, token.span);
 	}
 
 	num(): NumberLiteral {
 		let token: Token = this.match("NUM");
-		return new NumberLiteral(token.value);
+		return new NumberLiteral(token.value, token.span);
 	}
 }

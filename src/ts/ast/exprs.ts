@@ -1,4 +1,5 @@
 import { IOBuffer } from "../IOBuffer.js";
+import { Span } from "../parser/token.js";
 import { AST, IdSymbol, ReturnObject, Scope } from "./asts.js";
 import { DeclarationStatement, ReturnStatement, Statement } from "./stmts.js";
 import { TypeAST, FunctionType, TypeEnum } from "./type.js";
@@ -8,10 +9,11 @@ export class Expr extends AST {
 
 	constructor(
 		name: string,
+		span: Span,
 		args: AST[] = [],
 		type: TypeAST = new TypeAST("Dummy")
 	) {
-		super(name, args);
+		super(name, span, args);
 		this.type = type;
 	}
 
@@ -46,10 +48,11 @@ export class Expr extends AST {
 export class TypeCast extends Expr {
 	constructor(
 		name: string,
+		span: Span,
 		args: Expr[] = [],
 		type: TypeAST = new TypeAST("Dummy")
 	) {
-		super(name, args);
+		super(name, span, args);
 		// TODO
 	}
 }
@@ -61,13 +64,14 @@ export class FuncDecl extends Expr {
 	constructor(
 		params: DeclarationStatement[],
 		stmts: Statement[],
-		type: FunctionType
+		type: FunctionType,
+		span: Span
 	) {
 		let other: AST[] = [];
 		for (let child of params) other.push(child);
 		for (let child of stmts) other.push(child);
 
-		super("FuncDecl", other, type);
+		super("FuncDecl", span, other, type);
 		this.params = params;
 		this.stmts = stmts;
 	}
@@ -175,8 +179,8 @@ export class FuncDecl extends Expr {
 }
 
 export class StringLiteral extends Expr {
-	constructor(name: string) {
-		super(name, [], new TypeAST("String"));
+	constructor(name: string, span: Span) {
+		super(name, span, [], new TypeAST("String"));
 	}
 
 	override applyType(
@@ -202,7 +206,7 @@ export class StringLiteral extends Expr {
 
 export class VoidObj extends Expr {
 	constructor() {
-		super("Void", [], new TypeAST("void"));
+		super("Void", new Span(0, 0, 0, 0), [], new TypeAST("void"));
 	}
 
 	override applyType(
@@ -217,17 +221,17 @@ export class FuncCall extends Expr {
 	funcName: Expr;
 	input: Expr;
 
-	constructor(funcName: Expr, params: Expr[]) {
+	constructor(funcName: Expr, params: Expr[], span: Span) {
 		let other: AST[] = [];
 		other.push(funcName);
 		for (let child of params) other.push(child);
-		super("FuncCall", other);
+		super("FuncCall", span, other);
 
 		this.funcName = funcName;
 
 		if (params.length == 0) this.input = new VoidObj();
 		else if (params.length == 1) this.input = params[0];
-		else this.input = new Tuple(params);
+		else this.input = new Tuple(params, span);
 	}
 
 	override rval(buffer: IOBuffer): Expr {
@@ -259,8 +263,8 @@ export class Id extends Expr {
 	symbol: IdSymbol | null;
 	idName: string;
 
-	constructor(idName: string) {
-		super("Id_" + idName, [], new TypeAST("Dummy"));
+	constructor(idName: string, span: Span) {
+		super("Id_" + idName, span, [], new TypeAST("Dummy"));
 		this.symbol = null;
 		this.idName = idName;
 	}
@@ -317,9 +321,9 @@ export class Id extends Expr {
 export class ArrayAccess extends Expr {
 	arr: Expr;
 	ind: Expr;
-	constructor(arr: Expr, ind: Expr) {
+	constructor(arr: Expr, ind: Expr, span: Span) {
 		// TODO
-		super("arr", [arr, ind]);
+		super("arr", span, [arr, ind]);
 		this.arr = arr;
 		this.ind = ind;
 	}
@@ -327,8 +331,8 @@ export class ArrayAccess extends Expr {
 
 export class NumberLiteral extends Expr {
 	val: number;
-	constructor(name: string) {
-		super("NumberLiteral_" + name, [], new TypeAST("Int"));
+	constructor(name: string, span: Span) {
+		super("NumberLiteral_" + name, span, [], new TypeAST("Int"));
 		this.val = Number(name);
 	}
 
@@ -351,7 +355,7 @@ export class NumberLiteral extends Expr {
 
 	override rval(buffer: IOBuffer): Expr {
 		if (this.type.instanceOf(TypeEnum.STRING))
-			return new StringLiteral("" + this.val);
+			return new StringLiteral("" + this.val, this.span);
 
 		return this;
 	}
@@ -371,8 +375,8 @@ export class NumberLiteral extends Expr {
 
 export class IntegerLiteral extends Expr {
 	val: number;
-	constructor(name: string) {
-		super("IntegerLiteral_" + name, [], new TypeAST("Int"));
+	constructor(name: string, span: Span) {
+		super("IntegerLiteral_" + name, span, [], new TypeAST("Int"));
 		this.val = Number(name);
 	}
 
@@ -395,7 +399,7 @@ export class IntegerLiteral extends Expr {
 
 	override rval(buffer: IOBuffer): Expr {
 		if (this.type.instanceOf(TypeEnum.STRING))
-			return new StringLiteral("" + this.val);
+			return new StringLiteral("" + this.val, this.span);
 
 		return this;
 	}
@@ -419,8 +423,8 @@ export class IntegerLiteral extends Expr {
 
 export class Tuple extends Expr {
 	vals: Expr[];
-	constructor(vals: Expr[]) {
-		super("Tuple", vals, new TypeAST("CartProd"));
+	constructor(vals: Expr[], span: Span) {
+		super("Tuple", span, vals, new TypeAST("CartProd"));
 		this.vals = vals;
 	}
 
@@ -444,9 +448,12 @@ export class Tuple extends Expr {
 
 	override rval(buffer: IOBuffer): Expr {
 		if (this.type.instanceOf(TypeEnum.STRING))
-			return new StringLiteral("(" + this.vals + ")");
+			return new StringLiteral("(" + this.vals + ")", this.span);
 
-		return new Tuple(this.vals.map((v) => v.rval(buffer)));
+		return new Tuple(
+			this.vals.map((v) => v.rval(buffer)),
+			this.span
+		);
 	}
 
 	toLongString() {

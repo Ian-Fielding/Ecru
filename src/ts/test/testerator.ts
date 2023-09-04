@@ -14,7 +14,7 @@ function printBad(str: string): void {
 
 let tokenCount: number = 0;
 for (let test of tokenTests) {
-	let scan: Tokenizer = new Tokenizer(test.input);
+	let scan: Tokenizer = new Tokenizer(test.input, silentBuffer);
 
 	let tokenError: boolean = scan.tokens.length != test.tokens.length;
 	for (let i = 0; i < scan.tokens.length && !tokenError; i++) {
@@ -43,7 +43,7 @@ for (let test of parseTests) {
 	else {
 		printBad(`Error on ${test.name}`);
 		console.log(`---Inp: ${test.input}`);
-		console.log(`---Tok: ${new Tokenizer(test.input)}`);
+		console.log(`---Tok: ${new Tokenizer(test.input, silentBuffer)}`);
 		console.log(
 			`---Exp: "${test.expected}"\n---Saw: "${result.parseTree} ${result.errorMsg}"`
 		);

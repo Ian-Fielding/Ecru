@@ -1,3 +1,5 @@
+import { IOBuffer } from "../IOBuffer.js";
+import { UnknownCharacterError } from "../error.js";
 import { Span, Token } from "./token.js";
 
 const reserved: string[] = [
@@ -80,10 +82,12 @@ export class Tokenizer {
 	tokens: Token[];
 	input: string;
 	pointer: number = 0;
+	buffer: IOBuffer;
 
-	constructor(input: string) {
+	constructor(input: string, buffer: IOBuffer) {
 		this.input = `${input}\n`;
 		this.tokens = [];
+		this.buffer = buffer;
 		this.generateTokens();
 	}
 
@@ -153,9 +157,12 @@ export class Tokenizer {
 						break;
 					}
 
-					//TODO Error?
-
-					console.log("Error? i see " + c);
+					this.buffer.throwError(
+						new UnknownCharacterError(
+							c,
+							this.createSpan(ind, ind + 1)
+						)
+					);
 					ind++;
 
 					break;

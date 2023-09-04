@@ -33,7 +33,7 @@ export function compile(
 				}
 			}
 		});*/
-		parser = new Parser(input);
+		parser = new Parser(input, buffer);
 		prog = parser.root;
 	} catch (e: any) {
 		buffer.stderr(`Parse error! ${e.message}`);

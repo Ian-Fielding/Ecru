@@ -1,10 +1,12 @@
+import { EcruError } from "./error";
+
 export class IOBuffer {
 	out: (input: string) => void;
 	err: (input: string) => void;
 	outHistory: string[];
 	errHistory: string[];
 
-	constructor(out, err, maxRecursionDepth = 10) {
+	constructor(out, err) {
 		this.out = out;
 		this.err = err;
 		this.outHistory = [];
@@ -19,6 +21,11 @@ export class IOBuffer {
 	stderr(input: string): void {
 		this.errHistory.push(input);
 		this.err(input);
+	}
+
+	throwError(err: EcruError) {
+		this.stderr(err.toString());
+		throw new Error(err.msg);
 	}
 
 	getOut(): string {

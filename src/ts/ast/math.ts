@@ -1,40 +1,42 @@
 import { IOBuffer } from "../IOBuffer.js";
+import { Span } from "../parser/token.js";
 import { Expr, NumberLiteral, StringLiteral } from "./exprs.js";
 import { TypeAST, TypeEnum } from "./type.js";
 
 class BuiltinFunc extends Expr {
 	constructor(
 		name: string,
+		span: Span,
 		args: Expr[],
 		type: TypeAST = new TypeAST("Dummy")
 	) {
-		super(name, args, type);
+		super(name, span, args, type);
 	}
 }
 
 export class Negate extends BuiltinFunc {
-	constructor(expr: Expr) {
-		super("TODO", []);
+	constructor(expr: Expr, span: Span) {
+		super("TODO", span, []);
 	}
 }
 
 export class Factorial extends BuiltinFunc {
-	constructor(expr: Expr) {
-		super("TODO", []);
+	constructor(expr: Expr, span: Span) {
+		super("TODO", span, []);
 	}
 }
 
 export class Exponent extends BuiltinFunc {
-	constructor(expr1: Expr, expr2: Expr) {
-		super("TODO", []);
+	constructor(expr1: Expr, expr2: Expr, span: Span) {
+		super("TODO", span, []);
 	}
 }
 
 export class Add extends BuiltinFunc {
 	params: Expr[];
 
-	constructor(args: Expr[]) {
-		super("add", args);
+	constructor(args: Expr[], span: Span) {
+		super("add", span, args);
 		this.params = args;
 
 		//TODO better error
@@ -87,7 +89,7 @@ export class Add extends BuiltinFunc {
 		}
 
 		if (this.type.isMathType()) {
-			let out: NumberLiteral = new NumberLiteral("0");
+			let out: NumberLiteral = new NumberLiteral("0", this.span);
 			for (let i in childRVals) {
 				let child: NumberLiteral = childRVals[i] as NumberLiteral;
 
@@ -102,15 +104,15 @@ export class Add extends BuiltinFunc {
 			str += r.builtinToString();
 		}
 
-		return new StringLiteral(str);
+		return new StringLiteral(str, this.span);
 	}
 }
 
 export class Mul extends BuiltinFunc {
 	params: Expr[];
 
-	constructor(args: Expr[]) {
-		super("mul", args);
+	constructor(args: Expr[], span: Span) {
+		super("mul", span, args);
 		this.params = args;
 
 		//TODO better error
@@ -164,7 +166,7 @@ export class Mul extends BuiltinFunc {
 		}
 
 		if (this.type.isMathType()) {
-			let out: NumberLiteral = new NumberLiteral("1");
+			let out: NumberLiteral = new NumberLiteral("1", this.span);
 			for (let i in childRVals) {
 				let child: NumberLiteral = childRVals[i] as NumberLiteral;
 
@@ -179,15 +181,15 @@ export class Mul extends BuiltinFunc {
 		let dup: string = (childRVals[0] as StringLiteral).name;
 		for (let i = 0; i < count; i++) str += dup;
 
-		return new StringLiteral(str);
+		return new StringLiteral(str, this.span);
 	}
 }
 
 export class Sub extends BuiltinFunc {
 	params: Expr[];
 
-	constructor(args: Expr[]) {
-		super("sub", args);
+	constructor(args: Expr[], span: Span) {
+		super("sub", span, args);
 		this.params = args;
 
 		//TODO better error
@@ -227,15 +229,15 @@ export class Sub extends BuiltinFunc {
 
 		let v1: number = (childRVals[0] as NumberLiteral).val;
 		let v2: number = (childRVals[1] as NumberLiteral).val;
-		return new NumberLiteral("" + (v1 - v2));
+		return new NumberLiteral("" + (v1 - v2), this.span);
 	}
 }
 
 export class Div extends BuiltinFunc {
 	params: Expr[];
 
-	constructor(args: Expr[]) {
-		super("div", args);
+	constructor(args: Expr[], span: Span) {
+		super("div", span, args);
 		this.params = args;
 
 		//TODO better error
@@ -275,15 +277,15 @@ export class Div extends BuiltinFunc {
 
 		let v1: number = (childRVals[0] as NumberLiteral).val;
 		let v2: number = (childRVals[1] as NumberLiteral).val;
-		return new NumberLiteral("" + v1 / v2);
+		return new NumberLiteral("" + v1 / v2, this.span);
 	}
 }
 
 export class LogicalNot extends BuiltinFunc {
 	params: Expr[];
 
-	constructor(args: Expr[]) {
-		super("not", args);
+	constructor(args: Expr[], span: Span) {
+		super("not", span, args);
 		this.params = args;
 
 		//TODO better error
@@ -316,15 +318,15 @@ export class LogicalNot extends BuiltinFunc {
 
 		if (v1 != 0) v1 = 1;
 
-		return new NumberLiteral(v1 == 1 ? "0" : "1");
+		return new NumberLiteral(v1 == 1 ? "0" : "1", this.span);
 	}
 }
 
 export class LogicalOr extends BuiltinFunc {
 	params: Expr[];
 
-	constructor(args: Expr[]) {
-		super("or", args);
+	constructor(args: Expr[], span: Span) {
+		super("or", span, args);
 		this.params = args;
 
 		//TODO better error
@@ -363,15 +365,15 @@ export class LogicalOr extends BuiltinFunc {
 		if (v1 != 0) v1 = 1;
 		if (v2 != 0) v2 = 1;
 
-		return new NumberLiteral("" + Math.max(v1, v2));
+		return new NumberLiteral("" + Math.max(v1, v2), this.span);
 	}
 }
 
 export class LogicalAnd extends BuiltinFunc {
 	params: Expr[];
 
-	constructor(args: Expr[]) {
-		super("and", args);
+	constructor(args: Expr[], span: Span) {
+		super("and", span, args);
 		this.params = args;
 
 		//TODO better error
@@ -410,15 +412,15 @@ export class LogicalAnd extends BuiltinFunc {
 		if (v1 != 0) v1 = 1;
 		if (v2 != 0) v2 = 1;
 
-		return new NumberLiteral("" + v1 * v2);
+		return new NumberLiteral("" + v1 * v2, this.span);
 	}
 }
 
 export class LogicalEq extends BuiltinFunc {
 	params: Expr[];
 
-	constructor(args: Expr[]) {
-		super("equals", args);
+	constructor(args: Expr[], span: Span) {
+		super("equals", span, args);
 		this.params = args;
 
 		//TODO better error
@@ -481,6 +483,6 @@ export class LogicalEq extends BuiltinFunc {
 			v2 = (childRVals[1] as NumberLiteral).val;
 		}
 
-		return new NumberLiteral(v1 == v2 ? "1" : "0");
+		return new NumberLiteral(v1 == v2 ? "1" : "0", this.span);
 	}
 }
