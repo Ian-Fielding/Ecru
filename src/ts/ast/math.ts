@@ -1,9 +1,10 @@
 import { IOBuffer } from "../IOBuffer.js";
+import { IllegalTypeConversionError, UnsupportedBinop } from "../error.js";
 import { Span } from "../parser/token.js";
 import { Expr, NumberLiteral, StringLiteral } from "./exprs.js";
 import { TypeAST, TypeEnum } from "./type.js";
 
-class BuiltinFunc extends Expr {
+abstract class BuiltinFunc extends Expr {
 	constructor(
 		name: string,
 		span: Span,
@@ -18,18 +19,33 @@ export class Negate extends BuiltinFunc {
 	constructor(expr: Expr, span: Span) {
 		super("TODO", span, []);
 	}
+
+	override applyType(
+		buffer: IOBuffer,
+		expectedType?: TypeAST | undefined
+	): void {}
 }
 
 export class Factorial extends BuiltinFunc {
 	constructor(expr: Expr, span: Span) {
 		super("TODO", span, []);
 	}
+
+	override applyType(
+		buffer: IOBuffer,
+		expectedType?: TypeAST | undefined
+	): void {}
 }
 
 export class Exponent extends BuiltinFunc {
 	constructor(expr1: Expr, expr2: Expr, span: Span) {
 		super("TODO", span, []);
 	}
+
+	override applyType(
+		buffer: IOBuffer,
+		expectedType?: TypeAST | undefined
+	): void {}
 }
 
 export class Add extends BuiltinFunc {
@@ -38,10 +54,6 @@ export class Add extends BuiltinFunc {
 	constructor(args: Expr[], span: Span) {
 		super("add", span, args);
 		this.params = args;
-
-		//TODO better error
-		if (args.length < 2)
-			throw new Error("Need at least two arguments for 'add'");
 	}
 
 	override applyType(
@@ -79,7 +91,9 @@ export class Add extends BuiltinFunc {
 			return;
 		}
 
-		buffer.stderr("Unknown add type");
+		buffer.throwError(
+			new UnsupportedBinop("+", new TypeAST("TODO"), this.span)
+		);
 	}
 
 	override rval(buffer: IOBuffer): Expr {
@@ -114,10 +128,6 @@ export class Mul extends BuiltinFunc {
 	constructor(args: Expr[], span: Span) {
 		super("mul", span, args);
 		this.params = args;
-
-		//TODO better error
-		if (args.length < 2)
-			throw new Error("Need at least two arguments for 'mul'");
 	}
 
 	override applyType(
@@ -155,8 +165,9 @@ export class Mul extends BuiltinFunc {
 
 			return;
 		}
-
-		buffer.stderr("Unknown mul type");
+		buffer.throwError(
+			new UnsupportedBinop("*", new TypeAST("TODO"), this.span)
+		);
 	}
 
 	override rval(buffer: IOBuffer): Expr {
@@ -191,10 +202,6 @@ export class Sub extends BuiltinFunc {
 	constructor(args: Expr[], span: Span) {
 		super("sub", span, args);
 		this.params = args;
-
-		//TODO better error
-		if (args.length != 2)
-			throw new Error("Need exactly two arguments for 'sub'");
 	}
 
 	override applyType(
@@ -217,8 +224,9 @@ export class Sub extends BuiltinFunc {
 
 			return;
 		}
-
-		buffer.stderr("Unknown sub type");
+		buffer.throwError(
+			new UnsupportedBinop("-", new TypeAST("TODO"), this.span)
+		);
 	}
 
 	override rval(buffer: IOBuffer): Expr {
@@ -239,10 +247,6 @@ export class Div extends BuiltinFunc {
 	constructor(args: Expr[], span: Span) {
 		super("div", span, args);
 		this.params = args;
-
-		//TODO better error
-		if (args.length != 2)
-			throw new Error("Need exactly two arguments for 'div'");
 	}
 
 	override applyType(
@@ -265,8 +269,9 @@ export class Div extends BuiltinFunc {
 
 			return;
 		}
-
-		buffer.stderr("Unknown div type");
+		buffer.throwError(
+			new UnsupportedBinop("/", new TypeAST("TODO"), this.span)
+		);
 	}
 
 	override rval(buffer: IOBuffer): Expr {
@@ -287,10 +292,6 @@ export class LogicalNot extends BuiltinFunc {
 	constructor(args: Expr[], span: Span) {
 		super("not", span, args);
 		this.params = args;
-
-		//TODO better error
-		if (args.length != 1)
-			throw new Error("Need exactly one arguments for 'not'");
 	}
 
 	override applyType(
@@ -302,8 +303,12 @@ export class LogicalNot extends BuiltinFunc {
 			!expectedType.instanceOf(TypeEnum.DUMMY) &&
 			!this.type.instanceOf(expectedType)
 		) {
-			buffer.stderr(
-				`Cannot treat "${this.name}" as type ${expectedType.type} in ~`
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					this.type,
+					expectedType,
+					this.span
+				)
 			);
 			return;
 		}
@@ -328,10 +333,6 @@ export class LogicalOr extends BuiltinFunc {
 	constructor(args: Expr[], span: Span) {
 		super("or", span, args);
 		this.params = args;
-
-		//TODO better error
-		if (args.length != 2)
-			throw new Error("Need exactly two arguments for 'or'");
 	}
 
 	override applyType(
@@ -343,8 +344,12 @@ export class LogicalOr extends BuiltinFunc {
 			!expectedType.instanceOf(TypeEnum.DUMMY) &&
 			!this.type.instanceOf(expectedType)
 		) {
-			buffer.stderr(
-				`Cannot treat "${this.name}" as type ${expectedType.type} in ||`
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					this.type,
+					expectedType,
+					this.span
+				)
 			);
 			return;
 		}
@@ -375,10 +380,6 @@ export class LogicalAnd extends BuiltinFunc {
 	constructor(args: Expr[], span: Span) {
 		super("and", span, args);
 		this.params = args;
-
-		//TODO better error
-		if (args.length != 2)
-			throw new Error("Need exactly two arguments for 'or'");
 	}
 
 	override applyType(
@@ -390,8 +391,12 @@ export class LogicalAnd extends BuiltinFunc {
 			!expectedType.instanceOf(TypeEnum.DUMMY) &&
 			!this.type.instanceOf(expectedType)
 		) {
-			buffer.stderr(
-				`Cannot treat "${this.name}" as type ${expectedType.type} in &&`
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					this.type,
+					expectedType,
+					this.span
+				)
 			);
 			return;
 		}
@@ -422,10 +427,6 @@ export class LogicalEq extends BuiltinFunc {
 	constructor(args: Expr[], span: Span) {
 		super("equals", span, args);
 		this.params = args;
-
-		//TODO better error
-		if (args.length != 2)
-			throw new Error("Need exactly two arguments for 'equals'");
 	}
 
 	override applyType(
@@ -438,8 +439,12 @@ export class LogicalEq extends BuiltinFunc {
 			!expectedType.instanceOf(TypeEnum.DUMMY) &&
 			!this.type.instanceOf(expectedType)
 		) {
-			buffer.stderr(
-				`Cannot treat "${this.name}" as type ${expectedType.type} in ==`
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					this.type,
+					expectedType,
+					this.span
+				)
 			);
 			return;
 		}
@@ -448,20 +453,26 @@ export class LogicalEq extends BuiltinFunc {
 		this.params[1].applyType(buffer);
 
 		if (!this.params[0].type.instanceOf(this.params[1].type)) {
-			buffer.stderr(
-				`Cannot treat "${this.params[0].toString()}" as type ${
-					this.params[1].type
-				} in ==`
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					this.params[0].type,
+					this.params[1].type,
+					this.span
+				)
 			);
+
 			return;
 		}
 
 		if (!this.params[1].type.instanceOf(this.params[0].type)) {
-			buffer.stderr(
-				`Cannot treat "${this.params[1].toString()}" as type ${
-					this.params[0].type
-				} in ==`
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					this.params[1].type,
+					this.params[0].type,
+					this.span
+				)
 			);
+
 			return;
 		}
 	}

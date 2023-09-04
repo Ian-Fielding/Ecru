@@ -1,4 +1,9 @@
 import { IOBuffer } from "../IOBuffer.js";
+import {
+	IllegalTypeConversionError,
+	RedefinedIdentifierError,
+	UndefinedIdentifierError,
+} from "../error.js";
 import { Span } from "../parser/token.js";
 import { AST, IdSymbol, ReturnObject, Scope } from "./asts.js";
 import { StringLiteral, Id, Expr, NumberLiteral, VoidObj } from "./exprs.js";
@@ -56,7 +61,7 @@ export class DeclarationStatement extends Statement {
 		let name: string = this.id.idName;
 
 		if (scope.lookup(name)) {
-			buffer.stderr(`id ${name} has already been defined.`);
+			buffer.throwError(new RedefinedIdentifierError(name, this.span));
 			return;
 		}
 
@@ -91,7 +96,8 @@ export class AssignmentStatement extends Statement {
 		let sym: IdSymbol | null = scope.lookup(name);
 
 		if (!sym) {
-			buffer.stderr(`id ${name} has not been defined.`);
+			buffer.throwError(new UndefinedIdentifierError(name, this.span));
+			return;
 		}
 
 		this.id.symbol = sym;
@@ -184,9 +190,14 @@ export class PrintStatement extends Statement {
 			buffer.stdout(str.val + term);
 		} else {
 			// TODO better comparison to string.
-			buffer.stderr(
-				`Error! Weird string comparison at ${str} whose type is ${str.type}`
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					str.type,
+					new TypeAST("String"),
+					this.span
+				)
 			);
+			return { break: true };
 		}
 		return { break: false };
 	}
@@ -213,7 +224,14 @@ export class PrettyPrintStatement extends Statement {
 			buffer.stdout(str.val + term);
 		} else {
 			// TODO better conversion to string.
-			buffer.stderr("Error");
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					str.type,
+					new TypeAST("String"),
+					this.span
+				)
+			);
+			return { break: true };
 		}
 		return { break: false };
 	}
@@ -391,8 +409,12 @@ export class ReturnStatement extends Statement {
 			this.expr.applyType(buffer, expectedType);
 
 			if (!this.expr.type.instanceOf(expectedType)) {
-				buffer.stderr(
-					`return statement types don't match. Saw type ${this.expr.type} but expected ${expectedType}`
+				buffer.throwError(
+					new IllegalTypeConversionError(
+						this.expr.type,
+						expectedType,
+						this.span
+					)
 				);
 				return;
 			}
@@ -400,7 +422,13 @@ export class ReturnStatement extends Statement {
 			//TODO Better error handling
 		} else {
 			if (!expectedType.instanceOf(TypeEnum.VOID)) {
-				buffer.stderr("return statement must return value");
+				buffer.throwError(
+					new IllegalTypeConversionError(
+						this.expr.type,
+						expectedType,
+						this.span
+					)
+				);
 				return;
 			}
 		}

@@ -25,7 +25,7 @@ export class IOBuffer {
 
 	throwError(err: EcruError) {
 		this.stderr(err.toString());
-		throw new Error(err.msg);
+		throw err;
 	}
 
 	getOut(): string {

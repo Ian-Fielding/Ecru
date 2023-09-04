@@ -2,6 +2,7 @@ import * as AST from "./ast/asts.js";
 import { Parser } from "./parser/betterParser.js";
 import { IOBuffer, consoleBuffer } from "./IOBuffer.js";
 import { Program } from "./ast/stmts.js";
+import { EcruError } from "./error.js";
 
 export interface CompileObj {
 	parseTree: string;
@@ -36,33 +37,39 @@ export function compile(
 		parser = new Parser(input, buffer);
 		prog = parser.root;
 	} catch (e: any) {
-		buffer.stderr(`Parse error! ${e.message}`);
+		let error: EcruError = e as EcruError;
 		retVal.parseTree = "Error";
-		retVal.errorMsg = " --- " + e.message + "\n --- " + e.stack;
+		retVal.errorMsg = error.msg;
 		return retVal;
 	}
 
 	retVal.parseTree = prog.toString();
+
 	let scope = new AST.Scope();
 
-	prog.applyBind(scope, buffer);
-
-	if (buffer.hasSeenError()) return retVal;
-	prog.applyType(buffer);
-
-	if (buffer.hasSeenError()) return retVal;
-	prog.execute(buffer);
-
-	/*
-	let options: AST.Options = {
-		run: false,
-		currScope: new AST.Scope()
+	try {
+		prog.applyBind(scope, buffer);
+	} catch (e: any) {
+		let error: EcruError = e as EcruError;
+		retVal.errorMsg = error.msg;
+		return retVal;
 	}
 
-	prog.run(options);
+	try {
+		prog.applyType(buffer);
+	} catch (e: any) {
+		let error: EcruError = e as EcruError;
+		retVal.errorMsg = error.msg;
+		return retVal;
+	}
 
-
-	prog.run({run:true,currScope:null});*/
+	try {
+		prog.execute(buffer);
+	} catch (e: any) {
+		let error: EcruError = e as EcruError;
+		retVal.errorMsg = error.msg;
+		return retVal;
+	}
 
 	return retVal;
 }

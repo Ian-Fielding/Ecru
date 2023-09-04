@@ -1,10 +1,17 @@
 import { IOBuffer } from "../IOBuffer.js";
+import {
+	ArgumentLengthError,
+	IllegalCallError,
+	IllegalTypeConversionError,
+	NonexistentReturnError,
+	UndefinedIdentifierError,
+} from "../error.js";
 import { Span } from "../parser/token.js";
 import { AST, IdSymbol, ReturnObject, Scope } from "./asts.js";
 import { DeclarationStatement, ReturnStatement, Statement } from "./stmts.js";
 import { TypeAST, FunctionType, TypeEnum } from "./type.js";
 
-export class Expr extends AST {
+export abstract class Expr extends AST {
 	type: TypeAST;
 
 	constructor(
@@ -29,12 +36,7 @@ export class Expr extends AST {
 		return childRVals;
 	}
 
-	override applyType(
-		buffer: IOBuffer,
-		expectedType: TypeAST = new TypeAST("Dummy")
-	): void {
-		throw new Error("Must override this method!");
-	}
+	abstract override applyType(buffer: IOBuffer, expectedType?: TypeAST): void;
 
 	toLatex(): string {
 		return `\\text{${this.name}}`;
@@ -55,6 +57,11 @@ export class TypeCast extends Expr {
 		super(name, span, args);
 		// TODO
 	}
+
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {}
 }
 
 export class FuncDecl extends Expr {
@@ -110,7 +117,9 @@ export class FuncDecl extends Expr {
 			}
 
 			if (index == -1) {
-				buffer.stderr("Function doesn't necessarily return!");
+				buffer.throwError(
+					new NonexistentReturnError(type.codomain, this.span)
+				);
 				return { break: true };
 			}
 			/*if (index != this.stmts.length-1) {
@@ -131,10 +140,10 @@ export class FuncDecl extends Expr {
 			inputLength = (input as Tuple).vals.length;
 		else inputLength = 1;
 
-		if (this.params.length != inputLength) {
+		/*if (this.params.length != inputLength) {
 			buffer.stderr("Invalid arg lenths!");
 			return retVal;
-		}
+		}*/
 
 		if (this.params.length == 1) {
 			let decl: DeclarationStatement = this.params[0];
@@ -190,8 +199,12 @@ export class StringLiteral extends Expr {
 		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
 
 		if (!this.type.instanceOf(expectedType))
-			buffer.stderr(
-				`Cannot treat string "${this.name}" as type ${expectedType}`
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					this.type,
+					expectedType,
+					this.span
+				)
 			);
 	}
 
@@ -220,6 +233,7 @@ export class VoidObj extends Expr {
 export class FuncCall extends Expr {
 	funcName: Expr;
 	input: Expr;
+	params: Expr[];
 
 	constructor(funcName: Expr, params: Expr[], span: Span) {
 		let other: AST[] = [];
@@ -228,6 +242,7 @@ export class FuncCall extends Expr {
 		super("FuncCall", span, other);
 
 		this.funcName = funcName;
+		this.params = params;
 
 		if (params.length == 0) this.input = new VoidObj();
 		else if (params.length == 1) this.input = params[0];
@@ -236,7 +251,19 @@ export class FuncCall extends Expr {
 
 	override rval(buffer: IOBuffer): Expr {
 		let func: FuncDecl = this.funcName.rval(buffer) as FuncDecl;
-		let changeme: Expr = func.onCall(buffer, this.input.rval(buffer));
+
+		if (this.params.length != func.params.length) {
+			buffer.throwError(
+				new ArgumentLengthError(
+					this.params.length,
+					func.params.length,
+					this.span
+				)
+			);
+			return new VoidObj();
+		}
+
+		let changeme: Expr = func.onCall(buffer, this.input.rval(buffer)); //TODO sucks
 		if (buffer.hasSeenError()) return new VoidObj();
 		return changeme;
 	}
@@ -248,7 +275,9 @@ export class FuncCall extends Expr {
 		this.funcName.applyType(buffer, new TypeAST("Map"));
 
 		if (!this.funcName.type.instanceOf(TypeEnum.MAP)) {
-			buffer.stderr(`${this.funcName} is not a function`);
+			buffer.throwError(
+				new IllegalCallError(this.funcName.type, this.span)
+			);
 			return;
 		}
 
@@ -287,8 +316,12 @@ export class Id extends Expr {
 		}
 
 		if (!this.type.instanceOf(expectedType))
-			buffer.stderr(
-				`Cannot treat ${this.idName} as type ${expectedType}`
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					this.type,
+					expectedType,
+					this.span
+				)
 			);
 	}
 
@@ -297,7 +330,10 @@ export class Id extends Expr {
 		let sym: IdSymbol | null = scope.lookup(name);
 
 		if (!sym) {
-			buffer.stderr(`id ${name} has not been defined.`);
+			buffer.throwError(
+				new UndefinedIdentifierError(this.idName, this.span)
+			);
+			return;
 		}
 
 		this.symbol = sym;
@@ -327,6 +363,11 @@ export class ArrayAccess extends Expr {
 		this.arr = arr;
 		this.ind = ind;
 	}
+
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {}
 }
 
 export class NumberLiteral extends Expr {
@@ -348,8 +389,12 @@ export class NumberLiteral extends Expr {
 		}
 
 		if (!this.type.instanceOf(expectedType))
-			buffer.stderr(
-				`Cannot treat number "${this.val}" as type ${expectedType}`
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					this.type,
+					expectedType,
+					this.span
+				)
 			);
 	}
 
@@ -392,8 +437,12 @@ export class IntegerLiteral extends Expr {
 		}
 
 		if (!this.type.instanceOf(expectedType))
-			buffer.stderr(
-				`Cannot treat number "${this.val}" as type ${expectedType}`
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					this.type,
+					expectedType,
+					this.span
+				)
 			);
 	}
 
@@ -441,8 +490,12 @@ export class Tuple extends Expr {
 		}
 
 		if (!this.type.instanceOf(expectedType))
-			buffer.stderr(
-				`Cannot treat tuple "${this.vals}" as type ${expectedType}`
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					this.type,
+					expectedType,
+					this.span
+				)
 			);
 	}
 

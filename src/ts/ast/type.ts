@@ -26,11 +26,11 @@ export class TypeAST {
 		this.span = span;
 
 		if (typeof name == "number") {
-			this.type = <TypeEnum>name;
+			this.type = name as number;
 			return;
 		}
 
-		switch (<string>name) {
+		switch (name) {
 			case "Object":
 			case "Obj":
 				this.type = TypeEnum.OBJECT;
