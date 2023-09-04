@@ -1,6 +1,6 @@
 import { compile, CompileObj } from "../compile.js";
-import { ParseTest, parseTests } from "./parseTests.js";
-import { BasicTest, basicTests } from "./basicTests.js";
+import { parseTests } from "./parseTests.js";
+import { tests } from "./tests.js";
 import { tokenTests } from "./tokenTests.js";
 import { silentBuffer } from "../IOBuffer.js";
 import { Tokenizer } from "../parser/tokenizer.js";
@@ -55,7 +55,7 @@ if (parseCount != parseTests.length) printBad(out);
 else printGood(out);
 
 let basicCount: number = 0;
-for (let test of basicTests) {
+for (let test of tests) {
 	let result: CompileObj = compile(test.input, silentBuffer);
 
 	let out: string = result.buffer.getOut();
@@ -73,6 +73,6 @@ for (let test of basicTests) {
 	}
 }
 
-out = `Basic test score: ${basicCount}/${basicTests.length}`;
-if (basicCount != basicTests.length) printBad(out);
+out = `Basic test score: ${basicCount}/${tests.length}`;
+if (basicCount != tests.length) printBad(out);
 else printGood(out);

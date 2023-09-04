@@ -106,6 +106,9 @@ export class AssignmentStatement extends Statement {
 	override execute(buffer: IOBuffer): ReturnObject {
 		// TODO replace id with Expr, support lval
 		let sym: IdSymbol = this.id.symbol!;
+		let safetyCheck: ReturnObject = this.expr.execute(buffer);
+		if (safetyCheck.break) return safetyCheck;
+
 		sym.val = this.expr.rval(buffer);
 		return { break: false };
 	}
@@ -162,6 +165,12 @@ export class PrintStatement extends Statement {
 		super("PrintStmt", [expr]);
 		this.expr = expr;
 		this.isNewLine = isNewLine;
+	}
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
+		this.expr.applyType(buffer, new TypeAST(TypeEnum.STRING));
 	}
 
 	override execute(buffer: IOBuffer): ReturnObject {

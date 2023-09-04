@@ -1,4 +1,10 @@
-f(x:Z):Z{
+f(x:Z,y:Z):Z{
+	return x+y;
+}
+
+print f(1,2);
+
+/*f(x:Z):Z{
 	if(x==0){
 		return 1;
 	}
@@ -6,4 +12,4 @@ f(x:Z):Z{
 }
 
 for(i:Z = 0; i~=8; i+=1)
-	print i+"! is "+f(i);
+	print i+"! is "+f(i);*/

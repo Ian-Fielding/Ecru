@@ -1,0 +1,13 @@
+allPyth(maxC:Z):String[]{
+    // str:String = ('h','e','l','l','o')
+    // str:Char[*] = ['h','e','l','l','o']
+    // ints:Int() = (1,2,3,...)
+    // ints:Int[5] = [1,2,...,5]
+    // (ints_0,ints_1,...) = (5,10,...) defines sequence ints
+    // ints[0...2] = [5,10,15]
+    strs:String[*] = [];
+    for(m:Z=2;m<=sqrt(maxC);m++)
+        for(n:Z=1;n<m;n++)
+            if(coprime(m,n) && (m%2==n%2))
+                strs.add(Vec(m^2-n^2, 2*m*n , m^2+n^2));
+}

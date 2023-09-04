@@ -95,20 +95,60 @@ export class FuncDecl extends Expr {
 	}
 
 	override execute(buffer: IOBuffer): ReturnObject {
+		let type: FunctionType = this.type as FunctionType;
+		if (!type.codomain.instanceOf(TypeEnum.VOID)) {
+			let index: number = -1;
+			for (let i = 0; i < this.stmts.length; i++) {
+				if (this.stmts[i] instanceof ReturnStatement) {
+					index = i;
+					break;
+				}
+			}
+
+			if (index == -1) {
+				buffer.stderr("Function doesn't necessarily return!");
+				return { break: true };
+			}
+			/*if (index != this.stmts.length-1) {
+				buffer.stderr("Function contains unreachable code!");
+				return { break: true };
+			}*/
+		}
 		return { break: false };
 	}
 
-	onCall(buffer: IOBuffer, inputs: Expr[]): Expr {
+	onCall(buffer: IOBuffer, input: Expr): Expr {
 		let backup: (Expr | null)[] = [];
 		let retVal: Expr = new VoidObj();
 
-		for (let i = 0; i < this.params.length; i++) {
-			let decl: DeclarationStatement = this.params[i];
-			let param: Expr = inputs[i];
+		let inputLength: number;
+		if (input instanceof VoidObj) inputLength = 0;
+		else if (input instanceof Tuple)
+			inputLength = (input as Tuple).vals.length;
+		else inputLength = 1;
+
+		if (this.params.length != inputLength) {
+			buffer.stderr("Invalid arg lenths!");
+			return retVal;
+		}
+
+		if (this.params.length == 1) {
+			let decl: DeclarationStatement = this.params[0];
+			let param: Expr = input;
 
 			let id: Id = decl.id;
 			backup.push(id.symbol!.val);
 			id.symbol!.val = param;
+		} else if (this.params.length > 1) {
+			for (let i = 0; i < this.params.length; i++) {
+				let decl: DeclarationStatement = this.params[i];
+				let tup: Tuple = input as Tuple;
+				let param: Expr = tup.vals[i];
+
+				let id: Id = decl.id;
+				backup.push(id.symbol!.val);
+				id.symbol!.val = param;
+			}
 		}
 
 		for (let stmt of this.stmts) {
@@ -175,7 +215,7 @@ export class VoidObj extends Expr {
 
 export class FuncCall extends Expr {
 	funcName: Expr;
-	params: Expr[];
+	input: Expr;
 
 	constructor(funcName: Expr, params: Expr[]) {
 		let other: AST[] = [];
@@ -184,32 +224,17 @@ export class FuncCall extends Expr {
 		super("FuncCall", other);
 
 		this.funcName = funcName;
-		this.params = params;
+
+		if (params.length == 0) this.input = new VoidObj();
+		else if (params.length == 1) this.input = params[0];
+		else this.input = new Tuple(params);
 	}
 
 	override rval(buffer: IOBuffer): Expr {
-		/*if (buffer.maxRecursionDepth <= 0) {
-			buffer.stderr(`Max recursion depth reached!`);
-			return new VoidObj();
-		}
-		buffer.maxRecursionDepth--;
-        */
-
 		let func: FuncDecl = this.funcName.rval(buffer) as FuncDecl;
-
-		/*
-		if (func.params.length != this.params.length) {
-			buffer.stderr(
-				`Function call has ${this.params.length} parameters while definition has ${func.params.length}.`
-			);
-			return new VoidObj();
-		}
-        */
-
-		return func.onCall(
-			buffer,
-			this.params.map((param) => param.rval(buffer))
-		);
+		let changeme: Expr = func.onCall(buffer, this.input.rval(buffer));
+		if (buffer.hasSeenError()) return new VoidObj();
+		return changeme;
 	}
 
 	override applyType(
@@ -225,7 +250,7 @@ export class FuncCall extends Expr {
 
 		let funcType: FunctionType = this.funcName.type as FunctionType;
 
-		this.params[0].applyType(buffer, funcType.domain);
+		this.input.applyType(buffer, funcType.domain);
 		this.type = funcType.codomain;
 	}
 }
@@ -389,5 +414,55 @@ export class IntegerLiteral extends Expr {
 
 	equals(other: NumberLiteral) {
 		return this.val == other.val;
+	}
+}
+
+export class Tuple extends Expr {
+	vals: Expr[];
+	constructor(vals: Expr[]) {
+		super("Tuple", vals, new TypeAST("CartProd"));
+		this.vals = vals;
+	}
+
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
+		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
+
+		// TODO
+		if (expectedType.instanceOf(TypeEnum.STRING)) {
+			this.type = expectedType;
+			return;
+		}
+
+		if (!this.type.instanceOf(expectedType))
+			buffer.stderr(
+				`Cannot treat tuple "${this.vals}" as type ${expectedType}`
+			);
+	}
+
+	override rval(buffer: IOBuffer): Expr {
+		if (this.type.instanceOf(TypeEnum.STRING))
+			return new StringLiteral("(" + this.vals + ")");
+
+		return new Tuple(this.vals.map((v) => v.rval(buffer)));
+	}
+
+	toLongString() {
+		return this.vals + "";
+	}
+
+	toString(): string {
+		return this.vals + "";
+	}
+
+	toLatex(): string {
+		return this.vals + "";
+	}
+
+	equals(other: Tuple) {
+		//TODO
+		return this.vals == other.vals;
 	}
 }

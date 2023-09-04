@@ -188,6 +188,7 @@ export class Parser {
 		let params: DeclarationStatement[] = [];
 		while (this.current() != ")") {
 			params.push(this.varDecl() as DeclarationStatement);
+			if (this.current() == ",") this.match(",");
 		}
 
 		let domainTypes: TypeAST[] = params.map((x) => x.type);
@@ -449,6 +450,7 @@ export class Parser {
 				this.match("(");
 				let exprs: Expr[] = this.current() == ")" ? [] : this.exprs();
 				this.match(")");
+
 				left = new FuncCall(left, exprs);
 			} else {
 				this.match("[");
