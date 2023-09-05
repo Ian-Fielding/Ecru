@@ -110,6 +110,12 @@ export let tests: Test[] = [
 		err: false,
 	},
 	{
+		name: "basic_test18",
+		input: 'print " abc \n \t ";',
+		out: " abc \n \t ",
+		err: false,
+	},
+	{
 		name: "add1",
 		input: "print 1+(2+3);",
 		out: "6",

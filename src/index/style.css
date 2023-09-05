@@ -2,6 +2,7 @@
 
 html, body {
     --dark: #192A5D;
+    --ligher-dark: #2b4bac;
     --ecru: #E8DAAE; /* F2E9CF */
     --highlight: #DECA87;
     --movable-bar-length: 15px;
@@ -98,7 +99,7 @@ button{
 	height: 60%;
 	margin: 0;
 	padding: 0;
-	background-color: lightblue;
+	background-color: var(--ligher-dark);
 	overflow: auto;
 }
 
@@ -109,10 +110,25 @@ button{
 	padding: 0;
 
 
-	user-drag: none;
-    -webkit-user-drag: none;
-    user-select: none;
-    -moz-user-select: none;
-    -webkit-user-select: none;
-    -ms-user-select: none;
+	
+}
+
+.stdout{
+	margin:5px;
+	padding:10px 20px;
+	border-radius: 5px;
+	border: 5px solid var(--highlight);
+	background-color: var(--ecru);
+	width:calc(100%-20px);
+	height:auto;
+}
+
+.stderr{
+	margin:5px;
+	padding:10px 20px;
+	border-radius: 5px;
+	border: 5px solid  #880a0a;
+	background-color: #e91212;
+	width:calc(100%-20px);
+	height:auto;
 }
