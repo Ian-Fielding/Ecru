@@ -153,7 +153,7 @@ export class Parser {
 				expr = this.expr();
 				return new AssignmentStatement(
 					id,
-					new MATH.Add([id, expr], unionSpan([id.span, expr.span])),
+					new MATH.Add(id, expr, unionSpan([id.span, expr.span])),
 					unionSpan([id.span, expr.span])
 				);
 
@@ -492,7 +492,8 @@ export class Parser {
 				this.match("+");
 				let right = this.multiplicative();
 				left = new MATH.Add(
-					[left, right],
+					left,
+					right,
 					unionSpan([left.span, right.span])
 				);
 			} else if (this.current() == "-") {

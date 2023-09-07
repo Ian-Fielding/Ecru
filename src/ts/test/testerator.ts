@@ -77,7 +77,9 @@ for (let test of tests) {
 	else {
 		printBad(`Error on ${test.name}`);
 		let err1: string = test.err ? "Error" : "No error";
-		let err2: string = err ? "Error" : "No error";
+		let err2: string = err
+			? `Error (${result.buffer.getErr()})`
+			: "No error";
 
 		console.log(
 			`---Exp: "${test.out}"\n---${err1}\n---Saw: "${out}"\n---${err2}`

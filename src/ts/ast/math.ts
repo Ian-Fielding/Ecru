@@ -1,21 +1,20 @@
 import { IOBuffer } from "../IOBuffer.js";
-import { IllegalTypeConversionError, UnsupportedBinop } from "../error.js";
+import {
+	CompilerError,
+	IllegalTypeConversionError,
+	UnsupportedBinop,
+} from "../error.js";
 import { Span } from "../parser/token.js";
-import { Expr, NumberLiteral, StringLiteral } from "./exprs.js";
+import {
+	Expr,
+	IntToString,
+	NumberLiteral,
+	StringLiteral,
+	VoidObj,
+} from "./exprs.js";
 import { TypeAST, TypeEnum } from "./type.js";
 
-abstract class BuiltinFunc extends Expr {
-	constructor(
-		name: string,
-		span: Span,
-		args: Expr[],
-		type: TypeAST = new TypeAST("Dummy")
-	) {
-		super(name, span, args, type);
-	}
-}
-
-export class Negate extends BuiltinFunc {
+export class Negate extends Expr {
 	constructor(expr: Expr, span: Span) {
 		super("TODO", span, []);
 	}
@@ -30,7 +29,7 @@ export class Negate extends BuiltinFunc {
 	}
 }
 
-export class Factorial extends BuiltinFunc {
+export class Factorial extends Expr {
 	constructor(expr: Expr, span: Span) {
 		super("TODO", span, []);
 	}
@@ -45,7 +44,7 @@ export class Factorial extends BuiltinFunc {
 	}
 }
 
-export class Exponent extends BuiltinFunc {
+export class Exponent extends Expr {
 	constructor(expr1: Expr, expr2: Expr, span: Span) {
 		super("TODO", span, []);
 	}
@@ -60,81 +59,87 @@ export class Exponent extends BuiltinFunc {
 	}
 }
 
-export class Add extends BuiltinFunc {
-	params: Expr[];
+const enum AddOps {
+	ADD_INTS,
+	STRING_CONCAT,
+	UNKNOWN,
+}
+export class Add extends Expr {
+	a: Expr;
+	b: Expr;
+	op: AddOps;
 
-	constructor(args: Expr[], span: Span) {
-		super("add", span, args);
-		this.params = args;
+	constructor(a: Expr, b: Expr, span: Span) {
+		super("add", span, [a, b]);
+		this.a = a;
+		this.b = b;
+		this.op = AddOps.UNKNOWN;
 	}
 
 	override applyType(
 		buffer: IOBuffer,
 		expectedType: TypeAST = new TypeAST("Dummy")
 	): void {
-		let childTypes: TypeAST[] = this.params.map(function (
-			c: Expr
-		): TypeAST {
-			c.applyType(buffer);
-			return c.type;
-		});
+		this.a.applyType(buffer);
+		this.b.applyType(buffer);
+		let aType: TypeAST = this.a.type;
+		let bType: TypeAST = this.b.type;
 
-		// updates types for all math ops
-		let gcdType: TypeAST = childTypes.reduce((t1, t2) =>
-			t1.closestParent(t2)
-		);
-		if (gcdType.isMathType()) {
-			this.type = gcdType;
+		if (
+			aType.type == TypeEnum.VOID ||
+			bType.type == TypeEnum.VOID ||
+			expectedType.type == TypeEnum.VOID
+		)
+			buffer.throwError(
+				new UnsupportedBinop("+", new TypeAST("void"), this.span)
+			);
 
+		if (aType.type == TypeEnum.INTEGER && bType.type == TypeEnum.INTEGER) {
+			this.type = new TypeAST("Int");
+			this.op = AddOps.ADD_INTS;
 			return;
 		}
 
-		// handles string concat
-		let containsString: boolean = false;
-		for (let t of childTypes) {
-			if (t.instanceOf(TypeEnum.STRING)) {
-				containsString = true;
-				break;
-			}
-		}
-		if (containsString) {
-			this.type = new TypeAST("String");
+		// str concat
 
-			return;
+		if (bType.type != TypeEnum.STRING) {
+			this.b = new IntToString(this.b);
 		}
+		if (aType.type != TypeEnum.STRING) {
+			this.a = new IntToString(this.a);
+		}
+		this.type = new TypeAST("Str");
 
-		buffer.throwError(
-			new UnsupportedBinop("+", new TypeAST("Dummy"), this.span) //TODO
-		);
+		this.a.applyType(buffer, this.type);
+		this.b.applyType(buffer, this.type);
+		this.op = AddOps.STRING_CONCAT;
+
+		return;
 	}
 
 	override rval(buffer: IOBuffer): Expr {
-		let childRVals: Expr[] = [];
-		for (let child of this.params) {
-			childRVals.push(child.rval(buffer));
+		let aRval: Expr = this.a.rval(buffer);
+		let bRval: Expr = this.b.rval(buffer);
+
+		switch (this.op) {
+			case AddOps.ADD_INTS:
+				let v1: NumberLiteral = aRval as NumberLiteral;
+				let v2: NumberLiteral = bRval as NumberLiteral;
+				return new NumberLiteral("" + (v1.val + v2.val), this.span);
+			case AddOps.STRING_CONCAT:
+				let s1: StringLiteral = aRval as StringLiteral;
+				let s2: StringLiteral = bRval as StringLiteral;
+				return new StringLiteral(s1._name + s2._name, this.span);
+			case AddOps.UNKNOWN:
+				buffer.throwError(
+					new CompilerError("+ not assigned type?", this.span)
+				);
+				return new VoidObj();
 		}
-
-		if (this.type.isMathType()) {
-			let out: NumberLiteral = new NumberLiteral("0", this.span);
-			for (let i in childRVals) {
-				let child: NumberLiteral = childRVals[i] as NumberLiteral;
-
-				out.val += child.val;
-				out._name = "NumberLiteral_" + out.val;
-			}
-			return out;
-		}
-
-		let str: string = "";
-		for (let r of childRVals) {
-			str += r.builtinToString();
-		}
-
-		return new StringLiteral(str, this.span);
 	}
 }
 
-export class Mul extends BuiltinFunc {
+export class Mul extends Expr {
 	params: Expr[];
 
 	constructor(args: Expr[], span: Span) {
@@ -208,7 +213,7 @@ export class Mul extends BuiltinFunc {
 	}
 }
 
-export class Sub extends BuiltinFunc {
+export class Sub extends Expr {
 	params: Expr[];
 
 	constructor(args: Expr[], span: Span) {
@@ -253,7 +258,7 @@ export class Sub extends BuiltinFunc {
 	}
 }
 
-export class Div extends BuiltinFunc {
+export class Div extends Expr {
 	params: Expr[];
 
 	constructor(args: Expr[], span: Span) {
@@ -298,7 +303,7 @@ export class Div extends BuiltinFunc {
 	}
 }
 
-export class LogicalNot extends BuiltinFunc {
+export class LogicalNot extends Expr {
 	params: Expr[];
 
 	constructor(args: Expr[], span: Span) {
@@ -339,7 +344,7 @@ export class LogicalNot extends BuiltinFunc {
 	}
 }
 
-export class LogicalOr extends BuiltinFunc {
+export class LogicalOr extends Expr {
 	params: Expr[];
 
 	constructor(args: Expr[], span: Span) {
@@ -386,7 +391,7 @@ export class LogicalOr extends BuiltinFunc {
 	}
 }
 
-export class LogicalAnd extends BuiltinFunc {
+export class LogicalAnd extends Expr {
 	params: Expr[];
 
 	constructor(args: Expr[], span: Span) {
@@ -433,7 +438,7 @@ export class LogicalAnd extends BuiltinFunc {
 	}
 }
 
-export class LogicalEq extends BuiltinFunc {
+export class LogicalEq extends Expr {
 	params: Expr[];
 
 	constructor(args: Expr[], span: Span) {

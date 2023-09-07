@@ -123,3 +123,13 @@ export class UnsupportedBinop extends EcruError {
 		);
 	}
 }
+
+export class DimensionError extends EcruError {
+	constructor(expectedDim: number, sawDim: number, span: Span) {
+		super(
+			"DimensionError",
+			`Tuple has ${expectedDim} dimensions but saw ${sawDim}.`,
+			span
+		);
+	}
+}

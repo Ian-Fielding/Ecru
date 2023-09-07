@@ -1,6 +1,7 @@
 import { IOBuffer } from "../IOBuffer.js";
 import {
 	ArgumentLengthError,
+	DimensionError,
 	IllegalCallError,
 	IllegalTypeConversionError,
 	NonexistentReturnError,
@@ -10,7 +11,7 @@ import { Span } from "../parser/token.js";
 import { AST, ReturnObject } from "./asts.js";
 import { DeclarationStatement, ReturnStatement, Statement } from "./stmts.js";
 import { Scope, IdSymbol } from "./symbols.js";
-import { TypeAST, FunctionType, TypeEnum } from "./type.js";
+import { TypeAST, FunctionType, TypeEnum, ProductType } from "./type.js";
 
 export abstract class Expr extends AST {
 	type: TypeAST;
@@ -46,24 +47,46 @@ export abstract class Expr extends AST {
 	}
 }
 
-export class TypeCast extends Expr {
-	constructor(
-		name: string,
-		span: Span,
-		args: Expr[] = [],
-		type: TypeAST = new TypeAST("Dummy")
-	) {
-		super(name, span, args);
-		// TODO
+export abstract class TypeCast extends Expr {
+	inType: TypeAST;
+	outType: TypeAST;
+	expr: Expr;
+
+	constructor(inType: TypeAST, outType: TypeAST, expr: Expr, span: Span) {
+		super("TypeCast", span, [inType, outType, expr], outType);
+		this.inType = inType;
+		this.outType = outType;
+		this.expr = expr;
 	}
 
 	override applyType(
 		buffer: IOBuffer,
 		expectedType: TypeAST = new TypeAST("Dummy")
-	): void {}
+	): void {
+		this.outType.applyType(buffer, expectedType);
+		this.expr.applyType(buffer, this.inType);
+		this.type = this.outType;
+	}
+}
+
+export class IntToString extends TypeCast {
+	constructor(expr: Expr) {
+		super(new TypeAST("Int"), new TypeAST("Str"), expr, expr.span);
+	}
 
 	override rval(buffer: IOBuffer): Expr {
-		return this;
+		let r: Expr = this.expr.rval(buffer);
+		if (!(r instanceof NumberLiteral))
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					this.inType,
+					this.outType,
+					this.span
+				)
+			);
+		let num: NumberLiteral = r as NumberLiteral;
+
+		return new StringLiteral(num.val + "", this.span);
 	}
 }
 
@@ -190,57 +213,6 @@ export class FuncDecl extends Expr {
 	}
 }
 
-export class StringLiteral extends Expr {
-	constructor(name: string, span: Span) {
-		super(name, span, [], new TypeAST("String"));
-	}
-
-	override applyType(
-		buffer: IOBuffer,
-		expectedType: TypeAST = new TypeAST("Dummy")
-	): void {
-		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
-
-		if (!this.type.instanceOf(expectedType))
-			buffer.throwError(
-				new IllegalTypeConversionError(
-					this.type,
-					expectedType,
-					this.span
-				)
-			);
-	}
-
-	override builtinToString(): string {
-		return this._name;
-	}
-
-	override toString(): string {
-		return `"${this._name}"`;
-	}
-
-	override rval(buffer: IOBuffer): Expr {
-		return this;
-	}
-}
-
-export class VoidObj extends Expr {
-	constructor() {
-		super("Void", new Span(0, 0, 0, 0), [], new TypeAST("void"));
-	}
-
-	override applyType(
-		buffer: IOBuffer,
-		expectedType: TypeAST = new TypeAST("Dummy")
-	): void {
-		return;
-	}
-
-	override rval(buffer: IOBuffer): Expr {
-		return this;
-	}
-}
-
 export class FuncCall extends Expr {
 	funcName: Expr;
 	input: Expr;
@@ -296,6 +268,57 @@ export class FuncCall extends Expr {
 
 		this.input.applyType(buffer, funcType.domain);
 		this.type = funcType.codomain;
+	}
+}
+
+export class StringLiteral extends Expr {
+	constructor(name: string, span: Span) {
+		super(name, span, [], new TypeAST("String"));
+	}
+
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
+		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
+
+		if (!this.type.instanceOf(expectedType))
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					this.type,
+					expectedType,
+					this.span
+				)
+			);
+	}
+
+	override builtinToString(): string {
+		return this._name;
+	}
+
+	override toString(): string {
+		return `"${this._name}"`;
+	}
+
+	override rval(buffer: IOBuffer): Expr {
+		return this;
+	}
+}
+
+export class VoidObj extends Expr {
+	constructor() {
+		super("Void", new Span(0, 0, 0, 0), [], new TypeAST("void"));
+	}
+
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
+		return;
+	}
+
+	override rval(buffer: IOBuffer): Expr {
+		return this;
 	}
 }
 
@@ -480,22 +503,30 @@ export class Tuple extends Expr {
 		buffer: IOBuffer,
 		expectedType: TypeAST = new TypeAST("Dummy")
 	): void {
-		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
-
-		// TODO
-		if (expectedType.instanceOf(TypeEnum.STRING)) {
-			this.type = expectedType;
-			return;
+		if (expectedType.type == TypeEnum.DUMMY) {
+			for (let val of this.vals) val.applyType(buffer);
 		}
 
-		if (!this.type.instanceOf(expectedType))
+		if (!(expectedType instanceof ProductType)) {
 			buffer.throwError(
 				new IllegalTypeConversionError(
-					this.type,
+					new ProductType([]),
 					expectedType,
 					this.span
 				)
 			);
+		}
+
+		let t: ProductType = expectedType as ProductType;
+		if (t.types.length != this.vals.length) {
+			buffer.throwError(
+				new DimensionError(t.types.length, this.vals.length, this.span)
+			);
+		}
+
+		for (let i = 0; i < t.types.length; i++) {
+			this.vals[i].applyType(buffer, t.types[i]);
+		}
 	}
 
 	override rval(buffer: IOBuffer): Expr {

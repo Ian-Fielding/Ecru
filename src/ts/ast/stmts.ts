@@ -24,12 +24,9 @@ export class Program extends AST {
 		return str;
 	}
 
-	override applyType(
-		buffer: IOBuffer,
-		expectedType: TypeAST = new TypeAST("Dummy")
-	): void {
+	override applyType(buffer: IOBuffer): void {
 		for (let child of this._args) {
-			child.applyType(buffer, expectedType);
+			child.applyType(buffer, new TypeAST("void"));
 		}
 	}
 }
@@ -180,6 +177,10 @@ export class ExprAsStatement extends Statement {
 	override execute(buffer: IOBuffer): ReturnObject {
 		this.expr.rval(buffer);
 		return { break: false };
+	}
+
+	override applyType(buffer: IOBuffer): void {
+		this.expr.applyType(buffer);
 	}
 }
 

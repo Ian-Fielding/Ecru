@@ -148,6 +148,13 @@ export let tests: Test[] = [
 		out: "170",
 		err: false,
 	},
+
+	{
+		name: "add4.2",
+		input: "abc: Z; abc=100+70; print abc+2+abc;",
+		out: "342",
+		err: false,
+	},
 	{
 		name: "add5",
 		input: `
@@ -316,6 +323,126 @@ export let tests: Test[] = [
 		name: "func_test20",
 		input: "f(x:Z):Z {b:Z = 3; b=x; return b;} print f(4);",
 		out: "4",
+		err: false,
+	},
+
+	{
+		name: "func_test21",
+		input: "f(x:Z):Z {return 2*x;} print f(f(f(3)));",
+		out: "24",
+		err: false,
+	},
+
+	{
+		name: "func_test22",
+		input: "f(x:Z,y:Z):Z {return x+y;} x:Z = 4; print f(x,x);",
+		out: "8",
+		err: false,
+	},
+
+	{
+		name: "func_test23",
+		input: "f(x:Z,y:Z):Z {return x+y;} x:Z = 2; print f(2*x,x+2);",
+		out: "8",
+		err: false,
+	},
+
+	{
+		name: "func_test24",
+		input: `
+f(x:Z):Z { 
+	g(y:Z,z:Z):Z {
+		a:Z = 3; 
+		return a*(y+z);
+	} 
+	return x+g(x,2);
+} 
+print f(2);`,
+		out: "14",
+		err: false,
+	},
+
+	{
+		name: "func_test25",
+		input: "return;",
+		out: "",
+		err: false,
+	},
+
+	{
+		name: "func_test26",
+		input: "return 3;",
+		out: "",
+		err: true,
+	},
+
+	{
+		name: "loop_test1",
+		input: "",
+		out: "",
+		err: false,
+	},
+
+	{
+		name: "loop_test2",
+		input: "",
+		out: "",
+		err: false,
+	},
+
+	{
+		name: "loop_test3",
+		input: "",
+		out: "",
+		err: false,
+	},
+
+	{
+		name: "loop_test4",
+		input: "",
+		out: "",
+		err: false,
+	},
+
+	{
+		name: "loop_test5",
+		input: "",
+		out: "",
+		err: false,
+	},
+
+	{
+		name: "loop_test6",
+		input: "",
+		out: "",
+		err: false,
+	},
+
+	{
+		name: "loop_test7",
+		input: "",
+		out: "",
+		err: false,
+	},
+
+	{
+		name: "loop_test8",
+		input: "",
+		out: "",
+		err: false,
+	},
+
+	{
+		name: "loop_test9",
+		input: "",
+		out: "",
+		err: false,
+	},
+
+	{
+		name: "loop_test10",
+		input: "",
+		out: "",
 		err: false,
 	},
 ];
