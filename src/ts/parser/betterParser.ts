@@ -25,7 +25,7 @@ import {
 	ForLoop,
 	Statement,
 } from "../ast/stmts.js";
-import { FunctionType, ProductType, TypeAST } from "../ast/type.js";
+import { FunctionType, ProductType, TypeAST, TypeString } from "../ast/type.js";
 import { ParserError } from "../error.js";
 import { unionSpan } from "../utils.js";
 import { Span, Token } from "./token.js";
@@ -35,7 +35,6 @@ export class Parser {
 	input: string;
 	scan: Tokenizer;
 	root: Program;
-	error: boolean;
 	buffer: IOBuffer;
 
 	constructor(input: string, buffer: IOBuffer) {
@@ -43,7 +42,6 @@ export class Parser {
 		this.scan = new Tokenizer(input, buffer);
 		this.buffer = buffer;
 		this.root = this.program();
-		this.error = false;
 	}
 
 	current(n?: number): string {
@@ -53,11 +51,14 @@ export class Parser {
 	match(kind: string): Token {
 		if (kind == this.current()) return this.scan.pop();
 
-		this.error = true;
+		this.error(kind);
+		return this.scan.peek();
+	}
+
+	error(kind: string) {
 		this.buffer.throwError(
 			new ParserError(kind, this.current(), this.scan.peek().span)
 		);
-		return this.scan.peek();
 	}
 
 	// program -> stmt*
@@ -641,7 +642,9 @@ export class Parser {
 
 	typePrimary(): TypeAST {
 		let tok: Token = this.match(this.current());
-		return new TypeAST(tok.value, tok.span);
+
+		// TODO sucky type conversion
+		return new TypeAST(tok.value as TypeString, tok.span);
 	}
 
 	id(): Id {

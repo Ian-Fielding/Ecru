@@ -1,8 +1,8 @@
-import * as AST from "./ast/asts.js";
 import { Parser } from "./parser/betterParser.js";
 import { IOBuffer, consoleBuffer } from "./IOBuffer.js";
 import { Program } from "./ast/stmts.js";
 import { EcruError } from "./error.js";
+import { Scope } from "./ast/symbols.js";
 
 export interface CompileObj {
 	parseTree: string;
@@ -45,7 +45,7 @@ export function compile(
 
 	retVal.parseTree = prog.toString();
 
-	let scope = new AST.Scope();
+	let scope = new Scope();
 
 	try {
 		prog.applyBind(scope, buffer);

@@ -4,18 +4,18 @@ import { TypeAST } from "./ast/type.js";
 import { Span } from "./parser/token.js";
 
 export abstract class EcruError extends Error {
-	name: string;
+	_name: string;
 	msg: string;
 	span: Span;
 	constructor(name: string, msg: string, span: Span) {
 		super(msg);
-		this.name = name;
+		this._name = name;
 		this.msg = msg;
 		this.span = span;
 	}
 
-	toString(): string {
-		return `${this.name}:${this.span} -- ${this.msg}`;
+	override toString(): string {
+		return `${this._name}:${this.span} -- ${this.msg}`;
 	}
 }
 

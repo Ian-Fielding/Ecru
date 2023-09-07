@@ -1,5 +1,7 @@
+import { IOBuffer } from "../IOBuffer.js";
 import { Span } from "../parser/token.js";
 import { divides, gcd } from "../utils.js";
+import { AST } from "./asts.js";
 
 export const enum TypeEnum {
 	OBJECT = 1,
@@ -16,85 +18,117 @@ export const enum TypeEnum {
 	DUMMY = 23456789,
 }
 
-export class TypeAST {
-	name: string;
+export type TypeString =
+	| "Object"
+	| "Obj"
+	| "Formula"
+	| "Form"
+	| "Real"
+	| "R"
+	| "Rational"
+	| "Q"
+	| "Integer"
+	| "Int"
+	| "Z"
+	| "Natural"
+	| "N"
+	| "Boolean"
+	| "Bool"
+	| "String"
+	| "Str"
+	| "void"
+	| "Map"
+	| "CartProd"
+	| "dummy"
+	| "Dummy";
+
+export function typeEnumToString(t: TypeEnum): TypeString {
+	switch (t) {
+		case TypeEnum.OBJECT:
+			return "Object";
+		case TypeEnum.FORMULA:
+			return "Form";
+		case TypeEnum.REAL:
+			return "R";
+		case TypeEnum.RATIONAL:
+			return "Q";
+		case TypeEnum.INTEGER:
+			return "Z";
+		case TypeEnum.NATURAL:
+			return "N";
+		case TypeEnum.BOOLEAN:
+			return "Bool";
+		case TypeEnum.STRING:
+			return "String";
+		case TypeEnum.VOID:
+			return "void";
+		case TypeEnum.MAP:
+			return "Map";
+		case TypeEnum.PROD:
+			return "CartProd";
+		case TypeEnum.DUMMY:
+			return "Dummy";
+	}
+}
+
+export function typeStringToEnum(s: string): TypeEnum {
+	switch (s) {
+		case "Object":
+		case "Obj":
+			return TypeEnum.OBJECT;
+		case "Formula":
+		case "Form":
+			return TypeEnum.FORMULA;
+		case "Real":
+		case "R":
+			return TypeEnum.REAL;
+		case "Rational":
+		case "Q":
+			return TypeEnum.RATIONAL;
+		case "Integer":
+		case "Int":
+		case "Z":
+			return TypeEnum.INTEGER;
+		case "Natural":
+		case "N":
+			return TypeEnum.NATURAL;
+		case "Boolean":
+		case "Bool":
+			return TypeEnum.BOOLEAN;
+		case "String":
+		case "Str":
+			return TypeEnum.STRING;
+		case "void":
+			return TypeEnum.VOID;
+		case "Map":
+			return TypeEnum.MAP;
+		case "CartProd":
+			return TypeEnum.PROD;
+		case "dummy":
+		case "Dummy":
+		default:
+			return TypeEnum.DUMMY;
+	}
+}
+
+export class TypeAST extends AST {
 	type: TypeEnum;
-	span: Span;
 
-	constructor(name: string | number, span: Span = new Span(0, 0, 0, 0)) {
-		this.name = "uncertain";
-		this.span = span;
-
-		if (typeof name == "number") {
-			this.type = name as number;
-			return;
+	constructor(
+		name: TypeString | TypeEnum,
+		span: Span = new Span(0, 0, 0, 0)
+	) {
+		let str: TypeString;
+		let num: TypeEnum;
+		if (typeof name == "string") {
+			num = typeStringToEnum(name);
+			str = typeEnumToString(num);
+		} else {
+			str = typeEnumToString(name);
+			num = name;
 		}
-
-		switch (name) {
-			case "Object":
-			case "Obj":
-				this.type = TypeEnum.OBJECT;
-				this.name = "ObjType";
-				break;
-			case "Formula":
-			case "Form":
-				this.type = TypeEnum.FORMULA;
-				this.name = "FormType";
-				break;
-			case "Real":
-			case "R":
-				this.type = TypeEnum.REAL;
-				this.name = "RealType";
-				break;
-			case "Rational":
-			case "Q":
-				this.type = TypeEnum.RATIONAL;
-				this.name = "RatType";
-				break;
-			case "Integer":
-			case "Int":
-			case "Z":
-				this.type = TypeEnum.INTEGER;
-				this.name = "IntType";
-				break;
-			case "Natural":
-			case "N":
-				this.type = TypeEnum.NATURAL;
-				this.name = "NatType";
-				break;
-			case "Boolean":
-			case "Bool":
-				this.type = TypeEnum.BOOLEAN;
-				this.name = "BoolType";
-				break;
-			case "String":
-			case "Str":
-				this.type = TypeEnum.STRING;
-				this.name = "StrType";
-				break;
-			case "void":
-				this.type = TypeEnum.VOID;
-				this.name = "VoidType";
-				break;
-			case "Map":
-				this.type = TypeEnum.MAP;
-				this.name = "MapType";
-				break;
-			case "CartProd":
-				this.type = TypeEnum.PROD;
-				this.name = "ProdType";
-				break;
-			case "dummy":
-			case "Dummy":
-				this.type = TypeEnum.DUMMY;
-				this.name = "DummyType";
-				break;
-			default:
-				this.type = TypeEnum.DUMMY;
-				this.name = "ErrorType";
-				throw new Error("Bestie idk what the type " + name + " is");
-			//break;
-		}
+		super(str, span);
+		this.type = num;
 	}
 
 	instanceOf(t: TypeAST | number): boolean {
@@ -117,8 +151,17 @@ export class TypeAST {
 		return this.type % TypeEnum.MAP == 0;
 	}
 
-	toString(): string {
-		return `${this.name}()`;
+	override toString(): string {
+		return `${this._name}`;
+	}
+
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
+		for (let child of this._args) {
+			child.applyType(buffer, expectedType);
+		}
 	}
 }
 

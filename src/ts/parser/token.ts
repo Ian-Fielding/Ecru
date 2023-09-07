@@ -1,3 +1,6 @@
+/**
+ * Representation of a token from an input string
+ */
 export class Token {
 	span: Span;
 	kind: string;
@@ -22,6 +25,9 @@ export class Token {
 	}
 }
 
+/**
+ * The representation of a span of an input string
+ */
 export class Span {
 	startLine: number;
 	endLine: number;

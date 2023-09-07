@@ -24,6 +24,10 @@ export class Negate extends BuiltinFunc {
 		buffer: IOBuffer,
 		expectedType?: TypeAST | undefined
 	): void {}
+
+	override rval(buffer: IOBuffer): Expr {
+		return this;
+	}
 }
 
 export class Factorial extends BuiltinFunc {
@@ -35,6 +39,10 @@ export class Factorial extends BuiltinFunc {
 		buffer: IOBuffer,
 		expectedType?: TypeAST | undefined
 	): void {}
+
+	override rval(buffer: IOBuffer): Expr {
+		return this;
+	}
 }
 
 export class Exponent extends BuiltinFunc {
@@ -46,6 +54,10 @@ export class Exponent extends BuiltinFunc {
 		buffer: IOBuffer,
 		expectedType?: TypeAST | undefined
 	): void {}
+
+	override rval(buffer: IOBuffer): Expr {
+		return this;
+	}
 }
 
 export class Add extends BuiltinFunc {
@@ -92,7 +104,7 @@ export class Add extends BuiltinFunc {
 		}
 
 		buffer.throwError(
-			new UnsupportedBinop("+", new TypeAST("TODO"), this.span)
+			new UnsupportedBinop("+", new TypeAST("Dummy"), this.span) //TODO
 		);
 	}
 
@@ -108,7 +120,7 @@ export class Add extends BuiltinFunc {
 				let child: NumberLiteral = childRVals[i] as NumberLiteral;
 
 				out.val += child.val;
-				out.name = "NumberLiteral_" + out.val;
+				out._name = "NumberLiteral_" + out.val;
 			}
 			return out;
 		}
@@ -166,7 +178,7 @@ export class Mul extends BuiltinFunc {
 			return;
 		}
 		buffer.throwError(
-			new UnsupportedBinop("*", new TypeAST("TODO"), this.span)
+			new UnsupportedBinop("*", new TypeAST("Dummy"), this.span) //TODO
 		);
 	}
 
@@ -182,14 +194,14 @@ export class Mul extends BuiltinFunc {
 				let child: NumberLiteral = childRVals[i] as NumberLiteral;
 
 				out.val *= child.val;
-				out.name = "NumberLiteral_" + out.val;
+				out._name = "NumberLiteral_" + out.val;
 			}
 			return out;
 		}
 
 		let str: string = "";
 		let count: number = (childRVals[1] as NumberLiteral).val;
-		let dup: string = (childRVals[0] as StringLiteral).name;
+		let dup: string = (childRVals[0] as StringLiteral)._name;
 		for (let i = 0; i < count; i++) str += dup;
 
 		return new StringLiteral(str, this.span);
@@ -225,7 +237,7 @@ export class Sub extends BuiltinFunc {
 			return;
 		}
 		buffer.throwError(
-			new UnsupportedBinop("-", new TypeAST("TODO"), this.span)
+			new UnsupportedBinop("-", new TypeAST("Dummy"), this.span) //TODO
 		);
 	}
 
@@ -270,7 +282,7 @@ export class Div extends BuiltinFunc {
 			return;
 		}
 		buffer.throwError(
-			new UnsupportedBinop("/", new TypeAST("TODO"), this.span)
+			new UnsupportedBinop("/", new TypeAST("Dummy"), this.span) //TODO
 		);
 	}
 
@@ -487,8 +499,8 @@ export class LogicalEq extends BuiltinFunc {
 		let v2: string | number;
 
 		if (childRVals[0].type.instanceOf(TypeEnum.STRING)) {
-			v1 = (childRVals[0] as StringLiteral).name;
-			v2 = (childRVals[1] as StringLiteral).name;
+			v1 = (childRVals[0] as StringLiteral)._name;
+			v2 = (childRVals[1] as StringLiteral)._name;
 		} else {
 			v1 = (childRVals[0] as NumberLiteral).val;
 			v2 = (childRVals[1] as NumberLiteral).val;

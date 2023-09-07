@@ -5,9 +5,18 @@ import { tokenTests } from "./tokenTests.js";
 import { silentBuffer } from "../IOBuffer.js";
 import { Tokenizer } from "../parser/tokenizer.js";
 
+/**
+ * Prints str with green background
+ * @param str
+ */
 function printGood(str: string): void {
 	console.log("\x1b[42m\x1b[30m%s\x1b[0m", str);
 }
+
+/**
+ * Print str with red background
+ * @param str
+ */
 function printBad(str: string): void {
 	console.log("\x1b[41m\x1b[37m%s\x1b[0m", str);
 }
@@ -16,6 +25,7 @@ let tokenCount: number = 0;
 for (let test of tokenTests) {
 	let scan: Tokenizer = new Tokenizer(test.input, silentBuffer);
 
+	// determines if a token does or doesn't match
 	let tokenError: boolean = scan.tokens.length != test.tokens.length;
 	for (let i = 0; i < scan.tokens.length && !tokenError; i++) {
 		if (!scan.tokens[i].equals(test.tokens[i])) {
@@ -31,6 +41,7 @@ for (let test of tokenTests) {
 	}
 }
 
+// prints out token total score
 let out: string = `Tokenizer score: ${tokenCount}/${tokenTests.length}`;
 if (tokenCount != tokenTests.length) printBad(out);
 else printGood(out);
@@ -50,6 +61,7 @@ for (let test of parseTests) {
 	}
 }
 
+// prints out total parse score
 out = `Parse tree score: ${parseCount}/${parseTests.length}`;
 if (parseCount != parseTests.length) printBad(out);
 else printGood(out);
@@ -73,6 +85,7 @@ for (let test of tests) {
 	}
 }
 
+// prints out total test score
 out = `Basic test score: ${basicCount}/${tests.length}`;
 if (basicCount != tests.length) printBad(out);
 else printGood(out);

@@ -7,8 +7,9 @@ import {
 	UndefinedIdentifierError,
 } from "../error.js";
 import { Span } from "../parser/token.js";
-import { AST, IdSymbol, ReturnObject, Scope } from "./asts.js";
+import { AST, ReturnObject } from "./asts.js";
 import { DeclarationStatement, ReturnStatement, Statement } from "./stmts.js";
+import { Scope, IdSymbol } from "./symbols.js";
 import { TypeAST, FunctionType, TypeEnum } from "./type.js";
 
 export abstract class Expr extends AST {
@@ -24,13 +25,11 @@ export abstract class Expr extends AST {
 		this.type = type;
 	}
 
-	rval(buffer: IOBuffer): Expr {
-		return this;
-	}
+	abstract rval(buffer: IOBuffer): Expr;
 
 	getChildrenRVals(buffer: IOBuffer): Expr[] {
 		let childRVals: Expr[] = [];
-		for (let child of this.args) {
+		for (let child of this._args) {
 			childRVals.push((child as Expr).rval(buffer));
 		}
 		return childRVals;
@@ -39,7 +38,7 @@ export abstract class Expr extends AST {
 	abstract override applyType(buffer: IOBuffer, expectedType?: TypeAST): void;
 
 	toLatex(): string {
-		return `\\text{${this.name}}`;
+		return `\\text{${this._name}}`;
 	}
 
 	builtinToString(): string {
@@ -62,6 +61,10 @@ export class TypeCast extends Expr {
 		buffer: IOBuffer,
 		expectedType: TypeAST = new TypeAST("Dummy")
 	): void {}
+
+	override rval(buffer: IOBuffer): Expr {
+		return this;
+	}
 }
 
 export class FuncDecl extends Expr {
@@ -209,11 +212,15 @@ export class StringLiteral extends Expr {
 	}
 
 	override builtinToString(): string {
-		return this.name;
+		return this._name;
 	}
 
 	override toString(): string {
-		return `"${this.name}"`;
+		return `"${this._name}"`;
+	}
+
+	override rval(buffer: IOBuffer): Expr {
+		return this;
 	}
 }
 
@@ -227,6 +234,10 @@ export class VoidObj extends Expr {
 		expectedType: TypeAST = new TypeAST("Dummy")
 	): void {
 		return;
+	}
+
+	override rval(buffer: IOBuffer): Expr {
+		return this;
 	}
 }
 
@@ -345,7 +356,7 @@ export class Id extends Expr {
 		return this.symbol!.toLatex();
 	}
 
-	toString(): string {
+	override toString(): string {
 		return this.idName;
 	}
 
@@ -368,6 +379,10 @@ export class ArrayAccess extends Expr {
 		buffer: IOBuffer,
 		expectedType: TypeAST = new TypeAST("Dummy")
 	): void {}
+
+	override rval(buffer: IOBuffer): Expr {
+		return this;
+	}
 }
 
 export class NumberLiteral extends Expr {
@@ -405,16 +420,8 @@ export class NumberLiteral extends Expr {
 		return this;
 	}
 
-	toString(): string {
+	override toString(): string {
 		return this.val + "";
-	}
-
-	toLatex(): string {
-		return this.val + "";
-	}
-
-	equals(other: NumberLiteral) {
-		return this.val == other.val;
 	}
 }
 
@@ -457,16 +464,8 @@ export class IntegerLiteral extends Expr {
 		return this.val + "";
 	}
 
-	toString(): string {
+	override toString(): string {
 		return this.val + "";
-	}
-
-	toLatex(): string {
-		return this.val + "";
-	}
-
-	equals(other: NumberLiteral) {
-		return this.val == other.val;
 	}
 }
 
@@ -513,16 +512,7 @@ export class Tuple extends Expr {
 		return this.vals + "";
 	}
 
-	toString(): string {
+	override toString(): string {
 		return this.vals + "";
-	}
-
-	toLatex(): string {
-		return this.vals + "";
-	}
-
-	equals(other: Tuple) {
-		//TODO
-		return this.vals == other.vals;
 	}
 }

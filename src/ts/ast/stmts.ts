@@ -5,8 +5,9 @@ import {
 	UndefinedIdentifierError,
 } from "../error.js";
 import { Span } from "../parser/token.js";
-import { AST, IdSymbol, ReturnObject, Scope } from "./asts.js";
+import { AST, ReturnObject } from "./asts.js";
 import { StringLiteral, Id, Expr, NumberLiteral, VoidObj } from "./exprs.js";
+import { Scope, IdSymbol } from "./symbols.js";
 import { TypeAST, TypeEnum } from "./type.js";
 
 export class Program extends AST {
@@ -16,17 +17,35 @@ export class Program extends AST {
 
 	toLongString(): string {
 		let str: string = "";
-		for (let i: number = 0; i < this.args.length; i++) {
-			str += `---\n${i}. ${this.args[i].toString()}\n`;
+		for (let i: number = 0; i < this._args.length; i++) {
+			str += `---\n${i}. ${this._args[i].toString()}\n`;
 		}
 
 		return str;
+	}
+
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
+		for (let child of this._args) {
+			child.applyType(buffer, expectedType);
+		}
 	}
 }
 
 export class Statement extends AST {
 	constructor(name: string, span: Span, args: AST[] = []) {
 		super(name, span, args);
+	}
+
+	override applyType(
+		buffer: IOBuffer,
+		expectedType: TypeAST = new TypeAST("Dummy")
+	): void {
+		for (let child of this._args) {
+			child.applyType(buffer, expectedType);
+		}
 	}
 }
 
@@ -54,7 +73,7 @@ export class DeclarationStatement extends Statement {
 	}
 
 	override toString(): string {
-		return `${this.name}(${this.id},${this.type})`;
+		return `${this._name}(${this.id},${this.type})`;
 	}
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {
@@ -185,7 +204,7 @@ export class PrintStatement extends Statement {
 
 		let str: Expr = this.expr.rval(buffer);
 		if (str instanceof StringLiteral) {
-			buffer.stdout(str.name + term);
+			buffer.stdout(str._name + term);
 		} else if (str instanceof NumberLiteral) {
 			buffer.stdout(str.val + term);
 		} else {
@@ -219,7 +238,7 @@ export class PrettyPrintStatement extends Statement {
 
 		let str: Expr = this.expr.rval(buffer);
 		if (str instanceof StringLiteral) {
-			buffer.stdout(str.name + term);
+			buffer.stdout(str._name + term);
 		} else if (str instanceof NumberLiteral) {
 			buffer.stdout(str.val + term);
 		} else {
@@ -358,7 +377,7 @@ export class IfStmt extends Statement {
 		let other: AST[] = [];
 		other.push(test);
 		for (let child of stmts) other.push(child);
-		for (let child of elseStmts) other.push(child);
+		for (let child of elseStmts) other.push(child); // TODO Buggy!
 
 		super("IfStmt", span, other);
 		this.test = test;

@@ -6,6 +6,9 @@ export interface Test {
 	errmsg?: string;
 }
 
+/**
+ * Runnable test cases
+ */
 export let tests: Test[] = [
 	{
 		name: "basic_test1",
