@@ -56,7 +56,7 @@ for (let test of parseTests) {
 		printBad(`Error on ${test.name}`);
 		console.log(`---Inp: ${test.input}`);
 		console.log(
-			`---Exp: "${test.expected}"\n---Saw: "${result.parseTree}}"`
+			`---Exp: "${test.expected}"\n---Saw: "${result.parseTree}"`
 		);
 	}
 }

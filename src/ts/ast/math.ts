@@ -7,10 +7,10 @@ import {
 import { Span } from "../parser/token.js";
 import {
 	Expr,
-	IntToString,
 	NumberLiteral,
 	StringLiteral,
 	VoidObj,
+	getTypeCast,
 } from "./exprs.js";
 import { Scope } from "./symbols.js";
 import { TypeAST, TypeEnum } from "./type.js";
@@ -79,25 +79,16 @@ export class Exponent extends Expr {
 	}
 }
 
-const enum AddOps {
-	ADD_INTS,
-	STRING_CONCAT,
-	UNKNOWN,
-}
-export class Add extends Expr {
+export abstract class Binop extends Expr {
 	a: Expr;
 	b: Expr;
-	op: AddOps;
+	symbol: string;
 
-	constructor(a: Expr, b: Expr, span: Span) {
+	constructor(a: Expr, b: Expr, symbol: string, span: Span) {
 		super(span);
 		this.a = a;
 		this.b = b;
-		this.op = AddOps.UNKNOWN;
-	}
-
-	override toString(): string {
-		return `add(${this.a},${this.b})`;
+		this.symbol = symbol;
 	}
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {
@@ -111,235 +102,155 @@ export class Add extends Expr {
 		let aType: TypeAST = this.a.type;
 		let bType: TypeAST = this.b.type;
 
-		if (
-			aType.type == TypeEnum.VOID ||
-			bType.type == TypeEnum.VOID ||
-			expectedType.type == TypeEnum.VOID
-		)
-			buffer.throwError(
-				new UnsupportedBinop("+", new TypeAST("void"), this.span)
-			);
+		let precedence: TypeEnum[] = [TypeEnum.STRING, TypeEnum.INTEGER];
 
-		if (aType.type == TypeEnum.INTEGER && bType.type == TypeEnum.INTEGER) {
-			this.type = new TypeAST("Int");
-			this.op = AddOps.ADD_INTS;
-			return;
+		for (let type of precedence) {
+			if (aType.type == type || bType.type == type) {
+				this.type = new TypeAST(type);
+				this.a = getTypeCast(this.a, type);
+				this.b = getTypeCast(this.b, type);
+				return;
+			}
 		}
 
-		// str concat
-
-		if (bType.type != TypeEnum.STRING) {
-			this.b = new IntToString(this.b);
-		}
-		if (aType.type != TypeEnum.STRING) {
-			this.a = new IntToString(this.a);
-		}
-		this.type = new TypeAST("Str");
-
-		this.a.applyType(buffer, this.type);
-		this.b.applyType(buffer, this.type);
-		this.op = AddOps.STRING_CONCAT;
+		buffer.throwError(new UnsupportedBinop(this.symbol, aType, this.span));
 
 		return;
 	}
+}
 
+export class Add extends Binop {
+	constructor(a: Expr, b: Expr, span: Span) {
+		super(a, b, "+", span);
+	}
+
+	override toString(): string {
+		return `add(${this.a},${this.b})`;
+	}
 	override rval(buffer: IOBuffer): Expr {
 		let aRval: Expr = this.a.rval(buffer);
 		let bRval: Expr = this.b.rval(buffer);
 
-		switch (this.op) {
-			case AddOps.ADD_INTS:
+		switch (this.type.type) {
+			case TypeEnum.INTEGER:
 				let v1: NumberLiteral = aRval as NumberLiteral;
 				let v2: NumberLiteral = bRval as NumberLiteral;
 				return new NumberLiteral("" + (v1.val + v2.val), this.span);
-			case AddOps.STRING_CONCAT:
+			case TypeEnum.STRING:
 				let s1: StringLiteral = aRval as StringLiteral;
 				let s2: StringLiteral = bRval as StringLiteral;
 				return new StringLiteral(s1.name + s2.name, this.span);
-			case AddOps.UNKNOWN:
+			default:
 				buffer.throwError(
-					new CompilerError("+ not assigned type?", this.span)
+					new CompilerError(
+						this.symbol + " not assigned type?",
+						this.span
+					)
 				);
 				return new VoidObj();
 		}
 	}
 }
 
-export class Mul extends Expr {
-	params: Expr[];
-
-	constructor(args: Expr[], span: Span) {
-		super(span);
-		this.params = args;
+export class Mul extends Binop {
+	constructor(a: Expr, b: Expr, span: Span) {
+		super(a, b, "*", span);
 	}
 
 	override toString(): string {
-		let ps: string[] = this.params.map((e) => e.toString());
-		return `mul(${ps.join(",")})`;
+		return `mul(${this.a},${this.b})`;
 	}
-
-	override applyBind(scope: Scope, buffer: IOBuffer): void {
-		for (let p of this.params) p.applyBind(scope, buffer);
-	}
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		let childTypes: TypeAST[] = this.params.map(function (
-			c: Expr
-		): TypeAST {
-			c.applyType(buffer, new TypeAST("Dummy"));
-			return c.type;
-		});
-
-		// updates types for all math ops
-		let gcdType: TypeAST = childTypes.reduce((t1, t2) =>
-			t1.closestParent(t2)
-		);
-		if (gcdType.isMathType()) {
-			this.type = gcdType;
-
-			return;
-		}
-
-		// handles string multiplication
-		let containsString: boolean = false;
-		for (let t of childTypes) {
-			if (t.instanceOf(TypeEnum.STRING)) {
-				containsString = true;
-				break;
-			}
-		}
-
-		if (containsString) {
-			this.type = new TypeAST("String");
-
-			return;
-		}
-		buffer.throwError(
-			new UnsupportedBinop("*", new TypeAST("Dummy"), this.span) //TODO
-		);
-	}
-
 	override rval(buffer: IOBuffer): Expr {
-		let childRVals: Expr[] = [];
-		for (let child of this.params) {
-			childRVals.push(child.rval(buffer));
+		let aRval: Expr = this.a.rval(buffer);
+		let bRval: Expr = this.b.rval(buffer);
+
+		switch (this.type.type) {
+			case TypeEnum.INTEGER:
+				let v1: NumberLiteral = aRval as NumberLiteral;
+				let v2: NumberLiteral = bRval as NumberLiteral;
+				return new NumberLiteral("" + v1.val * v2.val, this.span);
+			case TypeEnum.STRING:
+				buffer.throwError(
+					new UnsupportedBinop(this.symbol, this.type, this.span)
+				);
+				return new VoidObj();
+			default:
+				buffer.throwError(
+					new CompilerError(
+						this.symbol + " not assigned type?",
+						this.span
+					)
+				);
+				return new VoidObj();
 		}
-
-		if (this.type.isMathType()) {
-			let out: NumberLiteral = new NumberLiteral("1", this.span);
-			for (let i in childRVals) {
-				let child: NumberLiteral = childRVals[i] as NumberLiteral;
-
-				out.val *= child.val;
-				//out._name = "NumberLiteral_" + out.val;
-			}
-			return out;
-		}
-
-		let str: string = "";
-		let count: number = (childRVals[1] as NumberLiteral).val;
-		let dup: string = (childRVals[0] as StringLiteral).name;
-		for (let i = 0; i < count; i++) str += dup;
-
-		return new StringLiteral(str, this.span);
 	}
 }
 
-export class Sub extends Expr {
-	params: Expr[];
-
-	constructor(args: Expr[], span: Span) {
-		super(span);
-		this.params = args;
+export class Sub extends Binop {
+	constructor(a: Expr, b: Expr, span: Span) {
+		super(a, b, "-", span);
 	}
 
 	override toString(): string {
-		let ps: string[] = this.params.map((e) => e.toString());
-		return `sub(${ps.join(",")})`;
+		return `sub(${this.a},${this.b})`;
 	}
-	override applyBind(scope: Scope, buffer: IOBuffer): void {
-		for (let param of this.params) param.applyBind(scope, buffer);
-	}
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		let childTypes: TypeAST[] = this.params.map(function (
-			c: Expr
-		): TypeAST {
-			c.applyType(buffer, new TypeAST("Dummy"));
-			return c.type;
-		});
-
-		// updates types for all math ops
-		let gcdType: TypeAST = childTypes.reduce((t1, t2) =>
-			t1.closestParent(t2)
-		);
-		if (gcdType.isMathType()) {
-			this.type = gcdType;
-
-			return;
-		}
-		buffer.throwError(
-			new UnsupportedBinop("-", new TypeAST("Dummy"), this.span) //TODO
-		);
-	}
-
 	override rval(buffer: IOBuffer): Expr {
-		let childRVals: Expr[] = [
-			this.params[0].rval(buffer),
-			this.params[1].rval(buffer),
-		];
+		let aRval: Expr = this.a.rval(buffer);
+		let bRval: Expr = this.b.rval(buffer);
 
-		let v1: number = (childRVals[0] as NumberLiteral).val;
-		let v2: number = (childRVals[1] as NumberLiteral).val;
-		return new NumberLiteral("" + (v1 - v2), this.span);
+		switch (this.type.type) {
+			case TypeEnum.INTEGER:
+				let v1: NumberLiteral = aRval as NumberLiteral;
+				let v2: NumberLiteral = bRval as NumberLiteral;
+				return new NumberLiteral("" + (v1.val - v2.val), this.span);
+			case TypeEnum.STRING:
+				buffer.throwError(
+					new UnsupportedBinop(this.symbol, this.type, this.span)
+				);
+				return new VoidObj();
+			default:
+				buffer.throwError(
+					new CompilerError(
+						this.symbol + " not assigned type?",
+						this.span
+					)
+				);
+				return new VoidObj();
+		}
 	}
 }
 
-export class Div extends Expr {
-	params: Expr[];
-
-	constructor(args: Expr[], span: Span) {
-		super(span);
-		this.params = args;
+export class Div extends Binop {
+	constructor(a: Expr, b: Expr, span: Span) {
+		super(a, b, "/", span);
 	}
 
 	override toString(): string {
-		let ps: string[] = this.params.map((e) => e.toString());
-		return `div(${ps.join(",")})`;
+		return `div(${this.a},${this.b})`;
 	}
-	override applyBind(scope: Scope, buffer: IOBuffer): void {
-		for (let param of this.params) param.applyBind(scope, buffer);
-	}
-
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		let childTypes: TypeAST[] = this.params.map(function (
-			c: Expr
-		): TypeAST {
-			c.applyType(buffer, new TypeAST("Dummy"));
-			return c.type;
-		});
-
-		// updates types for all math ops
-		let gcdType: TypeAST = childTypes.reduce((t1, t2) =>
-			t1.closestParent(t2)
-		);
-		if (gcdType.isMathType()) {
-			this.type = gcdType;
-
-			return;
-		}
-		buffer.throwError(
-			new UnsupportedBinop("/", new TypeAST("Dummy"), this.span) //TODO
-		);
-	}
-
 	override rval(buffer: IOBuffer): Expr {
-		let childRVals: Expr[] = [
-			this.params[0].rval(buffer),
-			this.params[1].rval(buffer),
-		];
+		let aRval: Expr = this.a.rval(buffer);
+		let bRval: Expr = this.b.rval(buffer);
 
-		let v1: number = (childRVals[0] as NumberLiteral).val;
-		let v2: number = (childRVals[1] as NumberLiteral).val;
-		return new NumberLiteral("" + v1 / v2, this.span);
+		switch (this.type.type) {
+			case TypeEnum.INTEGER:
+				let v1: NumberLiteral = aRval as NumberLiteral;
+				let v2: NumberLiteral = bRval as NumberLiteral;
+				return new NumberLiteral("" + v1.val / v2.val, this.span);
+			case TypeEnum.STRING:
+				buffer.throwError(
+					new UnsupportedBinop(this.symbol, this.type, this.span)
+				);
+				return new VoidObj();
+			default:
+				buffer.throwError(
+					new CompilerError(
+						this.symbol + " not assigned type?",
+						this.span
+					)
+				);
+				return new VoidObj();
+		}
 	}
 }
 

@@ -1,7 +1,9 @@
 import { IOBuffer } from "../IOBuffer.js";
+import { CompilerError, IllegalTypeConversionError } from "../error.js";
 import { Span } from "../parser/token.js";
 import { divides, gcd } from "../utils.js";
 import { AST } from "./asts.js";
+import { Expr, NumberLiteral, StringLiteral, VoidObj } from "./exprs.js";
 import { Scope } from "./symbols.js";
 
 export const enum TypeEnum {
@@ -12,7 +14,7 @@ export const enum TypeEnum {
 	INTEGER = 2 * 2 * 2 * 2,
 	NATURAL = 2 * 2 * 2 * 2 * 2,
 	BOOLEAN = 2 * 2 * 2 * 2 * 2 * 2,
-	STRING = 2 * 3,
+	STRING = 3,
 	VOID = 5,
 	MAP = 7,
 	PROD = 11,

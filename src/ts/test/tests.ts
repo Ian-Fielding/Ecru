@@ -28,6 +28,20 @@ export let tests: Test[] = [
 		out: "6",
 		err: false,
 	},
+
+	{
+		name: "basic_test3.1",
+		input: "print 1+2;",
+		out: "3",
+		err: false,
+	},
+
+	{
+		name: "basic_test3.2",
+		input: "print 2-1;",
+		out: "1",
+		err: false,
+	},
 	{
 		name: "basic_test4",
 		input: "print 1+2-3;",
@@ -145,6 +159,20 @@ export let tests: Test[] = [
 		name: "basic_test17",
 		input: 'x: Z = 10; y: Z = 20; print (x==y) + " " +(x+10==y);',
 		out: "0 1",
+		err: false,
+	},
+
+	{
+		name: "basic_test17.1",
+		input: 'print 3+"% milk";',
+		out: "3% milk",
+		err: false,
+	},
+
+	{
+		name: "basic_test17.2",
+		input: 'x: Z = 3; print x+"% milk";',
+		out: "3% milk",
 		err: false,
 	},
 	{

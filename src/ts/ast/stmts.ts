@@ -6,7 +6,14 @@ import {
 } from "../error.js";
 import { Span } from "../parser/token.js";
 import { AST, ReturnObject } from "./asts.js";
-import { StringLiteral, Id, Expr, NumberLiteral, VoidObj } from "./exprs.js";
+import {
+	StringLiteral,
+	Id,
+	Expr,
+	NumberLiteral,
+	VoidObj,
+	TypeCastToString,
+} from "./exprs.js";
 import { Scope, IdSymbol } from "./symbols.js";
 import { TypeAST, TypeEnum } from "./type.js";
 
@@ -259,7 +266,7 @@ export class PrintStatement extends Statement {
 
 	constructor(expr: Expr, span: Span, isNewLine: boolean, isPretty: boolean) {
 		super(span);
-		this.expr = expr;
+		this.expr = new TypeCastToString(expr);
 		this.isNewLine = isNewLine;
 		this.isPretty = isPretty;
 	}

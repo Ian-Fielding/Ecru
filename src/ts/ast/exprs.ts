@@ -28,51 +28,113 @@ export abstract class Expr extends AST {
 	}
 }
 
-export abstract class TypeCast extends Expr {
-	inType: TypeAST;
-	outType: TypeAST;
-	expr: Expr;
-
-	constructor(inType: TypeAST, outType: TypeAST, expr: Expr, span: Span) {
-		super(span);
-		this.inType = inType;
-		this.outType = outType;
-		this.expr = expr;
-	}
-
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		this.outType.applyType(buffer, expectedType);
-		this.expr.applyType(buffer, this.inType);
-		this.type = this.outType;
-	}
-
-	override toString(): string {
-		return this.expr.toString();
+export function getTypeCast(expr: Expr, type: TypeEnum): Expr {
+	switch (type) {
+		case TypeEnum.INTEGER:
+			return new TypeCastToInt(expr);
+		case TypeEnum.STRING:
+			return new TypeCastToString(expr);
+		default:
+			//NOT IMPLMENETED
+			return new VoidObj();
 	}
 }
 
-export class IntToString extends TypeCast {
+export class TypeCastToInt extends Expr {
+	expr: Expr;
+
 	constructor(expr: Expr) {
-		super(new TypeAST("Int"), new TypeAST("Str"), expr, expr.span);
+		super(expr.span);
+		this.expr = expr;
+		this.type = new TypeAST("Int");
 	}
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {
 		this.expr.applyBind(scope, buffer);
 	}
 
-	override rval(buffer: IOBuffer): Expr {
-		let r: Expr = this.expr.rval(buffer);
-		if (!(r instanceof NumberLiteral))
-			buffer.throwError(
-				new IllegalTypeConversionError(
-					this.inType,
-					this.outType,
-					this.span
-				)
-			);
-		let num: NumberLiteral = r as NumberLiteral;
+	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+		this.expr.applyType(buffer, new TypeAST("Dummy"));
+		this.type.applyType(buffer, expectedType);
+	}
 
-		return new StringLiteral(num.val + "", this.span);
+	override toString(): string {
+		return this.expr.toString();
+	}
+
+	override rval(buffer: IOBuffer): NumberLiteral {
+		let r: Expr = this.expr.rval(buffer);
+		switch (r.type.type) {
+			case TypeEnum.INTEGER:
+			case TypeEnum.BOOLEAN:
+			case TypeEnum.NATURAL:
+				return r as NumberLiteral;
+			case TypeEnum.STRING:
+				let s: StringLiteral = r as StringLiteral;
+				return new NumberLiteral(s.name, r.span);
+			case TypeEnum.RATIONAL:
+			case TypeEnum.REAL:
+			//TODO implement once types is good
+			case TypeEnum.PROD:
+			case TypeEnum.DUMMY:
+			case TypeEnum.FORMULA:
+			case TypeEnum.MAP:
+			case TypeEnum.OBJECT:
+			case TypeEnum.VOID:
+				buffer.throwError(
+					new IllegalTypeConversionError(r.type, this.type, this.span)
+				);
+				return new NumberLiteral("0", this.span);
+		}
+	}
+}
+
+export class TypeCastToString extends Expr {
+	expr: Expr;
+
+	constructor(expr: Expr) {
+		super(expr.span);
+		this.expr = expr;
+		this.type = new TypeAST("String");
+	}
+
+	override applyBind(scope: Scope, buffer: IOBuffer): void {
+		this.expr.applyBind(scope, buffer);
+	}
+
+	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+		this.expr.applyType(buffer, new TypeAST("Dummy"));
+		this.type.applyType(buffer, expectedType);
+	}
+
+	override toString(): string {
+		return this.expr.toString();
+	}
+
+	override rval(buffer: IOBuffer): StringLiteral {
+		let r: Expr = this.expr.rval(buffer);
+		switch (r.type.type) {
+			case TypeEnum.STRING:
+				return r as StringLiteral;
+			case TypeEnum.INTEGER:
+			case TypeEnum.BOOLEAN:
+			case TypeEnum.NATURAL:
+				let s: NumberLiteral = r as NumberLiteral;
+				return new StringLiteral(s.val + "", r.span);
+			case TypeEnum.RATIONAL:
+			case TypeEnum.REAL:
+			case TypeEnum.FORMULA:
+			case TypeEnum.MAP:
+			case TypeEnum.PROD:
+			//TODO implement once types is good
+			case TypeEnum.DUMMY:
+			case TypeEnum.OBJECT:
+			case TypeEnum.VOID:
+				buffer.throwError(
+					new IllegalTypeConversionError(r.type, this.type, this.span)
+				);
+				return new StringLiteral("", this.span);
+		}
 	}
 }
 
@@ -86,10 +148,6 @@ export class FuncDecl extends Expr {
 		type: FunctionType,
 		span: Span
 	) {
-		let other: AST[] = [];
-		for (let child of params) other.push(child);
-		for (let child of stmts) other.push(child);
-
 		super(span);
 		this.params = params;
 		this.stmts = stmts;
@@ -293,12 +351,11 @@ export class StringLiteral extends Expr {
 	constructor(name: string, span: Span) {
 		super(span);
 		this.name = name;
+		this.type = new TypeAST("String");
 	}
 	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
 	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		this.type = new TypeAST("String");
-
 		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
 
 		if (!this.type.instanceOf(expectedType))
@@ -437,12 +494,11 @@ export class NumberLiteral extends Expr {
 	constructor(name: string, span: Span) {
 		super(span);
 		this.val = Number(name);
+		this.type = new TypeAST("Int");
 	}
 	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
 	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		this.type = new TypeAST("Int");
-
 		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
 
 		if (expectedType.instanceOf(TypeEnum.STRING)) {
@@ -477,12 +533,11 @@ export class IntegerLiteral extends Expr {
 	constructor(name: string, span: Span) {
 		super(span);
 		this.val = Number(name);
+		this.type = new TypeAST("Int");
 	}
 	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
 	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		this.type = new TypeAST("Int");
-
 		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
 
 		if (expectedType.instanceOf(TypeEnum.STRING)) {
@@ -521,6 +576,7 @@ export class Tuple extends Expr {
 	constructor(vals: Expr[], span: Span) {
 		super(span);
 		this.vals = vals;
+		this.type = new TypeAST("CartProd");
 	}
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {

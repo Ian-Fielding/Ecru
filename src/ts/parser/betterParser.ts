@@ -161,7 +161,7 @@ export class Parser {
 				expr = this.expr();
 				return new AssignmentStatement(
 					id,
-					new MATH.Sub([id, expr], unionSpan([id.span, expr.span])),
+					new MATH.Sub(id, expr, unionSpan([id.span, expr.span])),
 					unionSpan([id.span, expr.span])
 				);
 
@@ -170,7 +170,7 @@ export class Parser {
 				expr = this.expr();
 				return new AssignmentStatement(
 					id,
-					new MATH.Mul([id, expr], unionSpan([id.span, expr.span])),
+					new MATH.Mul(id, expr, unionSpan([id.span, expr.span])),
 					unionSpan([id.span, expr.span])
 				);
 
@@ -179,7 +179,7 @@ export class Parser {
 				expr = this.expr();
 				return new AssignmentStatement(
 					id,
-					new MATH.Div([id, expr], unionSpan([id.span, expr.span])),
+					new MATH.Div(id, expr, unionSpan([id.span, expr.span])),
 					unionSpan([id.span, expr.span])
 				);
 		}
@@ -505,7 +505,8 @@ export class Parser {
 				this.match("-");
 				let right = this.multiplicative();
 				left = new MATH.Sub(
-					[left, right],
+					left,
+					right,
 					unionSpan([left.span, right.span])
 				);
 			}
@@ -520,14 +521,16 @@ export class Parser {
 				this.match("*");
 				let right = this.negation();
 				left = new MATH.Mul(
-					[left, right],
+					left,
+					right,
 					unionSpan([left.span, right.span])
 				);
 			} else if (this.current() == "/") {
 				this.match("/");
 				let right = this.negation();
 				left = new MATH.Div(
-					[left, right],
+					left,
+					right,
 					unionSpan([left.span, right.span])
 				);
 			}
