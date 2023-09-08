@@ -3,6 +3,7 @@ import { IOBuffer, consoleBuffer } from "./IOBuffer.js";
 import { Program } from "./ast/stmts.js";
 import { EcruError } from "./error.js";
 import { Scope } from "./ast/symbols.js";
+import { TypeAST } from "./ast/type.js";
 
 export interface CompileObj {
 	parseTree: string;
@@ -50,14 +51,17 @@ export function compile(
 	try {
 		prog.applyBind(scope, buffer);
 	} catch (e: any) {
+		if (!(e instanceof EcruError)) throw e;
+
 		let error: EcruError = e as EcruError;
 		retVal.errorMsg = error.msg;
 		return retVal;
 	}
 
 	try {
-		prog.applyType(buffer);
+		prog.applyType(buffer, new TypeAST("void"));
 	} catch (e: any) {
+		if (!(e instanceof EcruError)) throw e;
 		let error: EcruError = e as EcruError;
 		retVal.errorMsg = error.msg;
 		return retVal;
@@ -66,6 +70,7 @@ export function compile(
 	try {
 		prog.execute(buffer);
 	} catch (e: any) {
+		if (!(e instanceof EcruError)) throw e;
 		let error: EcruError = e as EcruError;
 		retVal.errorMsg = error.msg;
 		return retVal;

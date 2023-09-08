@@ -16,34 +16,15 @@ import { TypeAST, FunctionType, TypeEnum, ProductType } from "./type.js";
 export abstract class Expr extends AST {
 	type: TypeAST;
 
-	constructor(
-		name: string,
-		span: Span,
-		args: AST[] = [],
-		type: TypeAST = new TypeAST("Dummy")
-	) {
-		super(name, span, args);
-		this.type = type;
+	constructor(span: Span) {
+		super(span);
+		this.type = new TypeAST("Dummy");
 	}
 
 	abstract rval(buffer: IOBuffer): Expr;
 
-	getChildrenRVals(buffer: IOBuffer): Expr[] {
-		let childRVals: Expr[] = [];
-		for (let child of this._args) {
-			childRVals.push((child as Expr).rval(buffer));
-		}
-		return childRVals;
-	}
-
-	abstract override applyType(buffer: IOBuffer, expectedType?: TypeAST): void;
-
 	toLatex(): string {
-		return `\\text{${this._name}}`;
-	}
-
-	builtinToString(): string {
-		return this.toString();
+		return `\\text{REPLACE ME}`;
 	}
 }
 
@@ -53,25 +34,30 @@ export abstract class TypeCast extends Expr {
 	expr: Expr;
 
 	constructor(inType: TypeAST, outType: TypeAST, expr: Expr, span: Span) {
-		super("TypeCast", span, [inType, outType, expr], outType);
+		super(span);
 		this.inType = inType;
 		this.outType = outType;
 		this.expr = expr;
 	}
 
-	override applyType(
-		buffer: IOBuffer,
-		expectedType: TypeAST = new TypeAST("Dummy")
-	): void {
+	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
 		this.outType.applyType(buffer, expectedType);
 		this.expr.applyType(buffer, this.inType);
 		this.type = this.outType;
+	}
+
+	override toString(): string {
+		return this.expr.toString();
 	}
 }
 
 export class IntToString extends TypeCast {
 	constructor(expr: Expr) {
 		super(new TypeAST("Int"), new TypeAST("Str"), expr, expr.span);
+	}
+
+	override applyBind(scope: Scope, buffer: IOBuffer): void {
+		this.expr.applyBind(scope, buffer);
 	}
 
 	override rval(buffer: IOBuffer): Expr {
@@ -104,9 +90,17 @@ export class FuncDecl extends Expr {
 		for (let child of params) other.push(child);
 		for (let child of stmts) other.push(child);
 
-		super("FuncDecl", span, other, type);
+		super(span);
 		this.params = params;
 		this.stmts = stmts;
+		this.type = type;
+	}
+
+	override toString(): string {
+		let ps: string[] = this.params.map((d) => d.toString());
+		let ss: string[] = this.params.map((d) => d.toString());
+
+		return `FuncDecl([${ps.join(",")}],[${ss.join(",")}])`;
 	}
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {
@@ -118,20 +112,11 @@ export class FuncDecl extends Expr {
 		for (let child of this.stmts) child.applyBind(bScope, buffer);
 	}
 
-	override applyType(
-		buffer: IOBuffer,
-		expectedType: TypeAST = new TypeAST("Dummy")
-	): void {
+	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
 		for (let child of this.params) child.applyType(buffer, expectedType);
 		for (let child of this.stmts)
 			child.applyType(buffer, (this.type as FunctionType).codomain);
-	}
 
-	override rval(buffer: IOBuffer): Expr {
-		return this;
-	}
-
-	override execute(buffer: IOBuffer): ReturnObject {
 		let type: FunctionType = this.type as FunctionType;
 		if (!type.codomain.instanceOf(TypeEnum.VOID)) {
 			let index: number = -1;
@@ -146,14 +131,18 @@ export class FuncDecl extends Expr {
 				buffer.throwError(
 					new NonexistentReturnError(type.codomain, this.span)
 				);
-				return { break: true };
+				return;
 			}
 			/*if (index != this.stmts.length-1) {
 				buffer.stderr("Function contains unreachable code!");
 				return { break: true };
 			}*/
 		}
-		return { break: false };
+		return;
+	}
+
+	override rval(buffer: IOBuffer): Expr {
+		return this;
 	}
 
 	onCall(buffer: IOBuffer, input: Expr): Expr {
@@ -176,8 +165,16 @@ export class FuncDecl extends Expr {
 			let param: Expr = input;
 
 			let id: Id = decl.id;
-			backup.push(id.symbol!.val);
-			id.symbol!.val = param;
+
+			if (!id.symbol) {
+				buffer.throwError(
+					new UndefinedIdentifierError(id.idName, this.span)
+				);
+				return this;
+			}
+
+			backup.push(id.symbol.val);
+			id.symbol.val = param;
 		} else if (this.params.length > 1) {
 			for (let i = 0; i < this.params.length; i++) {
 				let decl: DeclarationStatement = this.params[i];
@@ -185,8 +182,16 @@ export class FuncDecl extends Expr {
 				let param: Expr = tup.vals[i];
 
 				let id: Id = decl.id;
-				backup.push(id.symbol!.val);
-				id.symbol!.val = param;
+
+				if (!id.symbol) {
+					buffer.throwError(
+						new UndefinedIdentifierError(id.idName, this.span)
+					);
+					return this;
+				}
+
+				backup.push(id.symbol.val);
+				id.symbol.val = param;
 			}
 		}
 
@@ -206,7 +211,14 @@ export class FuncDecl extends Expr {
 		for (let i = 0; i < this.params.length; i++) {
 			let decl: DeclarationStatement = this.params[i];
 			let id: Id = decl.id;
-			id.symbol!.val = backup[i];
+
+			if (!id.symbol) {
+				buffer.throwError(
+					new UndefinedIdentifierError(id.idName, this.span)
+				);
+				return this;
+			}
+			id.symbol.val = backup[i];
 		}
 
 		return retVal;
@@ -219,10 +231,7 @@ export class FuncCall extends Expr {
 	params: Expr[];
 
 	constructor(funcName: Expr, params: Expr[], span: Span) {
-		let other: AST[] = [];
-		other.push(funcName);
-		for (let child of params) other.push(child);
-		super("FuncCall", span, other);
+		super(span);
 
 		this.funcName = funcName;
 		this.params = params;
@@ -230,6 +239,17 @@ export class FuncCall extends Expr {
 		if (params.length == 0) this.input = new VoidObj();
 		else if (params.length == 1) this.input = params[0];
 		else this.input = new Tuple(params, span);
+	}
+	override applyBind(scope: Scope, buffer: IOBuffer): void {
+		this.funcName.applyBind(scope, buffer);
+		this.input.applyBind(scope, buffer);
+		for (let param of this.params) param.applyBind(scope, buffer);
+	}
+
+	override toString(): string {
+		let ps: string[] = this.params.map((d) => d.toString());
+
+		return `FuncCall(${this.funcName},${this.input},${ps.join(",")})`;
 	}
 
 	override rval(buffer: IOBuffer): Expr {
@@ -251,10 +271,7 @@ export class FuncCall extends Expr {
 		return changeme;
 	}
 
-	override applyType(
-		buffer: IOBuffer,
-		parentType: TypeAST = new TypeAST("Dummy")
-	): void {
+	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
 		this.funcName.applyType(buffer, new TypeAST("Map"));
 
 		if (!this.funcName.type.instanceOf(TypeEnum.MAP)) {
@@ -272,14 +289,16 @@ export class FuncCall extends Expr {
 }
 
 export class StringLiteral extends Expr {
+	name: string;
 	constructor(name: string, span: Span) {
-		super(name, span, [], new TypeAST("String"));
+		super(span);
+		this.name = name;
 	}
+	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
-	override applyType(
-		buffer: IOBuffer,
-		expectedType: TypeAST = new TypeAST("Dummy")
-	): void {
+	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+		this.type = new TypeAST("String");
+
 		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
 
 		if (!this.type.instanceOf(expectedType))
@@ -292,12 +311,8 @@ export class StringLiteral extends Expr {
 			);
 	}
 
-	override builtinToString(): string {
-		return this._name;
-	}
-
 	override toString(): string {
-		return `"${this._name}"`;
+		return `"${this.name}"`;
 	}
 
 	override rval(buffer: IOBuffer): Expr {
@@ -307,18 +322,20 @@ export class StringLiteral extends Expr {
 
 export class VoidObj extends Expr {
 	constructor() {
-		super("Void", new Span(0, 0, 0, 0), [], new TypeAST("void"));
+		super(new Span(0, 0, 0, 0));
 	}
+	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
-	override applyType(
-		buffer: IOBuffer,
-		expectedType: TypeAST = new TypeAST("Dummy")
-	): void {
-		return;
+	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+		this.type = new TypeAST("void");
 	}
 
 	override rval(buffer: IOBuffer): Expr {
 		return this;
+	}
+
+	override toString(): string {
+		return "void";
 	}
 }
 
@@ -327,20 +344,29 @@ export class Id extends Expr {
 	idName: string;
 
 	constructor(idName: string, span: Span) {
-		super("Id_" + idName, span, [], new TypeAST("Dummy"));
+		super(span);
 		this.symbol = null;
 		this.idName = idName;
 	}
 
 	rval(buffer: IOBuffer): Expr {
-		return this.symbol!.rval(buffer);
+		if (!this.symbol) {
+			buffer.throwError(
+				new UndefinedIdentifierError(this.idName, this.span)
+			);
+			return this;
+		}
+		return this.symbol.rval(buffer);
 	}
 
-	override applyType(
-		buffer: IOBuffer,
-		expectedType: TypeAST = new TypeAST("Dummy")
-	): void {
-		this.type = this.symbol!.type;
+	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+		if (!this.symbol) {
+			buffer.throwError(
+				new UndefinedIdentifierError(this.idName, this.span)
+			);
+			return;
+		}
+		this.type = this.symbol.type;
 
 		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
 
@@ -382,10 +408,6 @@ export class Id extends Expr {
 	override toString(): string {
 		return this.idName;
 	}
-
-	override builtinToString(): string {
-		return this.symbol!.builtinToString();
-	}
 }
 
 export class ArrayAccess extends Expr {
@@ -393,32 +415,34 @@ export class ArrayAccess extends Expr {
 	ind: Expr;
 	constructor(arr: Expr, ind: Expr, span: Span) {
 		// TODO
-		super("arr", span, [arr, ind]);
+		super(span);
 		this.arr = arr;
 		this.ind = ind;
 	}
+	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
-	override applyType(
-		buffer: IOBuffer,
-		expectedType: TypeAST = new TypeAST("Dummy")
-	): void {}
+	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {}
 
 	override rval(buffer: IOBuffer): Expr {
 		return this;
+	}
+
+	override toString(): string {
+		return `ArrayInd(${this.arr.toString()},${this.ind.toString()})`;
 	}
 }
 
 export class NumberLiteral extends Expr {
 	val: number;
 	constructor(name: string, span: Span) {
-		super("NumberLiteral_" + name, span, [], new TypeAST("Int"));
+		super(span);
 		this.val = Number(name);
 	}
+	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
-	override applyType(
-		buffer: IOBuffer,
-		expectedType: TypeAST = new TypeAST("Dummy")
-	): void {
+	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+		this.type = new TypeAST("Int");
+
 		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
 
 		if (expectedType.instanceOf(TypeEnum.STRING)) {
@@ -451,14 +475,14 @@ export class NumberLiteral extends Expr {
 export class IntegerLiteral extends Expr {
 	val: number;
 	constructor(name: string, span: Span) {
-		super("IntegerLiteral_" + name, span, [], new TypeAST("Int"));
+		super(span);
 		this.val = Number(name);
 	}
+	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
-	override applyType(
-		buffer: IOBuffer,
-		expectedType: TypeAST = new TypeAST("Dummy")
-	): void {
+	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+		this.type = new TypeAST("Int");
+
 		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
 
 		if (expectedType.instanceOf(TypeEnum.STRING)) {
@@ -495,16 +519,17 @@ export class IntegerLiteral extends Expr {
 export class Tuple extends Expr {
 	vals: Expr[];
 	constructor(vals: Expr[], span: Span) {
-		super("Tuple", span, vals, new TypeAST("CartProd"));
+		super(span);
 		this.vals = vals;
 	}
 
-	override applyType(
-		buffer: IOBuffer,
-		expectedType: TypeAST = new TypeAST("Dummy")
-	): void {
+	override applyBind(scope: Scope, buffer: IOBuffer): void {
+		for (let val of this.vals) val.applyBind(scope, buffer);
+	}
+
+	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
 		if (expectedType.type == TypeEnum.DUMMY) {
-			for (let val of this.vals) val.applyType(buffer);
+			for (let val of this.vals) val.applyType(buffer, expectedType);
 		}
 
 		if (!(expectedType instanceof ProductType)) {
@@ -544,6 +569,7 @@ export class Tuple extends Expr {
 	}
 
 	override toString(): string {
-		return this.vals + "";
+		let ps: string[] = this.vals.map((d) => d.toString());
+		return `Tuple(${ps.join(",")})`;
 	}
 }

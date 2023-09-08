@@ -64,12 +64,12 @@ export let parseTests: ParseTest[] = [
 		name: "parse_test12",
 		input: '\n x: Z = 3; if(x){print "test";}',
 		expected:
-			'Program(DeclStmt(x,Z),AssignStmt(x,3),IfStmt(x,PrintStmt("test")))',
+			'Program(DeclStmt(x,Z),AssignStmt(x,3),IfStmt(x,[PrintStmt("test")],[]))',
 	},
 	{
 		name: "parse_test13",
 		input: "if 1+1 {x: Z;} else {x: Z;}",
-		expected: "Program(IfStmt(add(1,1),DeclStmt(x,Z),DeclStmt(x,Z)))",
+		expected: "Program(IfStmt(add(1,1),[DeclStmt(x,Z)],[DeclStmt(x,Z)]))",
 	},
 	{
 		name: "parse_test14",
@@ -105,24 +105,24 @@ export let parseTests: ParseTest[] = [
 	{
 		name: "parse_test20",
 		input: "while 0 {x: Z; y:String;}",
-		expected: "Program(WhileLoop(0,DeclStmt(x,Z),DeclStmt(y,String)))",
+		expected: "Program(WhileLoop(0,[DeclStmt(x,Z),DeclStmt(y,String)]))",
 	},
 	{
 		name: "parse_test21",
 		input: "while(x and y){}",
-		expected: "Program(WhileLoop(and(x,y)))",
+		expected: "Program(WhileLoop(and(x,y),[]))",
 	},
 	{
 		name: "parse_test22",
 		input: 'for x: Z = 1;x ~= 5; x+=1 {print "hello";}',
 		expected:
-			'Program(ForLoop(DeclStmt(x,Z),AssignStmt(x,1),not(equals(x,5)),AssignStmt(x,add(x,1)),PrintStmt("hello")))',
+			'Program(ForLoop(DeclStmt(x,Z),AssignStmt(x,1),not(equals(x,5)),AssignStmt(x,add(x,1)),[PrintStmt("hello")]))',
 	},
 	{
 		name: "parse_test23",
 		input: 'for ( x: Z = 1;x ~= 5; x+=1 ) {print "hello";}',
 		expected:
-			'Program(ForLoop(DeclStmt(x,Z),AssignStmt(x,1),not(equals(x,5)),AssignStmt(x,add(x,1)),PrintStmt("hello")))',
+			'Program(ForLoop(DeclStmt(x,Z),AssignStmt(x,1),not(equals(x,5)),AssignStmt(x,add(x,1)),[PrintStmt("hello")]))',
 	},
 	{
 		name: "parse_test24",
@@ -188,7 +188,8 @@ export let parseTests: ParseTest[] = [
 				
 				return x;
 				`,
-		expected: "Program(IfStmt(equals(x,0),ReturnStmt(1)),ReturnStmt(x))",
+		expected:
+			"Program(IfStmt(equals(x,0),[ReturnStmt(1)],[]),ReturnStmt(x))",
 	},
 	{
 		name: "parse_test36",

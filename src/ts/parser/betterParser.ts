@@ -19,7 +19,6 @@ import {
 	DeclarationStatement,
 	CommentStatement,
 	PrintStatement,
-	PrettyPrintStatement,
 	IfStmt,
 	WhileLoop,
 	ForLoop,
@@ -280,7 +279,9 @@ export class Parser {
 			let expr: Expr = this.expr();
 			let ret: Statement = new PrintStatement(
 				expr,
-				unionSpan([start.span, expr.span])
+				unionSpan([start.span, expr.span]),
+				false,
+				false
 			);
 			this.match(";");
 			return ret;
@@ -288,9 +289,11 @@ export class Parser {
 		if (this.current() == "pprint") {
 			let start: Token = this.match("pprint");
 			let expr: Expr = this.expr();
-			let ret: Statement = new PrettyPrintStatement(
+			let ret: Statement = new PrintStatement(
 				expr,
-				unionSpan([start.span, expr.span])
+				unionSpan([start.span, expr.span]),
+				false,
+				true
 			);
 			this.match(";");
 			return ret;
@@ -301,7 +304,8 @@ export class Parser {
 			let ret: Statement = new PrintStatement(
 				expr,
 				unionSpan([start.span, expr.span]),
-				true
+				true,
+				false
 			);
 			this.match(";");
 			return ret;
@@ -309,9 +313,10 @@ export class Parser {
 
 		let start: Token = this.match("pprintln");
 		let expr: Expr = this.expr();
-		let ret: Statement = new PrettyPrintStatement(
+		let ret: Statement = new PrintStatement(
 			expr,
 			unionSpan([start.span, expr.span]),
+			true,
 			true
 		);
 		this.match(";");
@@ -386,9 +391,9 @@ export class Parser {
 			stmts = [this.stmt()];
 		}
 		return new ForLoop(
-			[asg],
+			asg,
 			test,
-			[it],
+			it,
 			stmts,
 			unionSpan([start.span].concat(stmts.map((s) => s.span)))
 		);

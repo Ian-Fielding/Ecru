@@ -65,14 +65,6 @@ export class IdSymbol {
 
 		return this.val.toString();
 	}
-
-	/**
-	 *
-	 * @returns Representation in Ecru after type conversion to string
-	 */
-	builtinToString(): string {
-		return this.val!.builtinToString();
-	}
 }
 
 /**

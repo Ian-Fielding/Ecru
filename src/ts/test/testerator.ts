@@ -37,6 +37,7 @@ for (let test of tokenTests) {
 		tokenCount++;
 	} else {
 		printBad(`Error on ${test.name}`);
+		console.log(`---Inp: ${test.input}`);
 		console.log(`---Exp: "${test.tokens}"\n---Saw: "${scan.tokens}"`);
 	}
 }
@@ -54,9 +55,8 @@ for (let test of parseTests) {
 	else {
 		printBad(`Error on ${test.name}`);
 		console.log(`---Inp: ${test.input}`);
-		console.log(`---Tok: ${new Tokenizer(test.input, silentBuffer)}`);
 		console.log(
-			`---Exp: "${test.expected}"\n---Saw: "${result.parseTree} ${result.errorMsg}"`
+			`---Exp: "${test.expected}"\n---Saw: "${result.parseTree}}"`
 		);
 	}
 }
@@ -81,8 +81,9 @@ for (let test of tests) {
 			? `Error (${result.buffer.getErr()})`
 			: "No error";
 
+		console.log(`---Inp: ${test.input}`);
 		console.log(
-			`---Exp: "${test.out}"\n---${err1}\n---Saw: "${out}"\n---${err2}`
+			`---Exp: "${test.out}"\n  -${err1}\n---Saw: "${out}"\n  -${err2}`
 		);
 	}
 }

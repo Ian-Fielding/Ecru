@@ -2,6 +2,7 @@ import { IOBuffer } from "../IOBuffer.js";
 import { Span } from "../parser/token.js";
 import { divides, gcd } from "../utils.js";
 import { AST } from "./asts.js";
+import { Scope } from "./symbols.js";
 
 export const enum TypeEnum {
 	OBJECT = 1,
@@ -113,6 +114,7 @@ export function typeStringToEnum(s: string): TypeEnum {
 
 export class TypeAST extends AST {
 	type: TypeEnum;
+	name: TypeString;
 
 	constructor(
 		name: TypeString | TypeEnum,
@@ -127,8 +129,9 @@ export class TypeAST extends AST {
 			str = typeEnumToString(name);
 			num = name;
 		}
-		super(str, span);
+		super(span);
 		this.type = num;
+		this.name = str;
 	}
 
 	instanceOf(t: TypeAST | number): boolean {
@@ -152,17 +155,14 @@ export class TypeAST extends AST {
 	}
 
 	override toString(): string {
-		return `${this._name}`;
+		return `${this.name}`;
 	}
 
-	override applyType(
-		buffer: IOBuffer,
-		expectedType: TypeAST = new TypeAST("Dummy")
-	): void {
-		for (let child of this._args) {
-			child.applyType(buffer, expectedType);
-		}
+	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+		// TODO Check if needed
 	}
+
+	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 }
 
 export class ProductType extends TypeAST {
@@ -171,6 +171,8 @@ export class ProductType extends TypeAST {
 		super("CartProd", span);
 		this.types = types;
 	}
+
+	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 }
 
 export class FunctionType extends TypeAST {

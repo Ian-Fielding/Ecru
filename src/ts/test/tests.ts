@@ -70,6 +70,41 @@ export let tests: Test[] = [
 		out: "7",
 		err: false,
 	},
+
+	{
+		name: "basic_test10.1",
+		input: "x: Z = 3; y: Z = 4; print x*y;",
+		out: "12",
+		err: false,
+	},
+
+	{
+		name: "basic_test10.2",
+		input: "print x*y; x: Z = 3; y: Z = 4; ",
+		out: "",
+		err: true,
+	},
+
+	{
+		name: "basic_test10.3",
+		input: "print 3*4; x: Z = 3; y: Z = 4; ",
+		out: "12",
+		err: false,
+	},
+
+	{
+		name: "basic_test10.4",
+		input: "print 3*4;",
+		out: "12",
+		err: false,
+	},
+
+	{
+		name: "basic_test10.5",
+		input: "x:Z = 12; print x;",
+		out: "12",
+		err: false,
+	},
 	{
 		name: "basic_test11",
 		input: "x: Z; y: Z = 3; x=y; print 2*x + y;",
