@@ -44,10 +44,4 @@ export abstract class AST {
 	 * @param buffer for handling error messaging
 	 */
 	abstract applyBind(scope: Scope, buffer: IOBuffer): void;
-
-	/**
-	 * Applies type assignment and consistency checking to all children
-	 * @param buffer for handling error messaging
-	 */
-	abstract applyType(buffer: IOBuffer, expectedType: TypeAST): void;
 }

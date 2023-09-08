@@ -29,7 +29,7 @@ export class Negate extends Expr {
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {}
+	override applyType(buffer: IOBuffer): void {}
 
 	override rval(buffer: IOBuffer): Expr {
 		return this;
@@ -49,7 +49,7 @@ export class Factorial extends Expr {
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {}
+	override applyType(buffer: IOBuffer): void {}
 
 	override rval(buffer: IOBuffer): Expr {
 		return this;
@@ -72,7 +72,7 @@ export class Exponent extends Expr {
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {}
+	override applyType(buffer: IOBuffer): void {}
 
 	override rval(buffer: IOBuffer): Expr {
 		return this;
@@ -96,9 +96,9 @@ export abstract class Binop extends Expr {
 		this.b.applyBind(scope, buffer);
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		this.a.applyType(buffer, new TypeAST("Dummy"));
-		this.b.applyType(buffer, new TypeAST("Dummy"));
+	override applyType(buffer: IOBuffer): void {
+		this.a.applyType(buffer);
+		this.b.applyType(buffer);
 		let aType: TypeAST = this.a.type;
 		let bType: TypeAST = this.b.type;
 
@@ -107,8 +107,10 @@ export abstract class Binop extends Expr {
 		for (let type of precedence) {
 			if (aType.type == type || bType.type == type) {
 				this.type = new TypeAST(type);
-				this.a = getTypeCast(this.a, type);
-				this.b = getTypeCast(this.b, type);
+				this.a = getTypeCast(this.a, this.type);
+				this.a.applyType(buffer);
+				this.b = getTypeCast(this.b, this.type);
+				this.b.applyType(buffer);
 				return;
 			}
 		}
@@ -269,23 +271,10 @@ export class LogicalNot extends Expr {
 	override applyBind(scope: Scope, buffer: IOBuffer): void {
 		for (let param of this.params) param.applyBind(scope, buffer);
 	}
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+	override applyType(buffer: IOBuffer): void {
 		this.type = new TypeAST("Integer");
-		if (
-			!expectedType.instanceOf(TypeEnum.DUMMY) &&
-			!this.type.instanceOf(expectedType)
-		) {
-			buffer.throwError(
-				new IllegalTypeConversionError(
-					this.type,
-					expectedType,
-					this.span
-				)
-			);
-			return;
-		}
 
-		this.params[0].applyType(buffer, this.type);
+		this.params[0].applyType(buffer);
 	}
 
 	override rval(buffer: IOBuffer): Expr {
@@ -314,24 +303,11 @@ export class LogicalOr extends Expr {
 		return `or(${ps.join(",")})`;
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+	override applyType(buffer: IOBuffer): void {
 		this.type = new TypeAST("Integer");
-		if (
-			!expectedType.instanceOf(TypeEnum.DUMMY) &&
-			!this.type.instanceOf(expectedType)
-		) {
-			buffer.throwError(
-				new IllegalTypeConversionError(
-					this.type,
-					expectedType,
-					this.span
-				)
-			);
-			return;
-		}
 
-		this.params[0].applyType(buffer, this.type);
-		this.params[1].applyType(buffer, this.type);
+		this.params[0].applyType(buffer);
+		this.params[1].applyType(buffer);
 	}
 
 	override rval(buffer: IOBuffer): Expr {
@@ -365,24 +341,11 @@ export class LogicalAnd extends Expr {
 	override applyBind(scope: Scope, buffer: IOBuffer): void {
 		for (let param of this.params) param.applyBind(scope, buffer);
 	}
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+	override applyType(buffer: IOBuffer): void {
 		this.type = new TypeAST("Integer");
-		if (
-			!expectedType.instanceOf(TypeEnum.DUMMY) &&
-			!this.type.instanceOf(expectedType)
-		) {
-			buffer.throwError(
-				new IllegalTypeConversionError(
-					this.type,
-					expectedType,
-					this.span
-				)
-			);
-			return;
-		}
 
-		this.params[0].applyType(buffer, this.type);
-		this.params[1].applyType(buffer, this.type);
+		this.params[0].applyType(buffer);
+		this.params[1].applyType(buffer);
 	}
 
 	override rval(buffer: IOBuffer): Expr {
@@ -416,25 +379,11 @@ export class LogicalEq extends Expr {
 		return `equals(${ps.join(",")})`;
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+	override applyType(buffer: IOBuffer): void {
 		this.type = new TypeAST("Integer");
 
-		if (
-			!expectedType.instanceOf(TypeEnum.DUMMY) &&
-			!this.type.instanceOf(expectedType)
-		) {
-			buffer.throwError(
-				new IllegalTypeConversionError(
-					this.type,
-					expectedType,
-					this.span
-				)
-			);
-			return;
-		}
-
-		this.params[0].applyType(buffer, expectedType);
-		this.params[1].applyType(buffer, expectedType);
+		this.params[0].applyType(buffer);
+		this.params[1].applyType(buffer);
 
 		if (!this.params[0].type.instanceOf(this.params[1].type)) {
 			buffer.throwError(

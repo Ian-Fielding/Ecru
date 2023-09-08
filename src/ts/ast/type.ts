@@ -1,9 +1,7 @@
 import { IOBuffer } from "../IOBuffer.js";
-import { CompilerError, IllegalTypeConversionError } from "../error.js";
 import { Span } from "../parser/token.js";
 import { divides, gcd } from "../utils.js";
 import { AST } from "./asts.js";
-import { Expr, NumberLiteral, StringLiteral, VoidObj } from "./exprs.js";
 import { Scope } from "./symbols.js";
 
 export const enum TypeEnum {
@@ -160,11 +158,11 @@ export class TypeAST extends AST {
 		return `${this.name}`;
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		// TODO Check if needed
-	}
-
 	override applyBind(scope: Scope, buffer: IOBuffer): void {}
+
+	equals(other: TypeAST) {
+		return other.type == this.type;
+	}
 }
 
 export class ProductType extends TypeAST {
@@ -174,7 +172,22 @@ export class ProductType extends TypeAST {
 		this.types = types;
 	}
 
-	override applyBind(scope: Scope, buffer: IOBuffer): void {}
+	override equals(other: TypeAST): boolean {
+		if (!(other instanceof ProductType)) return false;
+
+		let o: ProductType = other as ProductType;
+		if (o.types.length != this.types.length) return false;
+
+		for (let i = 0; i < this.types.length; i++)
+			if (!this.types[i].equals(o.types[i])) return false;
+
+		return true;
+	}
+
+	override toString(): string {
+		let ts: string[] = this.types.map((t) => t.toString());
+		return `(${ts.join(",")})`;
+	}
 }
 
 export class FunctionType extends TypeAST {
@@ -189,5 +202,17 @@ export class FunctionType extends TypeAST {
 		super("Map", span);
 		this.domain = domain;
 		this.codomain = codomain;
+	}
+
+	override equals(other: TypeAST): boolean {
+		if (!(other instanceof FunctionType)) return false;
+
+		let o: FunctionType = other as FunctionType;
+
+		return this.domain.equals(o.domain) && this.codomain.equals(o.codomain);
+	}
+
+	override toString(): string {
+		return `${this.domain}->${this.codomain}`;
 	}
 }

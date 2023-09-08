@@ -1,6 +1,7 @@
 import { IOBuffer } from "../IOBuffer.js";
 import {
 	ArgumentLengthError,
+	CompilerError,
 	DimensionError,
 	IllegalCallError,
 	IllegalTypeConversionError,
@@ -26,17 +27,168 @@ export abstract class Expr extends AST {
 	toLatex(): string {
 		return `\\text{REPLACE ME}`;
 	}
+
+	abstract applyType(buffer: IOBuffer): void;
 }
 
-export function getTypeCast(expr: Expr, type: TypeEnum): Expr {
-	switch (type) {
+export function getTypeCast(expr: Expr, type: TypeAST): Expr {
+	switch (type.type) {
 		case TypeEnum.INTEGER:
 			return new TypeCastToInt(expr);
 		case TypeEnum.STRING:
 			return new TypeCastToString(expr);
+		case TypeEnum.PROD:
+			return new TypeCastToTuple(expr, type as ProductType);
+		case TypeEnum.MAP:
+			return new TypeCastToMap(expr, type as FunctionType);
+		case TypeEnum.VOID:
+			return new TypeCastToVoid(expr);
 		default:
-			//NOT IMPLMENETED
-			return new VoidObj();
+			//NOT IMPLEMENTEd
+			throw new Error("NOT IMPLEMENTED " + type);
+	}
+}
+
+export class TypeCastToVoid extends Expr {
+	expr: Expr;
+
+	constructor(expr: Expr) {
+		super(expr.span);
+		this.expr = expr;
+		this.type = new TypeAST("void");
+	}
+
+	override applyBind(scope: Scope, buffer: IOBuffer): void {
+		this.expr.applyBind(scope, buffer);
+	}
+
+	override applyType(buffer: IOBuffer): void {
+		this.expr.applyType(buffer);
+	}
+
+	override toString(): string {
+		return this.expr.toString();
+	}
+
+	override rval(buffer: IOBuffer): VoidObj {
+		let r: Expr = this.expr.rval(buffer);
+
+		if (r.type.type != TypeEnum.VOID)
+			buffer.throwError(
+				new IllegalTypeConversionError(r.type, this.type, this.span)
+			);
+
+		return new VoidObj();
+	}
+}
+
+export class TypeCastToMap extends Expr {
+	expr: Expr;
+
+	constructor(expr: Expr, type: FunctionType) {
+		super(expr.span);
+		this.expr = expr;
+		this.type = type;
+	}
+
+	override applyBind(scope: Scope, buffer: IOBuffer): void {
+		this.expr.applyBind(scope, buffer);
+	}
+
+	override applyType(buffer: IOBuffer): void {
+		this.expr.applyType(buffer);
+
+		if (!this.expr.type.equals(this.type))
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					this.expr.type,
+					this.type,
+					this.span
+				)
+			);
+	}
+
+	override toString(): string {
+		return this.expr.toString();
+	}
+
+	override rval(buffer: IOBuffer): FuncDecl {
+		let r: Expr = this.expr.rval(buffer);
+		if (r instanceof FuncDecl) {
+			return r as FuncDecl;
+		}
+
+		buffer.throwError(
+			new IllegalTypeConversionError(r.type, this.type, this.span)
+		);
+		return new FuncDecl([], [], this.type as FunctionType, this.span);
+	}
+}
+
+export class TypeCastToTuple extends Expr {
+	expr: Expr;
+
+	constructor(expr: Expr, type: ProductType) {
+		super(expr.span);
+		this.expr = expr;
+		this.type = type;
+	}
+
+	override applyBind(scope: Scope, buffer: IOBuffer): void {
+		this.expr.applyBind(scope, buffer);
+	}
+
+	override applyType(buffer: IOBuffer): void {
+		this.expr.applyType(buffer);
+
+		if (!this.expr.type.equals(this.type)) {
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					this.expr.type,
+					this.type,
+					this.span
+				)
+			);
+		}
+
+		if (this.expr instanceof Tuple) {
+			let input: Tuple = this.expr as Tuple;
+			let outputType: ProductType = this.type as ProductType;
+
+			for (let i = 0; i < input.vals.length; i++) {
+				input.vals[i] = getTypeCast(input.vals[i], outputType.types[i]);
+				input.vals[i].applyType(buffer);
+			}
+			return;
+		}
+
+		if (this.expr instanceof TypeCastToTuple) {
+			let tc: TypeCastToTuple = this.expr as TypeCastToTuple;
+			this.expr = new TypeCastToTuple(tc.expr, this.type as ProductType);
+			this.expr.applyType(buffer);
+			return;
+		}
+
+		buffer.throwError(
+			new IllegalTypeConversionError(this.expr.type, this.type, this.span)
+		);
+		return;
+	}
+
+	override toString(): string {
+		return this.expr.toString();
+	}
+
+	override rval(buffer: IOBuffer): Tuple {
+		let r: Expr = this.expr.rval(buffer);
+		if (r instanceof Tuple) {
+			return r as Tuple;
+		}
+
+		buffer.throwError(
+			new IllegalTypeConversionError(r.type, this.type, this.span)
+		);
+		return new Tuple([], this.span);
 	}
 }
 
@@ -53,9 +205,8 @@ export class TypeCastToInt extends Expr {
 		this.expr.applyBind(scope, buffer);
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		this.expr.applyType(buffer, new TypeAST("Dummy"));
-		this.type.applyType(buffer, expectedType);
+	override applyType(buffer: IOBuffer): void {
+		this.expr.applyType(buffer);
 	}
 
 	override toString(): string {
@@ -102,9 +253,8 @@ export class TypeCastToString extends Expr {
 		this.expr.applyBind(scope, buffer);
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		this.expr.applyType(buffer, new TypeAST("Dummy"));
-		this.type.applyType(buffer, expectedType);
+	override applyType(buffer: IOBuffer): void {
+		this.expr.applyType(buffer);
 	}
 
 	override toString(): string {
@@ -170,12 +320,13 @@ export class FuncDecl extends Expr {
 		for (let child of this.stmts) child.applyBind(bScope, buffer);
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		for (let child of this.params) child.applyType(buffer, expectedType);
-		for (let child of this.stmts)
-			child.applyType(buffer, (this.type as FunctionType).codomain);
-
+	override applyType(buffer: IOBuffer): void {
 		let type: FunctionType = this.type as FunctionType;
+
+		for (let child of this.params)
+			child.applyType(buffer, new TypeAST("Dummy"));
+		for (let child of this.stmts) child.applyType(buffer, type.codomain);
+
 		if (!type.codomain.instanceOf(TypeEnum.VOID)) {
 			let index: number = -1;
 			for (let i = 0; i < this.stmts.length; i++) {
@@ -207,13 +358,13 @@ export class FuncDecl extends Expr {
 		let backup: (Expr | null)[] = [];
 		let retVal: Expr = new VoidObj();
 
-		let inputLength: number;
+		/*let inputLength: number;
 		if (input instanceof VoidObj) inputLength = 0;
 		else if (input instanceof Tuple)
 			inputLength = (input as Tuple).vals.length;
 		else inputLength = 1;
 
-		/*if (this.params.length != inputLength) {
+		if (this.params.length != inputLength) {
 			buffer.stderr("Invalid arg lenths!");
 			return retVal;
 		}*/
@@ -311,7 +462,18 @@ export class FuncCall extends Expr {
 	}
 
 	override rval(buffer: IOBuffer): Expr {
-		let func: FuncDecl = this.funcName.rval(buffer) as FuncDecl;
+		let safetyCheck: Expr = this.funcName.rval(buffer);
+
+		if (!(safetyCheck instanceof FuncDecl))
+			buffer.throwError(
+				new CompilerError(
+					"Idk apparently the funcname is invalid? I see " +
+						safetyCheck,
+					this.span
+				)
+			);
+
+		let func: FuncDecl = safetyCheck as FuncDecl;
 
 		if (this.params.length != func.params.length) {
 			buffer.throwError(
@@ -329,10 +491,10 @@ export class FuncCall extends Expr {
 		return changeme;
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		this.funcName.applyType(buffer, new TypeAST("Map"));
+	override applyType(buffer: IOBuffer): void {
+		this.funcName.applyType(buffer);
 
-		if (!this.funcName.type.instanceOf(TypeEnum.MAP)) {
+		if (!(this.funcName.type instanceof FunctionType)) {
 			buffer.throwError(
 				new IllegalCallError(this.funcName.type, this.span)
 			);
@@ -341,7 +503,8 @@ export class FuncCall extends Expr {
 
 		let funcType: FunctionType = this.funcName.type as FunctionType;
 
-		this.input.applyType(buffer, funcType.domain);
+		this.input = getTypeCast(this.input, funcType.domain);
+		this.input.applyType(buffer);
 		this.type = funcType.codomain;
 	}
 }
@@ -355,18 +518,7 @@ export class StringLiteral extends Expr {
 	}
 	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
-
-		if (!this.type.instanceOf(expectedType))
-			buffer.throwError(
-				new IllegalTypeConversionError(
-					this.type,
-					expectedType,
-					this.span
-				)
-			);
-	}
+	override applyType(buffer: IOBuffer): void {}
 
 	override toString(): string {
 		return `"${this.name}"`;
@@ -380,12 +532,11 @@ export class StringLiteral extends Expr {
 export class VoidObj extends Expr {
 	constructor() {
 		super(new Span(0, 0, 0, 0));
+		this.type = new TypeAST("void");
 	}
 	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		this.type = new TypeAST("void");
-	}
+	override applyType(buffer: IOBuffer): void {}
 
 	override rval(buffer: IOBuffer): Expr {
 		return this;
@@ -416,7 +567,7 @@ export class Id extends Expr {
 		return this.symbol.rval(buffer);
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+	override applyType(buffer: IOBuffer): void {
 		if (!this.symbol) {
 			buffer.throwError(
 				new UndefinedIdentifierError(this.idName, this.span)
@@ -424,22 +575,6 @@ export class Id extends Expr {
 			return;
 		}
 		this.type = this.symbol.type;
-
-		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
-
-		if (expectedType.instanceOf(TypeEnum.STRING)) {
-			this.type = expectedType;
-			return;
-		}
-
-		if (!this.type.instanceOf(expectedType))
-			buffer.throwError(
-				new IllegalTypeConversionError(
-					this.type,
-					expectedType,
-					this.span
-				)
-			);
 	}
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {
@@ -478,7 +613,7 @@ export class ArrayAccess extends Expr {
 	}
 	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {}
+	override applyType(buffer: IOBuffer): void {}
 
 	override rval(buffer: IOBuffer): Expr {
 		return this;
@@ -498,23 +633,7 @@ export class NumberLiteral extends Expr {
 	}
 	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
-
-		if (expectedType.instanceOf(TypeEnum.STRING)) {
-			this.type = expectedType;
-			return;
-		}
-
-		if (!this.type.instanceOf(expectedType))
-			buffer.throwError(
-				new IllegalTypeConversionError(
-					this.type,
-					expectedType,
-					this.span
-				)
-			);
-	}
+	override applyType(buffer: IOBuffer): void {}
 
 	override rval(buffer: IOBuffer): Expr {
 		if (this.type.instanceOf(TypeEnum.STRING))
@@ -537,23 +656,7 @@ export class IntegerLiteral extends Expr {
 	}
 	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		if (expectedType.instanceOf(TypeEnum.DUMMY)) return;
-
-		if (expectedType.instanceOf(TypeEnum.STRING)) {
-			this.type = expectedType;
-			return;
-		}
-
-		if (!this.type.instanceOf(expectedType))
-			buffer.throwError(
-				new IllegalTypeConversionError(
-					this.type,
-					expectedType,
-					this.span
-				)
-			);
-	}
+	override applyType(buffer: IOBuffer): void {}
 
 	override rval(buffer: IOBuffer): Expr {
 		if (this.type.instanceOf(TypeEnum.STRING))
@@ -583,37 +686,18 @@ export class Tuple extends Expr {
 		for (let val of this.vals) val.applyBind(scope, buffer);
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		if (expectedType.type == TypeEnum.DUMMY) {
-			for (let val of this.vals) val.applyType(buffer, expectedType);
+	override applyType(buffer: IOBuffer): void {
+		for (let i = 0; i < this.vals.length; i++) {
+			this.vals[i].applyType(buffer);
 		}
 
-		if (!(expectedType instanceof ProductType)) {
-			buffer.throwError(
-				new IllegalTypeConversionError(
-					new ProductType([]),
-					expectedType,
-					this.span
-				)
-			);
-		}
-
-		let t: ProductType = expectedType as ProductType;
-		if (t.types.length != this.vals.length) {
-			buffer.throwError(
-				new DimensionError(t.types.length, this.vals.length, this.span)
-			);
-		}
-
-		for (let i = 0; i < t.types.length; i++) {
-			this.vals[i].applyType(buffer, t.types[i]);
-		}
+		this.type = new ProductType(
+			this.vals.map((v) => v.type),
+			this.span
+		);
 	}
 
 	override rval(buffer: IOBuffer): Expr {
-		if (this.type.instanceOf(TypeEnum.STRING))
-			return new StringLiteral("(" + this.vals + ")", this.span);
-
 		return new Tuple(
 			this.vals.map((v) => v.rval(buffer)),
 			this.span
@@ -621,7 +705,8 @@ export class Tuple extends Expr {
 	}
 
 	toLongString() {
-		return this.vals + "";
+		let ps: string[] = this.vals.map((d) => d.toString());
+		return `(${ps.join(",")})`;
 	}
 
 	override toString(): string {

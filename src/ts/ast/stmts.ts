@@ -13,6 +13,7 @@ import {
 	NumberLiteral,
 	VoidObj,
 	TypeCastToString,
+	getTypeCast,
 } from "./exprs.js";
 import { Scope, IdSymbol } from "./symbols.js";
 import { TypeAST, TypeEnum } from "./type.js";
@@ -21,6 +22,8 @@ export abstract class Statement extends AST {
 	constructor(span: Span) {
 		super(span);
 	}
+
+	abstract applyType(buffer: IOBuffer, expectedType: TypeAST): void;
 
 	/**
 	 * Executes code at this node and its children
@@ -171,7 +174,8 @@ export class AssignmentStatement extends Statement {
 			return;
 		}
 
-		this.expr.applyType(buffer, this.id.symbol.type);
+		this.expr = getTypeCast(this.expr, this.id.symbol.type);
+		this.expr.applyType(buffer);
 	}
 
 	override execute(buffer: IOBuffer): ReturnObject {
@@ -255,7 +259,7 @@ export class ExprAsStatement extends Statement {
 	}
 
 	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		this.expr.applyType(buffer, new TypeAST("Dummy"));
+		this.expr.applyType(buffer);
 	}
 }
 
@@ -266,7 +270,7 @@ export class PrintStatement extends Statement {
 
 	constructor(expr: Expr, span: Span, isNewLine: boolean, isPretty: boolean) {
 		super(span);
-		this.expr = new TypeCastToString(expr);
+		this.expr = expr;
 		this.isNewLine = isNewLine;
 		this.isPretty = isPretty;
 	}
@@ -281,7 +285,8 @@ export class PrintStatement extends Statement {
 	}
 
 	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		this.expr.applyType(buffer, new TypeAST(TypeEnum.STRING));
+		this.expr = getTypeCast(this.expr, new TypeAST("String"));
+		this.expr.applyType(buffer);
 	}
 
 	override execute(buffer: IOBuffer): ReturnObject {
@@ -327,7 +332,8 @@ export class WhileLoop extends Statement {
 	}
 
 	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		this.test.applyType(buffer, new TypeAST("Int"));
+		this.test = getTypeCast(this.test, new TypeAST("Int"));
+		this.test.applyType(buffer);
 		for (let stmt of this.stmts) stmt.applyType(buffer, expectedType);
 	}
 
@@ -381,8 +387,9 @@ export class ForLoop extends Statement {
 	}
 
 	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		this.asg.applyType(buffer, new TypeAST("Dummy"));
-		this.test.applyType(buffer, new TypeAST("Int"));
+		this.asg.applyType(buffer, expectedType);
+		this.test = getTypeCast(this.test, new TypeAST("Int"));
+		this.test.applyType(buffer);
 		this.it.applyType(buffer, expectedType);
 		for (let stmt of this.stmts) stmt.applyType(buffer, expectedType);
 	}
@@ -448,7 +455,8 @@ export class IfStmt extends Statement {
 	}
 
 	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		this.test.applyType(buffer, new TypeAST("Int"));
+		this.test = getTypeCast(this.test, new TypeAST("Int"));
+		this.test.applyType(buffer);
 		for (let stmt of this.stmts) stmt.applyType(buffer, expectedType);
 		for (let stmt of this.elseStmts) stmt.applyType(buffer, expectedType);
 	}
@@ -497,33 +505,8 @@ export class ReturnStatement extends Statement {
 	}
 
 	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		if (!(this.expr instanceof VoidObj)) {
-			this.expr.applyType(buffer, expectedType);
-
-			if (!this.expr.type.instanceOf(expectedType)) {
-				buffer.throwError(
-					new IllegalTypeConversionError(
-						this.expr.type,
-						expectedType,
-						this.span
-					)
-				);
-				return;
-			}
-
-			//TODO Better error handling
-		} else {
-			if (!expectedType.instanceOf(TypeEnum.VOID)) {
-				buffer.throwError(
-					new IllegalTypeConversionError(
-						this.expr.type,
-						expectedType,
-						this.span
-					)
-				);
-				return;
-			}
-		}
+		this.expr = getTypeCast(this.expr, expectedType);
+		this.expr.applyType(buffer);
 	}
 
 	override execute(buffer: IOBuffer): ReturnObject {
