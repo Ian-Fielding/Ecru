@@ -271,11 +271,15 @@ export class TypeCastToString extends Expr {
 			case TypeEnum.NATURAL:
 				let s: NumberLiteral = r as NumberLiteral;
 				return new StringLiteral(s.val + "", r.span);
+			case TypeEnum.PROD:
+				let t: Tuple = r as Tuple;
+				let vs: string[] = t.vals.map((v) => v.toString());
+				return new StringLiteral(`(${vs.join(",")})`, r.span);
+
 			case TypeEnum.RATIONAL:
 			case TypeEnum.REAL:
 			case TypeEnum.FORMULA:
 			case TypeEnum.MAP:
-			case TypeEnum.PROD:
 			//TODO implement once types is good
 			case TypeEnum.DUMMY:
 			case TypeEnum.OBJECT:
@@ -521,7 +525,7 @@ export class StringLiteral extends Expr {
 	override applyType(buffer: IOBuffer): void {}
 
 	override toString(): string {
-		return `"${this.name}"`;
+		return this.name;
 	}
 
 	override rval(buffer: IOBuffer): Expr {
@@ -702,11 +706,6 @@ export class Tuple extends Expr {
 			this.vals.map((v) => v.rval(buffer)),
 			this.span
 		);
-	}
-
-	toLongString() {
-		let ps: string[] = this.vals.map((d) => d.toString());
-		return `(${ps.join(",")})`;
 	}
 
 	override toString(): string {

@@ -8,6 +8,7 @@ import {
 	FuncCall,
 	ArrayAccess,
 	NumberLiteral,
+	Tuple,
 } from "../ast/exprs.js";
 import * as MATH from "../ast/math.js";
 import {
@@ -25,7 +26,7 @@ import {
 	Statement,
 } from "../ast/stmts.js";
 import { FunctionType, ProductType, TypeAST, TypeString } from "../ast/type.js";
-import { ParserError } from "../error.js";
+import { MissingSemicolonError, ParserError } from "../error.js";
 import { unionSpan } from "../utils.js";
 import { Span, Token } from "./token.js";
 import { Tokenizer } from "./tokenizer.js";
@@ -54,7 +55,12 @@ export class Parser {
 		return this.scan.peek();
 	}
 
-	error(kind: string) {
+	error(kind: string): void {
+		if (kind == ";")
+			this.buffer.throwError(
+				new MissingSemicolonError(this.scan.peek().span)
+			);
+
 		this.buffer.throwError(
 			new ParserError(kind, this.current(), this.scan.peek().span)
 		);
@@ -425,7 +431,8 @@ export class Parser {
 
 			let right = this.boolAnd();
 			left = new MATH.LogicalOr(
-				[left, right],
+				left,
+				right,
 				unionSpan([left.span, right.span])
 			);
 		}
@@ -439,7 +446,8 @@ export class Parser {
 
 			let right = this.boolEq();
 			left = new MATH.LogicalAnd(
-				[left, right],
+				left,
+				right,
 				unionSpan([left.span, right.span])
 			);
 		}
@@ -467,12 +475,11 @@ export class Parser {
 
 			let right = this.boolNeg();
 			left = new MATH.LogicalNot(
-				[
-					new MATH.LogicalEq(
-						[left, right],
-						unionSpan([left.span, right.span])
-					),
-				],
+				new MATH.LogicalEq(
+					[left, right],
+					unionSpan([left.span, right.span])
+				),
+
 				unionSpan([left.span, right.span])
 			);
 		}
@@ -485,7 +492,7 @@ export class Parser {
 
 			let ins: Expr = this.boolNeg();
 
-			return new MATH.LogicalNot([ins], unionSpan([tok.span, ins.span]));
+			return new MATH.LogicalNot(ins, unionSpan([tok.span, ins.span]));
 		}
 		return this.additive();
 	}
@@ -609,10 +616,19 @@ export class Parser {
 		if (this.current() == "NUM") return this.num();
 		if (this.current() == "ID") return this.id();
 		if (this.current() == "STR") return this.str();
-		this.match("(");
-		let ret: Expr = this.expr();
-		this.match(")");
-		return ret;
+
+		let startTok: Token = this.match("(");
+		let exprs: Expr[] = [this.expr()];
+
+		while (this.current() == ",") {
+			this.match(",");
+			exprs.push(this.expr());
+		}
+
+		let endTok: Token = this.match(")");
+
+		if (exprs.length == 1) return exprs[0];
+		return new Tuple(exprs, unionSpan([startTok.span, endTok.span]));
 	}
 
 	type(): TypeAST {

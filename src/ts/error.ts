@@ -33,7 +33,13 @@ export class StackOverflowError extends EcruError {
 
 export class ParserError extends EcruError {
 	constructor(exp: string, saw: string, span: Span) {
-		super("ParserError", `Expected ${exp} but saw ${saw}.`, span);
+		super("ParserError", `Expected ${exp} but saw "${saw}"`, span);
+	}
+}
+
+export class MissingSemicolonError extends EcruError {
+	constructor(span: Span) {
+		super("MissingSemicolonError", `Semicolon (;) expected.`, span);
 	}
 }
 

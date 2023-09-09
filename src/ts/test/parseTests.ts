@@ -64,7 +64,7 @@ export let parseTests: ParseTest[] = [
 		name: "parse_test12",
 		input: '\n x: Z = 3; if(x){print "test";}',
 		expected:
-			'Program(DeclStmt(x,Z),AssignStmt(x,3),IfStmt(x,[PrintStmt("test")],[]))',
+			"Program(DeclStmt(x,Z),AssignStmt(x,3),IfStmt(x,[PrintStmt(test)],[]))",
 	},
 	{
 		name: "parse_test13",
@@ -74,7 +74,7 @@ export let parseTests: ParseTest[] = [
 	{
 		name: "parse_test14",
 		input: 'foo: String = "hello world";',
-		expected: 'Program(DeclStmt(foo,String),AssignStmt(foo,"hello world"))',
+		expected: "Program(DeclStmt(foo,String),AssignStmt(foo,hello world))",
 	},
 	{
 		name: "parse_test15",
@@ -116,13 +116,13 @@ export let parseTests: ParseTest[] = [
 		name: "parse_test22",
 		input: 'for x: Z = 1;x ~= 5; x+=1 {print "hello";}',
 		expected:
-			'Program(ForLoop(DeclStmt(x,Z),AssignStmt(x,1),not(equals(x,5)),AssignStmt(x,add(x,1)),[PrintStmt("hello")]))',
+			"Program(ForLoop(DeclStmt(x,Z),AssignStmt(x,1),not(equals(x,5)),AssignStmt(x,add(x,1)),[PrintStmt(hello)]))",
 	},
 	{
 		name: "parse_test23",
 		input: 'for ( x: Z = 1;x ~= 5; x+=1 ) {print "hello";}',
 		expected:
-			'Program(ForLoop(DeclStmt(x,Z),AssignStmt(x,1),not(equals(x,5)),AssignStmt(x,add(x,1)),[PrintStmt("hello")]))',
+			"Program(ForLoop(DeclStmt(x,Z),AssignStmt(x,1),not(equals(x,5)),AssignStmt(x,add(x,1)),[PrintStmt(hello)]))",
 	},
 	{
 		name: "parse_test24",
