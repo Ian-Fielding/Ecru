@@ -303,7 +303,8 @@ export class PrintStatement extends Statement {
 				new IllegalTypeConversionError(
 					str.type,
 					new TypeAST("String"),
-					this.span
+					this.span,
+					2
 				)
 			);
 			return { break: true };

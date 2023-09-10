@@ -1,22 +1,27 @@
 import { IOBuffer } from "../IOBuffer.js";
+import {
+	CompilerError,
+	DimensionError,
+	IllegalTypeConversionError,
+} from "../error.js";
 import { Span } from "../parser/token.js";
-import { divides, gcd } from "../utils.js";
+import { divides, gcd, unionSpan } from "../utils.js";
 import { AST } from "./asts.js";
 import { Scope } from "./symbols.js";
 
 export const enum TypeEnum {
-	OBJECT = 1,
-	FORMULA = 2,
-	REAL = 2 * 2,
-	RATIONAL = 2 * 2 * 2,
-	INTEGER = 2 * 2 * 2 * 2,
-	NATURAL = 2 * 2 * 2 * 2 * 2,
-	BOOLEAN = 2 * 2 * 2 * 2 * 2 * 2,
-	STRING = 3,
-	VOID = 5,
-	MAP = 7,
-	PROD = 11,
-	DUMMY = 23456789,
+	OBJECT,
+	FORMULA,
+	REAL,
+	RATIONAL,
+	INTEGER,
+	NATURAL,
+	BOOLEAN,
+	STRING,
+	VOID,
+	MAP,
+	PROD,
+	DUMMY,
 }
 
 export type TypeString =
@@ -140,20 +145,6 @@ export class TypeAST extends AST {
 		return divides(t, this.type);
 	}
 
-	closestParent(t: TypeAST | number): TypeAST {
-		if (t instanceof TypeAST)
-			return new TypeAST(gcd(this.type, t.type), this.span);
-		return new TypeAST(gcd(this.type, t), this.span);
-	}
-
-	isMathType(): boolean {
-		return this.type % TypeEnum.REAL == 0;
-	}
-
-	isFunction(): boolean {
-		return this.type % TypeEnum.MAP == 0;
-	}
-
 	override toString(): string {
 		return `${this.name}`;
 	}
@@ -215,4 +206,48 @@ export class FunctionType extends TypeAST {
 	override toString(): string {
 		return `${this.domain}->${this.codomain}`;
 	}
+}
+
+export function gcdType(t1: TypeAST, t2: TypeAST, buffer?: IOBuffer): TypeAST {
+	const precedence: TypeEnum[] = [TypeEnum.STRING, TypeEnum.INTEGER];
+	if ((t1.type == TypeEnum.PROD) != (t2.type == TypeEnum.PROD)) {
+		if (buffer)
+			buffer.throwError(
+				new CompilerError("Girl this aint workin")
+				//new IllegalTypeConversionError(t1, t2, t1.span)
+			);
+		return new TypeAST("Dummy");
+	}
+
+	if (t1.type == TypeEnum.PROD && t2.type == TypeEnum.PROD) {
+		let a: ProductType = t1 as ProductType;
+		let b: ProductType = t2 as ProductType;
+		if (a.types.length != b.types.length) {
+			if (buffer)
+				buffer.throwError(
+					new DimensionError(a.types.length, b.types.length, a.span)
+				);
+			return new TypeAST("Dummy");
+		}
+
+		let types: TypeAST[] = [];
+		for (let i = 0; i < a.types.length; i++) {
+			types.push(gcdType(a.types[i], b.types[i], buffer));
+		}
+		return new ProductType(types, unionSpan([t1.span, t2.span]));
+	}
+
+	for (let type of precedence) {
+		if (t1.type == type || t2.type == type) {
+			return new TypeAST(type);
+		}
+	}
+
+	if (buffer)
+		buffer.throwError(
+			//new IllegalTypeConversionError(t1, t2, t1.span)
+
+			new CompilerError("Girl this workin " + t1 + ", " + t2)
+		);
+	return new TypeAST("Dummy");
 }

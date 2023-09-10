@@ -26,7 +26,11 @@ import {
 	Statement,
 } from "../ast/stmts.js";
 import { FunctionType, ProductType, TypeAST, TypeString } from "../ast/type.js";
-import { MissingSemicolonError, ParserError } from "../error.js";
+import {
+	IllegalTypeConversionError,
+	MissingSemicolonError,
+	ParserError,
+} from "../error.js";
 import { unionSpan } from "../utils.js";
 import { Span, Token } from "./token.js";
 import { Tokenizer } from "./tokenizer.js";
@@ -656,16 +660,24 @@ export class Parser {
 
 	typeMultiplicative(): TypeAST {
 		//TODO
+		let childs: TypeAST[] = [this.typePrimary()];
+		while (this.current() == "*") {
+			this.match("*");
+			childs.push(this.typePrimary());
+		}
+
+		if (childs.length == 1) return childs[0];
+		return new ProductType(childs, unionSpan(childs.map((c) => c.span)));
+	}
+
+	typePrimary(): TypeAST {
 		if (this.current() == "(") {
 			this.match("(");
 			let ret = this.type();
 			this.match(")");
 			return ret;
 		}
-		return this.typePrimary();
-	}
 
-	typePrimary(): TypeAST {
 		let tok: Token = this.match(this.current());
 
 		// TODO sucky type conversion
@@ -679,6 +691,17 @@ export class Parser {
 
 	num(): NumberLiteral {
 		let token: Token = this.match("NUM");
-		return new NumberLiteral(token.value, token.span);
+
+		if (isNaN(+token.value) || isNaN(parseFloat(token.value)))
+			this.buffer.throwError(
+				new IllegalTypeConversionError(
+					new TypeAST("String"),
+					new TypeAST("Int"),
+					token.span,
+					1
+				)
+			);
+
+		return new NumberLiteral(+token.value, token.span);
 	}
 }

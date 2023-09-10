@@ -40,17 +40,17 @@ export function unionSpan(spans: Span[]): Span {
 	let maxLine = spans[0].startLine;
 
 	for (let span of spans) {
-		if (minLine < span.startLine) {
+		if (minLine > span.startLine) {
 			minLine = span.startLine;
 			minCol = span.startCol;
-		} else if (minLine == span.startLine && minCol < span.startCol) {
+		} else if (minLine == span.startLine && minCol > span.startCol) {
 			minCol = span.startCol;
 		}
 
-		if (maxLine > span.endLine) {
+		if (maxLine < span.endLine) {
 			maxLine = span.endLine;
 			maxCol = span.endCol;
-		} else if (maxLine == span.endLine && maxCol > span.endCol) {
+		} else if (maxLine == span.endLine && maxCol < span.endCol) {
 			maxCol = span.endCol;
 		}
 	}

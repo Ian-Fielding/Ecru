@@ -1,6 +1,7 @@
 import { IOBuffer } from "../IOBuffer.js";
 import {
 	CompilerError,
+	DimensionError,
 	IllegalTypeConversionError,
 	UnsupportedBinop,
 } from "../error.js";
@@ -14,7 +15,7 @@ import {
 	getTypeCast,
 } from "./exprs.js";
 import { Scope } from "./symbols.js";
-import { ProductType, TypeAST, TypeEnum } from "./type.js";
+import { ProductType, TypeAST, TypeEnum, gcdType } from "./type.js";
 
 export abstract class Binop extends Expr {
 	a: Expr;
@@ -39,29 +40,13 @@ export abstract class Binop extends Expr {
 		let aType: TypeAST = this.a.type;
 		let bType: TypeAST = this.b.type;
 
-		let precedence: TypeEnum[] = [TypeEnum.STRING, TypeEnum.INTEGER];
+		this.type = gcdType(aType, bType, buffer);
+		this.a = getTypeCast(this.a, this.type);
+		this.a.applyType(buffer);
+		this.b = getTypeCast(this.b, this.type);
+		this.b.applyType(buffer);
 
-		if (aType.type == TypeEnum.PROD || bType.type == TypeEnum.PROD) {
-			this.type = aType as ProductType;
-
-			this.a.applyType(buffer);
-			this.b = getTypeCast(this.b, this.type);
-			this.b.applyType(buffer);
-			return;
-		}
-
-		for (let type of precedence) {
-			if (aType.type == type || bType.type == type) {
-				this.type = new TypeAST(type);
-				this.a = getTypeCast(this.a, this.type);
-				this.a.applyType(buffer);
-				this.b = getTypeCast(this.b, this.type);
-				this.b.applyType(buffer);
-				return;
-			}
-		}
-
-		buffer.throwError(new UnsupportedBinop(this.symbol, aType, this.span));
+		//buffer.throwError(new UnsupportedBinop(this.symbol, aType, this.span));
 
 		return;
 	}
@@ -147,7 +132,7 @@ export class Add extends Binop {
 			case TypeEnum.INTEGER:
 				let v1: NumberLiteral = aRval as NumberLiteral;
 				let v2: NumberLiteral = bRval as NumberLiteral;
-				return new NumberLiteral("" + (v1.val + v2.val), this.span);
+				return new NumberLiteral(v1.val + v2.val, this.span);
 			case TypeEnum.STRING:
 				let s1: StringLiteral = aRval as StringLiteral;
 				let s2: StringLiteral = bRval as StringLiteral;
@@ -190,7 +175,7 @@ export class Mul extends Binop {
 			case TypeEnum.INTEGER:
 				let v1: NumberLiteral = aRval as NumberLiteral;
 				let v2: NumberLiteral = bRval as NumberLiteral;
-				return new NumberLiteral("" + v1.val * v2.val, this.span);
+				return new NumberLiteral(v1.val * v2.val, this.span);
 			case TypeEnum.STRING:
 				buffer.throwError(
 					new UnsupportedBinop(this.symbol, this.type, this.span)
@@ -234,7 +219,7 @@ export class Sub extends Binop {
 			case TypeEnum.INTEGER:
 				let v1: NumberLiteral = aRval as NumberLiteral;
 				let v2: NumberLiteral = bRval as NumberLiteral;
-				return new NumberLiteral("" + (v1.val - v2.val), this.span);
+				return new NumberLiteral(v1.val - v2.val, this.span);
 			case TypeEnum.STRING:
 				buffer.throwError(
 					new UnsupportedBinop(this.symbol, this.type, this.span)
@@ -278,7 +263,7 @@ export class Div extends Binop {
 			case TypeEnum.INTEGER:
 				let v1: NumberLiteral = aRval as NumberLiteral;
 				let v2: NumberLiteral = bRval as NumberLiteral;
-				return new NumberLiteral("" + v1.val / v2.val, this.span);
+				return new NumberLiteral(v1.val / v2.val, this.span);
 			case TypeEnum.STRING:
 				buffer.throwError(
 					new UnsupportedBinop(this.symbol, this.type, this.span)
@@ -332,7 +317,7 @@ export class LogicalNot extends Expr {
 		let v1: number = r.val;
 		if (v1 != 0) v1 = 1;
 
-		return new NumberLiteral(v1 == 1 ? "0" : "1", this.span);
+		return new NumberLiteral(v1, this.span);
 	}
 }
 
@@ -355,13 +340,14 @@ export class LogicalOr extends Binop {
 				if (v1 != 0) v1 = 1;
 				if (v2 != 0) v2 = 1;
 
-				return new NumberLiteral("" + Math.max(v1, v2), this.span);
+				return new NumberLiteral(Math.max(v1, v2), this.span);
 			case TypeEnum.STRING:
 				buffer.throwError(
 					new IllegalTypeConversionError(
 						this.type,
 						new TypeAST("Int"),
-						this.span
+						this.span,
+						3
 					)
 				);
 			default:
@@ -394,13 +380,14 @@ export class LogicalAnd extends Binop {
 				if (v1 != 0) v1 = 1;
 				if (v2 != 0) v2 = 1;
 
-				return new NumberLiteral("" + v1 * v2, this.span);
+				return new NumberLiteral(v1 * v2, this.span);
 			case TypeEnum.STRING:
 				buffer.throwError(
 					new IllegalTypeConversionError(
 						this.type,
 						new TypeAST("Int"),
-						this.span
+						this.span,
+						4
 					)
 				);
 			default:
@@ -440,7 +427,8 @@ export class LogicalEq extends Expr {
 				new IllegalTypeConversionError(
 					this.params[0].type,
 					this.params[1].type,
-					this.span
+					this.span,
+					5
 				)
 			);
 
@@ -452,7 +440,8 @@ export class LogicalEq extends Expr {
 				new IllegalTypeConversionError(
 					this.params[1].type,
 					this.params[0].type,
-					this.span
+					this.span,
+					6
 				)
 			);
 
@@ -477,6 +466,6 @@ export class LogicalEq extends Expr {
 			v2 = (childRVals[1] as NumberLiteral).val;
 		}
 
-		return new NumberLiteral(v1 == v2 ? "1" : "0", this.span);
+		return new NumberLiteral(v1 == v2 ? 1 : 0, this.span);
 	}
 }

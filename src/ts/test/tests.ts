@@ -440,93 +440,294 @@ print f(2);`,
 	},
 
 	{
-		name: `type_test1`,
-		input: ``,
-		out: ``,
+		name: `tuple_test1`,
+		input: `print "abc"+"abc";`,
+		out: `abcabc`,
 		err: false,
 	},
 
 	{
-		name: `type_test2`,
+		name: `tuple_test2`,
 		input: `print 1+2;`,
 		out: `3`,
 		err: false,
 	},
 
 	{
-		name: `type_test3`,
+		name: `tuple_test3`,
 		input: `print "1"+2;`,
 		out: `12`,
 		err: false,
 	},
 
 	{
-		name: `type_test4`,
+		name: `tuple_test4`,
 		input: `print 1+"2";`,
 		out: `12`,
 		err: false,
 	},
 
 	{
-		name: `type_test5`,
+		name: `tuple_test5`,
 		input: `print (1,2,3);`,
 		out: `(1,2,3)`,
 		err: false,
 	},
 
 	{
-		name: `type_test6`,
+		name: `tuple_test6`,
 		input: `print ("abc",1,2);`,
 		out: `(abc,1,2)`,
 		err: false,
 	},
 
 	{
-		name: `type_test7`,
+		name: `tuple_test7`,
 		input: `print "abc";`,
 		out: `abc`,
 		err: false,
 	},
 
 	{
-		name: `type_test8`,
+		name: `tuple_test8`,
 		input: `print (1,2,3) + (7,6,5);`,
 		out: `(8,8,8)`,
 		err: false,
 	},
 
 	{
-		name: `type_test9`,
+		name: `tuple_test9`,
 		input: `print ("abc","3d",4,5) + ("def",3,"dex",10-4);`,
-		out: ``,
-		err: true,
+		out: `(abcdef,3d3,4dex,11)`,
+		err: false,
 	},
 
 	{
-		name: `type_test10`,
+		name: `tuple_test10`,
 		input: `print ("abc","3d",4*2,5) + ("def",3+"dex",1,10-4);`,
 		out: `(abcdef,3d3dex,9,11)`,
 		err: false,
 	},
 
 	{
-		name: `type_test11`,
+		name: `tuple_test11`,
 		input: `print (1,2,3,4) - (4,3,2,1);`,
 		out: `(-3,-1,1,3)`,
 		err: false,
 	},
 
 	{
-		name: `type_test12`,
+		name: `tuple_test12`,
 		input: `print (1,2,3,4) * (4,3,2,1);`,
 		out: `(4,6,6,4)`,
 		err: false,
 	},
 
 	{
-		name: `type_test13`,
+		name: `tuple_test13`,
 		input: `print (1,4,9,16) / (1,2,3,4);`,
 		out: `(1,2,3,4)`,
+		err: false,
+	},
+
+	{
+		name: `tuple_test14`,
+		input: `x: Z*Z = (2,3);`,
+		out: ``,
+		err: false,
+	},
+
+	{
+		name: `tuple_test15`,
+		input: `x: Z*Str = (2,3);`,
+		out: ``,
+		err: false,
+	},
+
+	{
+		name: `tuple_test16`,
+		input: `x: Str = 2; y:Str = 3; print x+y;`,
+		out: `23`,
+		err: false,
+	},
+
+	{
+		name: `tuple_test17`,
+		input: `x: Str*Z = (2,3);`,
+		out: ``,
+		err: false,
+	},
+
+	{
+		name: `tuple_test18`,
+		input: `x: Z*Z = (2,"abc");`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `tuple_test19`,
+		input: `x: Z*Z = (2,3,4);`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `tuple_test20`,
+		input: `x: Z*Z = (2);`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `tuple_test21`,
+		input: `x: Z*Str = (2,"3");`,
+		out: ``,
+		err: false,
+	},
+
+	{
+		name: `tuple_test22`,
+		input: `x: Z*Z*Str = (2,3,"test");`,
+		out: ``,
+		err: false,
+	},
+
+	{
+		name: `tuple_test23`,
+		input: `x: Z*Str = (2,3);`,
+		out: ``,
+		err: false,
+	},
+
+	{
+		name: `tuple_test24`,
+		input: `x: Z*Z*Z = (2,3,4); x = (4,2,0); print x;`,
+		out: `(4,2,0)`,
+		err: false,
+	},
+
+	{
+		name: `tuple_test25`,
+		input: `x: Z*Str*Z = (2,"abc",4); x = (4,"two",0); print x;`,
+		out: `(4,two,0)`,
+		err: false,
+	},
+
+	{
+		name: `tuple_test26`,
+		input: `x: Z*Z*Z = (2,3,4); x = ("four",2,0);`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `tuple_test27`,
+		input: `
+			auto_add_tups(
+				x:Z*Z*Z, 
+				y:Str*Str*Str):Str*Str*Str { 
+					return y+x+y;
+			} 
+			print auto_add_tups(
+				(1,2,3)*(29,15,2),
+				("a",13,"a")+(14,"b",15)
+			);`,
+		out: `(a1429a14,13b3013b,a156a15)`,
+		err: false,
+	},
+	{
+		name: `tuple_test28`,
+		input: `print (1,2,3)+("a","b","c");`,
+		out: `(1a,2b,3c)`,
+		err: false,
+	},
+
+	{
+		name: `tuple_test29`,
+		input: `print ("1","2","3")+("a","b","c");`,
+		out: `(1a,2b,3c)`,
+		err: false,
+	},
+	{
+		name: `tuple_test30`,
+		input: `
+			auto_add_tups(
+				x:Z*Z*Z, 
+				y:Str*Str*Str):Str*Str*Str { 
+					return y+x+y;
+			} 
+			print auto_add_tups((1,2,3),("a","b","c"));`,
+		out: `(a1a,b2b,c3c)`,
+		err: false,
+	},
+
+	{
+		name: `tuple_test31`,
+		input: `
+			f():Str*Str*Str { 
+					return ("a","b","c");
+			} 
+			print f();`,
+		out: `(a,b,c)`,
+		err: false,
+	},
+
+	{
+		name: `tuple_test32`,
+		input: `
+			f():Str*Str*Z { 
+					return ("a","b",3);
+			} 
+			print f()+f();`,
+		out: `(aa,bb,6)`,
+		err: false,
+	},
+
+	{
+		name: `tuple_test33`,
+		input: `
+			f(x:Z):Str { 
+					return "a"+x;
+			} 
+			print (f(1),f(2),f(3));`,
+		out: `(a1,a2,a3)`,
+		err: false,
+	},
+
+	{
+		name: `tuple_test34`,
+		input: `
+			f(a:Str,x:Z):Str { 
+					return a+x;
+			} 
+			print (f("a",1),f("b",2),f("c",3));`,
+		out: `(a1,b2,c3)`,
+		err: false,
+	},
+	{
+		name: `tuple_test35`,
+		input: `
+			auto_add_tups(
+				x:Z*Z*Z, 
+				y:Str*Str*Str):Str*Str*Str { 
+					return y;
+			} 
+			print auto_add_tups((1,2,3),("a","b","c"));`,
+		out: `(a,b,c)`,
+		err: false,
+	},
+
+	{
+		name: `tuple_test36`,
+		input: `
+			auto_add_tups(
+				x:Z*Z*Z, 
+				y:Str*Str*Str):Str { 
+					return "test";
+			} 
+			print auto_add_tups((1,2,3),("a","b","c"));`,
+		out: `test`,
 		err: false,
 	},
 ];

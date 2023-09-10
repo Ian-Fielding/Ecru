@@ -20,8 +20,8 @@ export abstract class EcruError extends Error {
 }
 
 export class CompilerError extends EcruError {
-	constructor(msg: string, span: Span) {
-		super("CompilerError", msg, span);
+	constructor(msg: string, span?: Span) {
+		super("CompilerError", msg, span ? span : new Span(0, 0, 0, 0));
 	}
 }
 
@@ -84,9 +84,14 @@ export class RedefinedIdentifierError extends EcruError {
 }
 
 export class IllegalTypeConversionError extends EcruError {
-	constructor(currentType: TypeAST, desiredType: TypeAST, span: Span) {
+	constructor(
+		currentType: TypeAST,
+		desiredType: TypeAST,
+		span: Span,
+		ind: number
+	) {
 		super(
-			"IllegalTypeConversionError",
+			"IllegalTypeConversionError" + ind,
 			`Cannot convert type ${currentType} to type ${desiredType}.`,
 			span
 		);
