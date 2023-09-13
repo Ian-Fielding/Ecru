@@ -56,6 +56,7 @@ export class IOBuffer {
 	 */
 	throwError(err: EcruError) {
 		this.stderr(err.toString());
+		if (err.stack) this.stderr(err.stack);
 		throw err;
 	}
 

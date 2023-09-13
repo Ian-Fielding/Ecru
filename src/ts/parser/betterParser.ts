@@ -25,7 +25,13 @@ import {
 	ForLoop,
 	Statement,
 } from "../ast/stmts.js";
-import { FunctionType, ProductType, TypeAST, TypeString } from "../ast/type.js";
+import {
+	FunctionType,
+	FundTypeString,
+	ProductType,
+	TypeAST,
+	TypeString,
+} from "../ast/type.js";
 import {
 	IllegalTypeConversionError,
 	MissingSemicolonError,
@@ -465,7 +471,8 @@ export class Parser {
 
 			let right = this.boolNeq();
 			left = new MATH.LogicalEq(
-				[left, right],
+				left,
+				right,
 				unionSpan([left.span, right.span])
 			);
 		}
@@ -480,7 +487,8 @@ export class Parser {
 			let right = this.boolNeg();
 			left = new MATH.LogicalNot(
 				new MATH.LogicalEq(
-					[left, right],
+					left,
+					right,
 					unionSpan([left.span, right.span])
 				),
 
@@ -681,7 +689,7 @@ export class Parser {
 		let tok: Token = this.match(this.current());
 
 		// TODO sucky type conversion
-		return new TypeAST(tok.value as TypeString, tok.span);
+		return new TypeAST(tok.value as FundTypeString, tok.span);
 	}
 
 	id(): Id {
@@ -697,8 +705,7 @@ export class Parser {
 				new IllegalTypeConversionError(
 					new TypeAST("String"),
 					new TypeAST("Int"),
-					token.span,
-					1
+					token.span
 				)
 			);
 

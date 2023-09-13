@@ -730,4 +730,81 @@ print f(2);`,
 		out: `test`,
 		err: false,
 	},
+
+	{
+		name: `tuple_test37`,
+		input: `x: Z*Z = ("3","4"); print x+(1,2);`,
+		out: `(4,6)`,
+		err: false,
+	},
+
+	{
+		name: `tuple_test38`,
+		input: `x: Z = "3";`,
+		out: ``,
+		err: false,
+	},
+
+	{
+		name: `tuple_test39`,
+		input: `x: Z = "a";`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `tuple_test40`,
+		input: `x: (Z*Z)*Z = ((1,2),3);`,
+		out: ``,
+		err: false,
+	},
+
+	{
+		name: `tuple_test41`,
+		input: `x: Z*Z*Z = ((1,2),3);`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `tuple_test42`,
+		input: `x: (Z*Z)*Z = (1,2,3);`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `tuple_test43`,
+		input: `x: (Z*Z) = (1,2);`,
+		out: ``,
+		err: false,
+	},
+
+	{
+		name: `tuple_test44`,
+		input: `x: Z = (3);`,
+		out: ``,
+		err: false,
+	},
+
+	{
+		name: `tuple_test45`,
+		input: `x: (Z*Z)*(Z*Z) = ((1,2),(3,4));`,
+		out: ``,
+		err: false,
+	},
+
+	{
+		name: `tuple_test46`,
+		input: `x: (Z*Z)*Z = ((1,"hi"),3);`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `tuple_test47`,
+		input: `x: (Z*String)*(String*Z) = ((1,"hi"),("there",4)); print x;`,
+		out: `((1,hi),(there,4))`,
+		err: false,
+	},
 ];

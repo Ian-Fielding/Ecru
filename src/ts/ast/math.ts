@@ -137,7 +137,7 @@ export class Add extends Binop {
 				let s1: StringLiteral = aRval as StringLiteral;
 				let s2: StringLiteral = bRval as StringLiteral;
 				return new StringLiteral(s1.name + s2.name, this.span);
-			case TypeEnum.PROD:
+			case TypeEnum.TUPLE:
 				let t1: Tuple = aRval as Tuple;
 				let t2: Tuple = bRval as Tuple;
 				let rs: Expr[] = [];
@@ -146,7 +146,9 @@ export class Add extends Binop {
 					add.applyType(buffer);
 					rs.push(add.rval(buffer));
 				}
-				return new Tuple(rs, this.span);
+				let ret: Tuple = new Tuple(rs, this.span);
+				ret.applyType(buffer);
+				return ret;
 			default:
 				buffer.throwError(
 					new CompilerError(
@@ -181,7 +183,7 @@ export class Mul extends Binop {
 					new UnsupportedBinop(this.symbol, this.type, this.span)
 				);
 				return new VoidObj();
-			case TypeEnum.PROD:
+			case TypeEnum.TUPLE:
 				let t1: Tuple = aRval as Tuple;
 				let t2: Tuple = bRval as Tuple;
 				let rs: Expr[] = [];
@@ -190,7 +192,9 @@ export class Mul extends Binop {
 					mul.applyType(buffer);
 					rs.push(mul.rval(buffer));
 				}
-				return new Tuple(rs, this.span);
+				let ret: Tuple = new Tuple(rs, this.span);
+				ret.applyType(buffer);
+				return ret;
 			default:
 				buffer.throwError(
 					new CompilerError(
@@ -225,7 +229,7 @@ export class Sub extends Binop {
 					new UnsupportedBinop(this.symbol, this.type, this.span)
 				);
 				return new VoidObj();
-			case TypeEnum.PROD:
+			case TypeEnum.TUPLE:
 				let t1: Tuple = aRval as Tuple;
 				let t2: Tuple = bRval as Tuple;
 				let rs: Expr[] = [];
@@ -234,7 +238,9 @@ export class Sub extends Binop {
 					sub.applyType(buffer);
 					rs.push(sub.rval(buffer));
 				}
-				return new Tuple(rs, this.span);
+				let ret: Tuple = new Tuple(rs, this.span);
+				ret.applyType(buffer);
+				return ret;
 			default:
 				buffer.throwError(
 					new CompilerError(
@@ -269,7 +275,7 @@ export class Div extends Binop {
 					new UnsupportedBinop(this.symbol, this.type, this.span)
 				);
 				return new VoidObj();
-			case TypeEnum.PROD:
+			case TypeEnum.TUPLE:
 				let t1: Tuple = aRval as Tuple;
 				let t2: Tuple = bRval as Tuple;
 				let rs: Expr[] = [];
@@ -278,7 +284,9 @@ export class Div extends Binop {
 					div.applyType(buffer);
 					rs.push(div.rval(buffer));
 				}
-				return new Tuple(rs, this.span);
+				let ret: Tuple = new Tuple(rs, this.span);
+				ret.applyType(buffer);
+				return ret;
 			default:
 				buffer.throwError(
 					new CompilerError(
@@ -346,8 +354,7 @@ export class LogicalOr extends Binop {
 					new IllegalTypeConversionError(
 						this.type,
 						new TypeAST("Int"),
-						this.span,
-						3
+						this.span
 					)
 				);
 			default:
@@ -386,8 +393,7 @@ export class LogicalAnd extends Binop {
 					new IllegalTypeConversionError(
 						this.type,
 						new TypeAST("Int"),
-						this.span,
-						4
+						this.span
 					)
 				);
 			default:
@@ -401,71 +407,49 @@ export class LogicalAnd extends Binop {
 		}
 	}
 }
-export class LogicalEq extends Expr {
-	params: Expr[];
+export class LogicalEq extends Binop {
+	constructor(a: Expr, b: Expr, span: Span) {
+		super(a, b, "==", span);
+	}
 
-	constructor(args: Expr[], span: Span) {
-		super(span);
-		this.params = args;
-	}
-	override applyBind(scope: Scope, buffer: IOBuffer): void {
-		for (let param of this.params) param.applyBind(scope, buffer);
-	}
 	override toString(): string {
-		let ps: string[] = this.params.map((e) => e.toString());
-		return `equals(${ps.join(",")})`;
+		return `equals(${this.a},${this.b})`;
 	}
+	override rval(buffer: IOBuffer): NumberLiteral {
+		let aRval: Expr = this.a.rval(buffer);
+		let bRval: Expr = this.b.rval(buffer);
 
-	override applyType(buffer: IOBuffer): void {
-		this.type = new TypeAST("Integer");
-
-		this.params[0].applyType(buffer);
-		this.params[1].applyType(buffer);
-
-		if (!this.params[0].type.instanceOf(this.params[1].type)) {
-			buffer.throwError(
-				new IllegalTypeConversionError(
-					this.params[0].type,
-					this.params[1].type,
-					this.span,
-					5
-				)
-			);
-
-			return;
+		switch (this.type.type) {
+			case TypeEnum.INTEGER:
+				let v1: number = (aRval as NumberLiteral).val;
+				let v2: number = (bRval as NumberLiteral).val;
+				return new NumberLiteral(v1 == v2 ? 1 : 0, this.span);
+			case TypeEnum.STRING:
+				let s1: StringLiteral = aRval as StringLiteral;
+				let s2: StringLiteral = bRval as StringLiteral;
+				return new NumberLiteral(s1.name == s2.name ? 1 : 0, this.span);
+			case TypeEnum.TUPLE:
+				let t1: Tuple = aRval as Tuple;
+				let t2: Tuple = bRval as Tuple;
+				for (let i = 0; i < t1.vals.length; i++) {
+					let eq: LogicalEq = new LogicalEq(
+						t1.vals[i],
+						t2.vals[i],
+						this.span
+					);
+					eq.applyType(buffer);
+					if (eq.rval(buffer).val == 0)
+						return new NumberLiteral(0, this.span);
+				}
+				return new NumberLiteral(1, this.span);
+			default:
+				buffer.throwError(
+					new CompilerError(
+						this.symbol + " not assigned type?",
+						this.span
+					)
+				);
+				return new NumberLiteral(0, this.span);
 		}
-
-		if (!this.params[1].type.instanceOf(this.params[0].type)) {
-			buffer.throwError(
-				new IllegalTypeConversionError(
-					this.params[1].type,
-					this.params[0].type,
-					this.span,
-					6
-				)
-			);
-
-			return;
-		}
-	}
-
-	override rval(buffer: IOBuffer): Expr {
-		let childRVals: Expr[] = [
-			this.params[0].rval(buffer),
-			this.params[1].rval(buffer),
-		];
-
-		let v1: string | number;
-		let v2: string | number;
-
-		if (childRVals[0].type.instanceOf(TypeEnum.STRING)) {
-			v1 = (childRVals[0] as StringLiteral).name;
-			v2 = (childRVals[1] as StringLiteral).name;
-		} else {
-			v1 = (childRVals[0] as NumberLiteral).val;
-			v2 = (childRVals[1] as NumberLiteral).val;
-		}
-
-		return new NumberLiteral(v1 == v2 ? 1 : 0, this.span);
 	}
 }

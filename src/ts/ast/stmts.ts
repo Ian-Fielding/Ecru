@@ -11,8 +11,6 @@ import {
 	Id,
 	Expr,
 	NumberLiteral,
-	VoidObj,
-	TypeCastToString,
 	getTypeCast,
 } from "./exprs.js";
 import { Scope, IdSymbol } from "./symbols.js";
@@ -303,8 +301,7 @@ export class PrintStatement extends Statement {
 				new IllegalTypeConversionError(
 					str.type,
 					new TypeAST("String"),
-					this.span,
-					2
+					this.span
 				)
 			);
 			return { break: true };

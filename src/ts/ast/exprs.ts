@@ -37,7 +37,7 @@ export function getTypeCast(expr: Expr, type: TypeAST): Expr {
 			return new TypeCastToInt(expr);
 		case TypeEnum.STRING:
 			return new TypeCastToString(expr);
-		case TypeEnum.PROD:
+		case TypeEnum.TUPLE:
 			return new TypeCastToTuple(expr, type as ProductType);
 		case TypeEnum.MAP:
 			return new TypeCastToMap(expr, type as FunctionType);
@@ -49,7 +49,7 @@ export function getTypeCast(expr: Expr, type: TypeAST): Expr {
 	}
 }
 
-export class TypeCastToVoid extends Expr {
+class TypeCastToVoid extends Expr {
 	expr: Expr;
 
 	constructor(expr: Expr) {
@@ -75,14 +75,14 @@ export class TypeCastToVoid extends Expr {
 
 		if (r.type.type != TypeEnum.VOID)
 			buffer.throwError(
-				new IllegalTypeConversionError(r.type, this.type, this.span, 7)
+				new IllegalTypeConversionError(r.type, this.type, this.span)
 			);
 
 		return new VoidObj();
 	}
 }
 
-export class TypeCastToMap extends Expr {
+class TypeCastToMap extends Expr {
 	expr: Expr;
 
 	constructor(expr: Expr, type: FunctionType) {
@@ -103,8 +103,7 @@ export class TypeCastToMap extends Expr {
 				new IllegalTypeConversionError(
 					this.expr.type,
 					this.type,
-					this.span,
-					8
+					this.span
 				)
 			);
 	}
@@ -120,13 +119,13 @@ export class TypeCastToMap extends Expr {
 		}
 
 		buffer.throwError(
-			new IllegalTypeConversionError(r.type, this.type, this.span, 9)
+			new IllegalTypeConversionError(r.type, this.type, this.span)
 		);
 		return new FuncDecl([], [], this.type as FunctionType, this.span);
 	}
 }
 
-export class TypeCastToTuple extends Expr {
+class TypeCastToTuple extends Expr {
 	expr: Expr;
 
 	constructor(expr: Expr, type: ProductType) {
@@ -176,13 +175,13 @@ export class TypeCastToTuple extends Expr {
 		}
 
 		buffer.throwError(
-			new IllegalTypeConversionError(r.type, this.type, this.span, 11)
+			new IllegalTypeConversionError(r.type, this.type, this.span)
 		);
 		return new Tuple([], this.span);
 	}
 }
 
-export class TypeCastToInt extends Expr {
+class TypeCastToInt extends Expr {
 	expr: Expr;
 
 	constructor(expr: Expr) {
@@ -218,34 +217,27 @@ export class TypeCastToInt extends Expr {
 						new IllegalTypeConversionError(
 							s.type,
 							this.type,
-							this.span,
-							12
+							this.span
 						)
 					);
 				return new NumberLiteral(+s.name, r.span);
 			case TypeEnum.RATIONAL:
 			case TypeEnum.REAL:
 			//TODO implement once types is good
-			case TypeEnum.PROD:
+			case TypeEnum.TUPLE:
 			case TypeEnum.DUMMY:
 			case TypeEnum.FORMULA:
 			case TypeEnum.MAP:
-			case TypeEnum.OBJECT:
 			case TypeEnum.VOID:
 				buffer.throwError(
-					new IllegalTypeConversionError(
-						r.type,
-						this.type,
-						this.span,
-						13
-					)
+					new IllegalTypeConversionError(r.type, this.type, this.span)
 				);
 				return new NumberLiteral(0, this.span);
 		}
 	}
 }
 
-export class TypeCastToString extends Expr {
+class TypeCastToString extends Expr {
 	expr: Expr;
 
 	constructor(expr: Expr) {
@@ -276,9 +268,14 @@ export class TypeCastToString extends Expr {
 			case TypeEnum.NATURAL:
 				let s: NumberLiteral = r as NumberLiteral;
 				return new StringLiteral(s.val + "", r.span);
-			case TypeEnum.PROD:
+			case TypeEnum.TUPLE:
 				let t: Tuple = r as Tuple;
-				let vs: string[] = t.vals.map((v) => v.toString());
+				let vs: string[] = [];
+				for (let i = 0; i < t.vals.length; i++) {
+					t.vals[i] = getTypeCast(t.vals[i], new TypeAST("String"));
+					t.vals[i].applyType(buffer);
+					vs.push((t.vals[i].rval(buffer) as StringLiteral).name);
+				}
 				return new StringLiteral(`(${vs.join(",")})`, r.span);
 
 			case TypeEnum.RATIONAL:
@@ -287,15 +284,9 @@ export class TypeCastToString extends Expr {
 			case TypeEnum.MAP:
 			//TODO implement once types is good
 			case TypeEnum.DUMMY:
-			case TypeEnum.OBJECT:
 			case TypeEnum.VOID:
 				buffer.throwError(
-					new IllegalTypeConversionError(
-						r.type,
-						this.type,
-						this.span,
-						14
-					)
+					new IllegalTypeConversionError(r.type, this.type, this.span)
 				);
 				return new StringLiteral("", this.span);
 		}
@@ -341,7 +332,7 @@ export class FuncDecl extends Expr {
 			child.applyType(buffer, new TypeAST("Dummy"));
 		for (let child of this.stmts) child.applyType(buffer, type.codomain);
 
-		if (!type.codomain.instanceOf(TypeEnum.VOID)) {
+		if (type.codomain.type != TypeEnum.VOID) {
 			let index: number = -1;
 			for (let i = 0; i < this.stmts.length; i++) {
 				if (this.stmts[i] instanceof ReturnStatement) {
@@ -650,9 +641,6 @@ export class NumberLiteral extends Expr {
 	override applyType(buffer: IOBuffer): void {}
 
 	override rval(buffer: IOBuffer): Expr {
-		if (this.type.instanceOf(TypeEnum.STRING))
-			return new StringLiteral("" + this.val, this.span);
-
 		return this;
 	}
 
@@ -693,7 +681,6 @@ export class Tuple extends Expr {
 	constructor(vals: Expr[], span: Span) {
 		super(span);
 		this.vals = vals;
-		this.type = new TypeAST("CartProd");
 	}
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {
@@ -712,10 +699,13 @@ export class Tuple extends Expr {
 	}
 
 	override rval(buffer: IOBuffer): Expr {
-		return new Tuple(
+		let ret: Tuple = new Tuple(
 			this.vals.map((v) => v.rval(buffer)),
 			this.span
 		);
+		ret.applyType(buffer);
+
+		return ret;
 	}
 
 	override toString(): string {

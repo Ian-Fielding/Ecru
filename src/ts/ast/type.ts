@@ -10,7 +10,6 @@ import { AST } from "./asts.js";
 import { Scope } from "./symbols.js";
 
 export const enum TypeEnum {
-	OBJECT,
 	FORMULA,
 	REAL,
 	RATIONAL,
@@ -20,13 +19,23 @@ export const enum TypeEnum {
 	STRING,
 	VOID,
 	MAP,
-	PROD,
+	TUPLE,
 	DUMMY,
 }
 
-export type TypeString =
-	| "Object"
-	| "Obj"
+export type FundTypeEnum =
+	| TypeEnum.FORMULA
+	| TypeEnum.REAL
+	| TypeEnum.FORMULA
+	| TypeEnum.REAL
+	| TypeEnum.RATIONAL
+	| TypeEnum.INTEGER
+	| TypeEnum.NATURAL
+	| TypeEnum.BOOLEAN
+	| TypeEnum.STRING
+	| TypeEnum.VOID;
+
+export type FundTypeString =
 	| "Formula"
 	| "Form"
 	| "Real"
@@ -42,16 +51,13 @@ export type TypeString =
 	| "Bool"
 	| "String"
 	| "Str"
-	| "void"
-	| "Map"
-	| "CartProd"
-	| "dummy"
-	| "Dummy";
+	| "Dummy"
+	| "void";
+
+export type TypeString = FundTypeString | "Map" | "Tuple";
 
 export function typeEnumToString(t: TypeEnum): TypeString {
 	switch (t) {
-		case TypeEnum.OBJECT:
-			return "Object";
 		case TypeEnum.FORMULA:
 			return "Form";
 		case TypeEnum.REAL:
@@ -70,18 +76,15 @@ export function typeEnumToString(t: TypeEnum): TypeString {
 			return "void";
 		case TypeEnum.MAP:
 			return "Map";
-		case TypeEnum.PROD:
-			return "CartProd";
+		case TypeEnum.TUPLE:
+			return "Tuple";
 		case TypeEnum.DUMMY:
 			return "Dummy";
 	}
 }
 
-export function typeStringToEnum(s: string): TypeEnum {
+export function typeStringToEnum(s: TypeString): TypeEnum {
 	switch (s) {
-		case "Object":
-		case "Obj":
-			return TypeEnum.OBJECT;
 		case "Formula":
 		case "Form":
 			return TypeEnum.FORMULA;
@@ -108,23 +111,17 @@ export function typeStringToEnum(s: string): TypeEnum {
 			return TypeEnum.VOID;
 		case "Map":
 			return TypeEnum.MAP;
-		case "CartProd":
-			return TypeEnum.PROD;
-		case "dummy":
+		case "Tuple":
+			return TypeEnum.TUPLE;
 		case "Dummy":
-		default:
 			return TypeEnum.DUMMY;
 	}
 }
 
-export class TypeAST extends AST {
+abstract class Type extends AST {
 	type: TypeEnum;
 	name: TypeString;
-
-	constructor(
-		name: TypeString | TypeEnum,
-		span: Span = new Span(0, 0, 0, 0)
-	) {
+	constructor(name: TypeString | TypeEnum, span: Span) {
 		let str: TypeString;
 		let num: TypeEnum;
 		if (typeof name == "string") {
@@ -139,12 +136,6 @@ export class TypeAST extends AST {
 		this.name = str;
 	}
 
-	instanceOf(t: TypeAST | number): boolean {
-		if (t instanceof TypeAST) return divides(t.type, this.type);
-
-		return divides(t, this.type);
-	}
-
 	override toString(): string {
 		return `${this.name}`;
 	}
@@ -156,10 +147,19 @@ export class TypeAST extends AST {
 	}
 }
 
-export class ProductType extends TypeAST {
+export class TypeAST extends Type {
+	constructor(
+		name: FundTypeString | FundTypeEnum,
+		span: Span = new Span(0, 0, 0, 0)
+	) {
+		super(name, span);
+	}
+}
+
+export class ProductType extends Type {
 	types: TypeAST[];
 	constructor(types: TypeAST[], span: Span = new Span(0, 0, 0, 0)) {
-		super("CartProd", span);
+		super("Tuple", span);
 		this.types = types;
 	}
 
@@ -181,7 +181,7 @@ export class ProductType extends TypeAST {
 	}
 }
 
-export class FunctionType extends TypeAST {
+export class FunctionType extends Type {
 	domain: TypeAST;
 	codomain: TypeAST;
 
@@ -209,8 +209,8 @@ export class FunctionType extends TypeAST {
 }
 
 export function gcdType(t1: TypeAST, t2: TypeAST, buffer?: IOBuffer): TypeAST {
-	const precedence: TypeEnum[] = [TypeEnum.STRING, TypeEnum.INTEGER];
-	if ((t1.type == TypeEnum.PROD) != (t2.type == TypeEnum.PROD)) {
+	const precedence: FundTypeEnum[] = [TypeEnum.STRING, TypeEnum.INTEGER];
+	if ((t1.type == TypeEnum.TUPLE) != (t2.type == TypeEnum.TUPLE)) {
 		if (buffer)
 			buffer.throwError(
 				new CompilerError("Girl this aint workin")
@@ -219,7 +219,7 @@ export function gcdType(t1: TypeAST, t2: TypeAST, buffer?: IOBuffer): TypeAST {
 		return new TypeAST("Dummy");
 	}
 
-	if (t1.type == TypeEnum.PROD && t2.type == TypeEnum.PROD) {
+	if (t1.type == TypeEnum.TUPLE && t2.type == TypeEnum.TUPLE) {
 		let a: ProductType = t1 as ProductType;
 		let b: ProductType = t2 as ProductType;
 		if (a.types.length != b.types.length) {
@@ -244,10 +244,6 @@ export function gcdType(t1: TypeAST, t2: TypeAST, buffer?: IOBuffer): TypeAST {
 	}
 
 	if (buffer)
-		buffer.throwError(
-			//new IllegalTypeConversionError(t1, t2, t1.span)
-
-			new CompilerError("Girl this workin " + t1 + ", " + t2)
-		);
+		buffer.throwError(new IllegalTypeConversionError(t1, t2, t1.span));
 	return new TypeAST("Dummy");
 }

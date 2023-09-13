@@ -1,4 +1,3 @@
-import { FuncCall, FuncDecl } from "./ast/exprs.js";
 import { Statement } from "./ast/stmts.js";
 import { TypeAST } from "./ast/type.js";
 import { Span } from "./parser/token.js";
@@ -84,14 +83,9 @@ export class RedefinedIdentifierError extends EcruError {
 }
 
 export class IllegalTypeConversionError extends EcruError {
-	constructor(
-		currentType: TypeAST,
-		desiredType: TypeAST,
-		span: Span,
-		ind: number
-	) {
+	constructor(currentType: TypeAST, desiredType: TypeAST, span: Span) {
 		super(
-			"IllegalTypeConversionError" + ind,
+			"IllegalTypeConversionError",
 			`Cannot convert type ${currentType} to type ${desiredType}.`,
 			span
 		);
