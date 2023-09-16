@@ -58,18 +58,26 @@ export class Negate extends Expr {
 	constructor(expr: Expr, span: Span) {
 		super(span);
 		this.expr = expr;
+		this.type = new TypeAST("Int");
 	}
 
 	override toString(): string {
 		return `negate(${this.expr})`;
 	}
 
-	override applyBind(scope: Scope, buffer: IOBuffer): void {}
+	override applyBind(scope: Scope, buffer: IOBuffer): void {
+		this.expr.applyBind(scope, buffer);
+	}
 
-	override applyType(buffer: IOBuffer): void {}
+	override applyType(buffer: IOBuffer): void {
+		this.expr.applyType(buffer);
+		this.expr = getTypeCast(this.expr, this.type);
+		this.expr.applyType(buffer);
+	}
 
 	override rval(buffer: IOBuffer): Expr {
-		return this;
+		let a: NumberLiteral = this.expr.rval(buffer) as NumberLiteral;
+		return new NumberLiteral(-a.val, a.span);
 	}
 }
 
@@ -129,6 +137,10 @@ export class Add extends Binop {
 		let bRval: Expr = this.b.rval(buffer);
 
 		switch (this.type.type) {
+			case TypeEnum.ANY:
+				let temp: Add = new Add(aRval, bRval, this.span);
+				temp.applyType(buffer);
+				return temp.rval(buffer);
 			case TypeEnum.INTEGER:
 				let v1: NumberLiteral = aRval as NumberLiteral;
 				let v2: NumberLiteral = bRval as NumberLiteral;
@@ -174,6 +186,10 @@ export class Mul extends Binop {
 		let bRval: Expr = this.b.rval(buffer);
 
 		switch (this.type.type) {
+			case TypeEnum.ANY:
+				let temp: Mul = new Mul(aRval, bRval, this.span);
+				temp.applyType(buffer);
+				return temp.rval(buffer);
 			case TypeEnum.INTEGER:
 				let v1: NumberLiteral = aRval as NumberLiteral;
 				let v2: NumberLiteral = bRval as NumberLiteral;
@@ -220,6 +236,10 @@ export class Sub extends Binop {
 		let bRval: Expr = this.b.rval(buffer);
 
 		switch (this.type.type) {
+			case TypeEnum.ANY:
+				let temp: Sub = new Sub(aRval, bRval, this.span);
+				temp.applyType(buffer);
+				return temp.rval(buffer);
 			case TypeEnum.INTEGER:
 				let v1: NumberLiteral = aRval as NumberLiteral;
 				let v2: NumberLiteral = bRval as NumberLiteral;
@@ -266,6 +286,10 @@ export class Div extends Binop {
 		let bRval: Expr = this.b.rval(buffer);
 
 		switch (this.type.type) {
+			case TypeEnum.ANY:
+				let temp: Div = new Div(aRval, bRval, this.span);
+				temp.applyType(buffer);
+				return temp.rval(buffer);
 			case TypeEnum.INTEGER:
 				let v1: NumberLiteral = aRval as NumberLiteral;
 				let v2: NumberLiteral = bRval as NumberLiteral;
@@ -342,6 +366,10 @@ export class LogicalOr extends Binop {
 		let bRval: Expr = this.b.rval(buffer);
 
 		switch (this.type.type) {
+			case TypeEnum.ANY:
+				let temp: LogicalOr = new LogicalOr(aRval, bRval, this.span);
+				temp.applyType(buffer);
+				return temp.rval(buffer);
 			case TypeEnum.INTEGER:
 				let v1: number = (aRval as NumberLiteral).val;
 				let v2: number = (bRval as NumberLiteral).val;
@@ -381,6 +409,10 @@ export class LogicalAnd extends Binop {
 		let bRval: Expr = this.b.rval(buffer);
 
 		switch (this.type.type) {
+			case TypeEnum.ANY:
+				let temp: LogicalAnd = new LogicalAnd(aRval, bRval, this.span);
+				temp.applyType(buffer);
+				return temp.rval(buffer);
 			case TypeEnum.INTEGER:
 				let v1: number = (aRval as NumberLiteral).val;
 				let v2: number = (bRval as NumberLiteral).val;
@@ -415,11 +447,16 @@ export class LogicalEq extends Binop {
 	override toString(): string {
 		return `equals(${this.a},${this.b})`;
 	}
+
 	override rval(buffer: IOBuffer): NumberLiteral {
 		let aRval: Expr = this.a.rval(buffer);
 		let bRval: Expr = this.b.rval(buffer);
 
 		switch (this.type.type) {
+			case TypeEnum.ANY:
+				let temp: LogicalEq = new LogicalEq(aRval, bRval, this.span);
+				temp.applyType(buffer);
+				return temp.rval(buffer);
 			case TypeEnum.INTEGER:
 				let v1: number = (aRval as NumberLiteral).val;
 				let v2: number = (bRval as NumberLiteral).val;

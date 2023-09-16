@@ -193,26 +193,76 @@ export let parseTests: ParseTest[] = [
 	},
 	{
 		name: "parse_test36",
-		input: "",
-		expected: "Program()",
+		input: "(1,2,3)[4];",
+		expected: "Program(Ind(Tuple(1,2,3),4))",
 	},
 	{
 		name: "parse_test37",
-		input: "",
-		expected: "Program()",
+		input: "(1,2,3)[4][3];",
+		expected: "Program(Ind(Ind(Tuple(1,2,3),4),3))",
 	},
 	{
 		name: "parse_test38",
-		input: "",
-		expected: "Program()",
+		input: `"hello"[4];`,
+		expected: "Program(Ind(hello,4))",
 	},
 	{
 		name: "parse_test39",
+		input: "123[4+5];",
+		expected: "Program(Ind(123,add(4,5)))",
+	},
+	{
+		name: "parse_test40",
 		input: "",
 		expected: "Program()",
 	},
 	{
-		name: "parse_test40",
+		name: "parse_test41",
+		input: "",
+		expected: "Program()",
+	},
+	{
+		name: "parse_test42",
+		input: "",
+		expected: "Program()",
+	},
+	{
+		name: "parse_test43",
+		input: "",
+		expected: "Program()",
+	},
+	{
+		name: "parse_test44",
+		input: "",
+		expected: "Program()",
+	},
+	{
+		name: "parse_test45",
+		input: "",
+		expected: "Program()",
+	},
+	{
+		name: "parse_test46",
+		input: "",
+		expected: "Program()",
+	},
+	{
+		name: "parse_test47",
+		input: "",
+		expected: "Program()",
+	},
+	{
+		name: "parse_test48",
+		input: "",
+		expected: "Program()",
+	},
+	{
+		name: "parse_test49",
+		input: "",
+		expected: "Program()",
+	},
+	{
+		name: "parse_test50",
 		input: "",
 		expected: "Program()",
 	},

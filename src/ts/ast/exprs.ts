@@ -4,8 +4,10 @@ import {
 	CompilerError,
 	DimensionError,
 	IllegalCallError,
+	IllegalIndexError,
 	IllegalTypeConversionError,
 	NonexistentReturnError,
+	OutOfBoundsError,
 	UndefinedIdentifierError,
 } from "../error.js";
 import { Span } from "../parser/token.js";
@@ -43,6 +45,8 @@ export function getTypeCast(expr: Expr, type: TypeAST): Expr {
 			return new TypeCastToMap(expr, type as FunctionType);
 		case TypeEnum.VOID:
 			return new TypeCastToVoid(expr);
+		case TypeEnum.ANY:
+			return expr;
 		default:
 			//NOT IMPLEMENTEd
 			throw new Error("NOT IMPLEMENTED " + type);
@@ -221,6 +225,7 @@ class TypeCastToInt extends Expr {
 						)
 					);
 				return new NumberLiteral(+s.name, r.span);
+			case TypeEnum.ANY:
 			case TypeEnum.RATIONAL:
 			case TypeEnum.REAL:
 			//TODO implement once types is good
@@ -278,6 +283,7 @@ class TypeCastToString extends Expr {
 				}
 				return new StringLiteral(`(${vs.join(",")})`, r.span);
 
+			case TypeEnum.ANY:
 			case TypeEnum.RATIONAL:
 			case TypeEnum.REAL:
 			case TypeEnum.FORMULA:
@@ -616,16 +622,76 @@ export class ArrayAccess extends Expr {
 		this.arr = arr;
 		this.ind = ind;
 	}
-	override applyBind(scope: Scope, buffer: IOBuffer): void {}
+	override applyBind(scope: Scope, buffer: IOBuffer): void {
+		this.arr.applyBind(scope, buffer);
+		this.ind.applyBind(scope, buffer);
+	}
 
-	override applyType(buffer: IOBuffer): void {}
+	override applyType(buffer: IOBuffer): void {
+		this.arr.applyType(buffer);
+		this.ind.applyType(buffer);
+		this.ind = getTypeCast(this.ind, new TypeAST("Int"));
+		this.ind.applyType(buffer);
+
+		if (this.arr.type.type == TypeEnum.STRING) {
+			this.type = this.arr.type;
+			return;
+		}
+
+		if (this.arr.type.type == TypeEnum.TUPLE) {
+			this.type = new TypeAST("Any");
+			return;
+		}
+
+		buffer.throwError(new IllegalIndexError(this.arr.type, this.span));
+	}
 
 	override rval(buffer: IOBuffer): Expr {
-		return this;
+		let i: number = (this.ind.rval(buffer) as NumberLiteral).val;
+
+		switch (this.arr.type.type) {
+			case TypeEnum.TUPLE:
+				let vals: Expr[] = (this.arr.rval(buffer) as Tuple).vals;
+				if (0 <= i && i < vals.length) {
+					this.type = (this.arr.type as ProductType).types[i];
+					return vals[i].rval(buffer);
+				}
+				if (-vals.length <= i && i < 0) {
+					this.type = (this.arr.type as ProductType).types[
+						vals.length + i
+					];
+					return vals[vals.length + i].rval(buffer);
+				}
+				buffer.throwError(
+					new OutOfBoundsError(i, vals.length, this.span)
+				);
+			case TypeEnum.STRING:
+				let str: string = (this.arr.rval(buffer) as StringLiteral).name;
+				if (0 <= i && i < str.length)
+					return new StringLiteral(str.charAt(i), this.span);
+				if (-str.length <= i && i < 0)
+					return new StringLiteral(
+						str.charAt(str.length + i),
+						this.span
+					);
+
+				buffer.throwError(
+					new OutOfBoundsError(i, str.length, this.span)
+				);
+
+			default:
+				buffer.throwError(
+					new CompilerError(
+						this.arr.type + " not supported",
+						this.span
+					)
+				);
+				return new VoidObj();
+		}
 	}
 
 	override toString(): string {
-		return `ArrayInd(${this.arr.toString()},${this.ind.toString()})`;
+		return `Ind(${this.arr.toString()},${this.ind.toString()})`;
 	}
 }
 

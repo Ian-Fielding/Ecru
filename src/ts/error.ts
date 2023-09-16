@@ -62,6 +62,26 @@ export class IllegalCallError extends EcruError {
 	}
 }
 
+export class OutOfBoundsError extends EcruError {
+	constructor(index: number, arrlen: number, span: Span) {
+		super(
+			"OutOfBoundsError",
+			`Array has length ${arrlen} but index is ${index}`,
+			span
+		);
+	}
+}
+
+export class IllegalIndexError extends EcruError {
+	constructor(type: TypeAST, span: Span) {
+		super(
+			"IllegalIndexError",
+			`Cannot index expression of type ${type}.`,
+			span
+		);
+	}
+}
+
 export class UndefinedIdentifierError extends EcruError {
 	constructor(id: string, span: Span) {
 		super(

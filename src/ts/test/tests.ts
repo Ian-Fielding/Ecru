@@ -807,4 +807,171 @@ print f(2);`,
 		out: `((1,hi),(there,4))`,
 		err: false,
 	},
+
+	{
+		name: `array_test1`,
+		input: `x:Z*Z*Z = (1,2,3); print x[3];`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `array_test2`,
+		input: `x:Z*Z*Z = (1,2,3); print x[2];`,
+		out: `3`,
+		err: false,
+	},
+
+	{
+		name: `array_test3`,
+		input: `x:Z*Z*Z = (1,2,3); print x[1];`,
+		out: `2`,
+		err: false,
+	},
+
+	{
+		name: `array_test4`,
+		input: `x:Z*Z*Z = (1,2,3); print x[0];`,
+		out: `1`,
+		err: false,
+	},
+
+	{
+		name: `array_test5`,
+		input: `x:Z*Z*Z = (1,2,3); print x[-1];`,
+		out: `3`,
+		err: false,
+	},
+
+	{
+		name: `array_test6`,
+		input: `x:Z*Z*Z = (1,2,3); print x[-2];`,
+		out: `2`,
+		err: false,
+	},
+
+	{
+		name: `array_test7`,
+		input: `x:Z*Z*Z = (1,2,3); print x[-3];`,
+		out: `1`,
+		err: false,
+	},
+
+	{
+		name: `array_test8`,
+		input: `x:Z*Z*Z = (1,2,3); print x[-4];`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `array_test9`,
+		input: `x:Z*Z = (3,5); print x[0]+x[1];`,
+		out: `8`,
+		err: false,
+	},
+
+	{
+		name: `array_test10`,
+		input: `dot(x:Z*Z,y:Z*Z):Z { return x[0]*y[0]+x[1]*y[1]; } print dot((2,4),(1,3));`,
+		out: `14`,
+		err: false,
+	},
+
+	{
+		name: `array_test11`,
+		input: `x: Z*Z*Z*String = (3,0,1,"testing!"); print x[x[x[x[2]]]];`,
+		out: `testing!`,
+		err: false,
+	},
+
+	{
+		name: `array_test12`,
+		input: `x: Z = 1; print x[0];`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `array_test13`,
+		input: `x: String*String = ("a","b"); print x["hi"];`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `array_test14`,
+		input: `x: String*String*String = ("a","b","c"); print x[1+1];`,
+		out: `c`,
+		err: false,
+	},
+
+	{
+		name: `array_test15`,
+		input: `cross_product(a:Z*Z*Z, b:Z*Z*Z): Z*Z*Z {
+			x1: Z = a[1]*b[2]-a[2]*b[1];
+			x2: Z = a[2]*b[0] - a[0]*b[2];
+			x3: Z = a[0]*b[1] - a[1]*b[0];
+			return (x1,x2,x3);
+		} 
+		
+		print cross_product(
+			(5,3,2),
+			(4,2,10)
+		);`,
+		out: `(26,-42,-2)`,
+		err: false,
+	},
+
+	{
+		name: `array_test16`,
+		input: `cross_product(a:Z*Z*Z, b:Z*Z*Z): Z*Z*Z {
+			x1: Z = a[1]*b[2]-a[2]*b[1];
+			x2: Z = a[2]*b[0] - a[0]*b[2];
+			x3: Z = a[0]*b[1] - a[1]*b[0];
+			return (x1,x2,x3);
+		}
+
+		sum(a:Z*Z*Z):Z { return a[0]+a[1]+a[2]; } 
+		
+		print sum(cross_product(
+			(5,3,2),
+			(4,2,10)
+		));`,
+
+		out: `-18`,
+		err: false,
+	},
+
+	{
+		name: `array_test17`,
+		input: `print "xyzabc"[0];`,
+		out: `x`,
+		err: false,
+	},
+
+	{
+		name: `array_test18`,
+		input: `x: String = "abc"; print x[1]+x[-1];`,
+		out: `bc`,
+		err: false,
+	},
+
+	{
+		name: `array_test19`,
+		input: `
+			x: String = "abc";
+			y: String = x[0]+x[2]+x[1];
+			z: String = x[0]+y[0]+x[2]+y[2];
+			print z[0]+z[1]+z[-2]+z[-1];`,
+		out: `aacb`,
+		err: false,
+	},
+
+	{
+		name: `array_test20`,
+		input: `first_last(x:String):String {return x[0]+x+x[-1];} print first_last(first_last("abc"+"def"));`,
+		out: `aaabcdefff`,
+		err: false,
+	},
 ];

@@ -21,6 +21,7 @@ export const enum TypeEnum {
 	MAP,
 	TUPLE,
 	DUMMY,
+	ANY,
 }
 
 export type FundTypeEnum =
@@ -33,7 +34,8 @@ export type FundTypeEnum =
 	| TypeEnum.NATURAL
 	| TypeEnum.BOOLEAN
 	| TypeEnum.STRING
-	| TypeEnum.VOID;
+	| TypeEnum.VOID
+	| TypeEnum.ANY;
 
 export type FundTypeString =
 	| "Formula"
@@ -52,7 +54,8 @@ export type FundTypeString =
 	| "String"
 	| "Str"
 	| "Dummy"
-	| "void";
+	| "void"
+	| "Any";
 
 export type TypeString = FundTypeString | "Map" | "Tuple";
 
@@ -80,6 +83,8 @@ export function typeEnumToString(t: TypeEnum): TypeString {
 			return "Tuple";
 		case TypeEnum.DUMMY:
 			return "Dummy";
+		case TypeEnum.ANY:
+			return "Any";
 	}
 }
 
@@ -115,6 +120,8 @@ export function typeStringToEnum(s: TypeString): TypeEnum {
 			return TypeEnum.TUPLE;
 		case "Dummy":
 			return TypeEnum.DUMMY;
+		case "Any":
+			return TypeEnum.ANY;
 	}
 }
 
@@ -209,7 +216,11 @@ export class FunctionType extends Type {
 }
 
 export function gcdType(t1: TypeAST, t2: TypeAST, buffer?: IOBuffer): TypeAST {
-	const precedence: FundTypeEnum[] = [TypeEnum.STRING, TypeEnum.INTEGER];
+	const precedence: FundTypeEnum[] = [
+		TypeEnum.ANY,
+		TypeEnum.STRING,
+		TypeEnum.INTEGER,
+	];
 	if ((t1.type == TypeEnum.TUPLE) != (t2.type == TypeEnum.TUPLE)) {
 		if (buffer)
 			buffer.throwError(
