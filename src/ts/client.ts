@@ -13,6 +13,7 @@ let canvas: HTMLCanvasElement = <HTMLCanvasElement>(
 
 let goBut: HTMLElement = document.getElementById("go")!;
 let clearbut: HTMLElement = document.getElementById("clear")!;
+let drawbut: HTMLElement = document.getElementById("draw")!;
 
 declare let ace: any;
 let editor: any = ace.edit("editor");
@@ -81,7 +82,7 @@ function updateCanvasSize(): void {
 }
 
 function drawCoolDesign(): void {
-	return;
+	console.log("Starting drawing...");
 	for (let x = 0; x < canvas.width; x++) {
 		for (let y = 0; y < canvas.height; y++) {
 			let dx = x / canvas.width;
@@ -90,6 +91,7 @@ function drawCoolDesign(): void {
 			drawPixel(x, y, { r: dx, g: dy, b: (dx + dy) / 2 });
 		}
 	}
+	console.log("Finished drawing!");
 }
 
 interface RGB {
@@ -127,17 +129,20 @@ function createStdDiv(input: string, cls: string): HTMLElement {
 goBut.onclick = function (): void {
 	con.innerHTML = "";
 
-	drawCoolDesign();
-
 	let input: string = editor.getValue();
 
+	console.log("Starting compilation...");
 	compile(input, new IOBuffer(stdout, stderr));
+	console.log("Finished compilation!");
 };
 
 clearbut.onclick = function (): void {
 	con.innerHTML = "";
 };
 
-updateCanvasSize();
-drawCoolDesign();
+drawbut.onclick = function (): void {
+	updateCanvasSize();
+	drawCoolDesign();
+};
+
 console.log("Ready!");

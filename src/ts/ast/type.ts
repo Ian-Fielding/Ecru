@@ -152,6 +152,8 @@ abstract class Type extends AST {
 	equals(other: TypeAST) {
 		return other.type == this.type;
 	}
+
+	abstract copy(): Type;
 }
 
 export class TypeAST extends Type {
@@ -161,6 +163,10 @@ export class TypeAST extends Type {
 	) {
 		super(name, span);
 	}
+
+	override copy(): TypeAST {
+		return new TypeAST(this.name as FundTypeString);
+	}
 }
 
 export class ProductType extends Type {
@@ -168,6 +174,13 @@ export class ProductType extends Type {
 	constructor(types: TypeAST[], span: Span = new Span(0, 0, 0, 0)) {
 		super("Tuple", span);
 		this.types = types;
+	}
+
+	override copy(): ProductType {
+		return new ProductType(
+			this.types.map((t) => t.copy()),
+			this.span
+		);
 	}
 
 	override equals(other: TypeAST): boolean {
@@ -200,6 +213,14 @@ export class FunctionType extends Type {
 		super("Map", span);
 		this.domain = domain;
 		this.codomain = codomain;
+	}
+
+	override copy(): FunctionType {
+		return new FunctionType(
+			this.domain.copy(),
+			this.codomain.copy(),
+			this.span
+		);
 	}
 
 	override equals(other: TypeAST): boolean {

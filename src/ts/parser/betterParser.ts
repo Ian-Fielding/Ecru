@@ -668,14 +668,30 @@ export class Parser {
 
 	typeMultiplicative(): TypeAST {
 		//TODO
-		let childs: TypeAST[] = [this.typePrimary()];
+		let childs: TypeAST[] = [this.typeExponent()];
 		while (this.current() == "*") {
 			this.match("*");
-			childs.push(this.typePrimary());
+			childs.push(this.typeExponent());
 		}
 
 		if (childs.length == 1) return childs[0];
 		return new ProductType(childs, unionSpan(childs.map((c) => c.span)));
+	}
+
+	typeExponent(): TypeAST {
+		let left: TypeAST = this.typePrimary();
+		if (this.current() == "^") {
+			this.match("^");
+			let right: NumberLiteral = this.num();
+			let count: number = right.val;
+
+			let types: TypeAST[] = [];
+			for (let i = 0; i < count; i++) types.push(left.copy());
+
+			return new ProductType(types, unionSpan(types.map((t) => t.span)));
+		}
+
+		return left;
 	}
 
 	typePrimary(): TypeAST {

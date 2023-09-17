@@ -661,6 +661,42 @@ print f(2);`,
 		out: `(a1a,b2b,c3c)`,
 		err: false,
 	},
+	{
+		name: `tuple_test30.1`,
+		input: `
+			auto_add_tups(
+				x:Z^3, 
+				y:Str^3):Str^3 { 
+					return y+x+y;
+			} 
+			print auto_add_tups((1,2,3),("a","b","c"));`,
+		out: `(a1a,b2b,c3c)`,
+		err: false,
+	},
+	{
+		name: `tuple_test30.2`,
+		input: `
+			auto_add_tups(
+				x:Z*Z*Z, 
+				y:Str^3):Str*Str*Str { 
+					return y+x+y;
+			} 
+			print auto_add_tups((1,2,3),("a","b","c"));`,
+		out: `(a1a,b2b,c3c)`,
+		err: false,
+	},
+	{
+		name: `tuple_test30.3`,
+		input: `
+			auto_add_tups(
+				x:Z*Z*Z, 
+				y:Str*Str*Str):Str^3 { 
+					return y+x+y;
+			} 
+			print auto_add_tups((1,2,3),("a","b","c"));`,
+		out: `(a1a,b2b,c3c)`,
+		err: false,
+	},
 
 	{
 		name: `tuple_test31`,
@@ -767,6 +803,13 @@ print f(2);`,
 	},
 
 	{
+		name: `tuple_test41.1`,
+		input: `x: Z^3 = ((1,2),3);`,
+		out: ``,
+		err: true,
+	},
+
+	{
 		name: `tuple_test42`,
 		input: `x: (Z*Z)*Z = (1,2,3);`,
 		out: ``,
@@ -774,8 +817,22 @@ print f(2);`,
 	},
 
 	{
+		name: `tuple_test42.1`,
+		input: `x: Z^2 * Z = (1,2,3);`,
+		out: ``,
+		err: true,
+	},
+
+	{
 		name: `tuple_test43`,
 		input: `x: (Z*Z) = (1,2);`,
+		out: ``,
+		err: false,
+	},
+
+	{
+		name: `tuple_test43.1`,
+		input: `x: Z^2 = (1,2);`,
 		out: ``,
 		err: false,
 	},
@@ -795,10 +852,31 @@ print f(2);`,
 	},
 
 	{
+		name: `tuple_test45.1`,
+		input: `x: Z^2 * Z^2 = ((1,2),(3,4));`,
+		out: ``,
+		err: false,
+	},
+
+	{
 		name: `tuple_test46`,
 		input: `x: (Z*Z)*Z = ((1,"hi"),3);`,
 		out: ``,
 		err: true,
+	},
+
+	{
+		name: `tuple_test46.1`,
+		input: `x: Z^2 * Z = ((1,"hi"),3);`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `tuple_test46.2`,
+		input: `x: Z^2 * Z = ((1,2),3);`,
+		out: ``,
+		err: false,
 	},
 
 	{
@@ -811,6 +889,13 @@ print f(2);`,
 	{
 		name: `array_test1`,
 		input: `x:Z*Z*Z = (1,2,3); print x[3];`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `array_test1.1`,
+		input: `x:Z^3 = (1,2,3); print x[3];`,
 		out: ``,
 		err: true,
 	},
