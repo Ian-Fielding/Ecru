@@ -1,5 +1,6 @@
 import { IOBuffer } from "../IOBuffer.js";
 import {
+	CompilerError,
 	IllegalTypeConversionError,
 	RedefinedIdentifierError,
 	UndefinedIdentifierError,
@@ -10,11 +11,11 @@ import {
 	StringLiteral,
 	Id,
 	Expr,
-	NumberLiteral,
+	IntegerLiteral,
 	getTypeCast,
 } from "./exprs.js";
 import { Scope, IdSymbol } from "./symbols.js";
-import { TypeAST, TypeEnum } from "./type.js";
+import { TypeAST } from "./type.js";
 
 export abstract class Statement extends AST {
 	constructor(span: Span) {
@@ -171,6 +172,7 @@ export class AssignmentStatement extends Statement {
 			);
 			return;
 		}
+		this.expr.applyType(buffer);
 
 		this.expr = getTypeCast(this.expr, this.id.symbol.type);
 		this.expr.applyType(buffer);
@@ -293,7 +295,7 @@ export class PrintStatement extends Statement {
 		let str: Expr = this.expr.rval(buffer);
 		if (str instanceof StringLiteral) {
 			buffer.stdout(str.name + term);
-		} else if (str instanceof NumberLiteral) {
+		} else if (str instanceof IntegerLiteral) {
 			buffer.stdout(str.val + term);
 		} else {
 			// TODO better comparison to string.
@@ -337,9 +339,9 @@ export class WhileLoop extends Statement {
 
 	override execute(buffer: IOBuffer): ReturnObject {
 		while (true) {
-			let compVal: NumberLiteral = this.test.rval(
+			let compVal: IntegerLiteral = this.test.rval(
 				buffer
-			) as NumberLiteral;
+			) as IntegerLiteral;
 
 			if (compVal.val == 0) break;
 
@@ -410,9 +412,9 @@ export class ForLoop extends Statement {
 		if (result.break) return result;
 
 		while (true) {
-			let compVal: NumberLiteral = this.test.rval(
+			let compVal: IntegerLiteral = this.test.rval(
 				buffer
-			) as NumberLiteral;
+			) as IntegerLiteral;
 
 			if (compVal.val == 0) break;
 
@@ -470,7 +472,7 @@ export class IfStmt extends Statement {
 	}
 
 	override execute(buffer: IOBuffer): ReturnObject {
-		let compVal: NumberLiteral = this.test.rval(buffer) as NumberLiteral;
+		let compVal: IntegerLiteral = this.test.rval(buffer) as IntegerLiteral;
 
 		if (compVal.val != 0)
 			for (let child of this.stmts) {

@@ -158,7 +158,7 @@ export let tests: Test[] = [
 	{
 		name: `basic_test17`,
 		input: 'x: Z = 10; y: Z = 20; print (x==y) + " " +(x+10==y);',
-		out: `0 1`,
+		out: `false true`,
 		err: false,
 	},
 
@@ -179,6 +179,12 @@ export let tests: Test[] = [
 		name: `basic_test18`,
 		input: 'print " abc \n \t ";',
 		out: ` abc \n \t `,
+		err: false,
+	},
+	{
+		name: `basic_test19`,
+		input: "print 3/2;",
+		out: `1`,
 		err: false,
 	},
 	{
@@ -322,8 +328,33 @@ export let tests: Test[] = [
 		err: false,
 	},
 	{
+		name: `func_test9.1`,
+		input: `f(x:N):N{
+					y:N = 3;
+					return x+y;
+				}
+
+				g(y:N,x:N):N{
+					return x*x+y*y;
+				}
+
+				h():N {
+					return 7;
+				}
+
+				print g(h(),f(h()));`,
+		out: `149`,
+		err: false,
+	},
+	{
 		name: `func_test10`,
 		input: `fgh(x:Z,y:Z,z:Z):void {return;} fgh(1,2,3);`,
+		out: ``,
+		err: false,
+	},
+	{
+		name: `func_test10.1`,
+		input: `fgh(x:N,y:N,z:N):void {return;} fgh(1,2,3);`,
 		out: ``,
 		err: false,
 	},
@@ -390,8 +421,36 @@ export let tests: Test[] = [
 	},
 
 	{
+		name: `func_test20.1`,
+		input: `f(x:Z/3Z):Z/3Z {b:Z = 3; b=x; return b;} print f(4);`,
+		out: `1`,
+		err: false,
+	},
+
+	{
+		name: `func_test20.2`,
+		input: `f(x:Z/3Z):Z {b:Z = 3; b=x; return b;} print f(4);`,
+		out: `1`,
+		err: false,
+	},
+
+	{
+		name: `func_test20.3`,
+		input: `f(x:Z):Z/3Z {return x;} print f(5);`,
+		out: `2`,
+		err: false,
+	},
+
+	{
 		name: `func_test21`,
 		input: `f(x:Z):Z {return 2*x;} print f(f(f(3)));`,
+		out: `24`,
+		err: false,
+	},
+
+	{
+		name: `func_test21.1`,
+		input: `f(x:Z):N {return 2*x;} print f(f(f(3)));`,
 		out: `24`,
 		err: false,
 	},
@@ -413,14 +472,30 @@ export let tests: Test[] = [
 	{
 		name: `func_test24`,
 		input: `
-f(x:Z):Z { 
-	g(y:Z,z:Z):Z {
-		a:Z = 3; 
-		return a*(y+z);
-	} 
-	return x+g(x,2);
-} 
-print f(2);`,
+			f(x:Z):Z { 
+				g(y:Z,z:Z):Z {
+					a:Z = 3; 
+					return a*(y+z);
+				} 
+				return x+g(x,2);
+			} 
+			print f(2);
+		`,
+		out: `14`,
+		err: false,
+	},
+	{
+		name: `func_test24.1`,
+		input: `
+			f(x:N):N { 
+				g(y:N,z:N):N {
+					a:N = 3; 
+					return a*(y+z);
+				} 
+				return x+g(x,2);
+			} 
+			print f(2);
+		`,
 		out: `14`,
 		err: false,
 	},
@@ -1057,6 +1132,469 @@ print f(2);`,
 		name: `array_test20`,
 		input: `first_last(x:String):String {return x[0]+x+x[-1];} print first_last(first_last("abc"+"def"));`,
 		out: `aaabcdefff`,
+		err: false,
+	},
+
+	{
+		name: `if_test1`,
+		input: `x:Z = 0; if x print "hello "; print "there";`,
+		out: `there`,
+		err: false,
+	},
+
+	{
+		name: `if_test2`,
+		input: `x:Z = 1; if x print "hello"; print " there";`,
+		out: `hello there`,
+		err: false,
+	},
+
+	{
+		name: `if_test3`,
+		input: `
+			x:String = "morning";
+			print "A good ";
+			if x=="morning" 
+				print "morning"; 
+			else 
+				print "evening";
+			
+			print " to you.";	`,
+		out: `A good morning to you.`,
+		err: false,
+	},
+
+	{
+		name: `if_test4`,
+		input: `
+			x:String = "evening";
+			print "A good ";
+			if x=="morning" 
+				print "morning"; 
+			else 
+				print "evening";
+			
+			print " to you.";	`,
+		out: `A good evening to you.`,
+		err: false,
+	},
+
+	{
+		name: `if_test5`,
+		input: `x: Z = 3;
+			if(x+5==3+5){
+				y: String = "My number is ";
+				print y+x;
+			} else {
+				y: Z = 5;
+				print "My output is "+(x+y);
+			}
+
+			print " and that's that.";
+		`,
+		out: `My number is 3 and that's that.`,
+		err: false,
+	},
+
+	{
+		name: `if_test6`,
+		input: `x: Z = 5;
+			if(x+5~=3+5){
+				y: String = "My number is ";
+				print y+x;
+			} else {
+				y: Z = 5;
+				print "My output is "+(x+y);
+			}
+
+			y:String = " and that's that.";
+			print y;
+		`,
+		out: `My output is 10 and that's that.`,
+		err: false,
+	},
+
+	{
+		name: `if_test7`,
+		input: `
+			x: Z = 3;
+			if x {
+				y: Z = 1;
+				x = 1;
+
+				if x-y {
+					z: Z = 3;
+					x=z;
+					print x;
+				} else {
+					y = 4;
+					x=y;
+					print x;
+				}
+			} else{
+				y: Z = 1;
+				x = 4;
+
+				if x-y {
+					z: Z = 3;
+					x=z;
+					print x;
+				} else {
+					y = 4;
+					x=y;
+					print x;
+				}
+			}
+		`,
+		out: `4`,
+		err: false,
+	},
+
+	{
+		name: `if_test8`,
+		input: `
+			factorial(x:Z):Z{
+				if x==0 return 1;
+				return x*factorial(x-1);
+			}
+
+			print factorial(5);
+		`,
+		out: `120`,
+		err: false,
+	},
+
+	{
+		name: `if_test9`,
+		input: `
+			sumTuple_helper(x:Z^100, ind:Z):Z {
+				if ind==100 return 0;
+				return x[ind]+sumTuple_helper(x,ind+1);
+			}
+
+			sumTuple(x:Z^100):Z {
+				return sumTuple_helper(x,0);
+			}
+
+			print sumTuple((
+				155,499,368,713,272,527,719,43,761,751,488,520,168,
+				236,839,968,696,260,160,298,302,625,290,89,163,524,
+				103,87,205,658,897,860,857,946,34,374,782,554,107,
+				500,323,760,296,795,796,842,303,366,125,390,553,678,
+				960,484,166,94,22,18,772,930,749,241,493,64,234,611,
+				938,281,137,601,759,498,798,535,608,285,115,533,741,
+				729,764,406,248,10,794,705,616,662,818,651,328,304,
+				233,698,47,363,896,585,16,216
+			));
+
+
+		`,
+		out: `47381`,
+		err: false,
+	},
+
+	{
+		name: `if_test10`,
+		input: `if 0 x:Z; x=3;`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `if_test11`,
+		input: `if 1 x:Z; x=3;`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `math_type_test1`,
+		input: `x: N = 1; print x;`,
+		out: `1`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test2`,
+		input: `x: N = 0;`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `math_type_test3`,
+		input: `x: N = -1;`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `math_type_test4`,
+		input: `x: N = 3; y: Z = 4; print x+y;`,
+		out: `7`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test5`,
+		input: `x: N = 3; y: Z = 4; print x-y;`,
+		out: `-1`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test6`,
+		input: `x: N = 3; y: N = 4; print x+y;`,
+		out: `7`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test6.1`,
+		input: `x: N = 4; y: N = 3; print x+y;`,
+		out: `7`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test6.2`,
+		input: `x: N = 1; y: N = 1; print x+y;`,
+		out: `2`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test6.3`,
+		input: `x: N = 1; y: N = 2; print x+" - "+y;`,
+		out: `1 - 2`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test6.4`,
+		input: `x: Z = 4; y: Z = 3; print x+y;`,
+		out: `7`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test7`,
+		input: `x: N = 3; y: N = 4; print x-y;`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `math_type_test7.1`,
+		input: `x: N = 3; y: N = 3; print x-y;`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `math_type_test7.2`,
+		input: `x: N = 3; y: N = 2; print x-y;`,
+		out: `1`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test8`,
+		input: `x: N = 4; print x; x=5; print x;`,
+		out: `45`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test9`,
+		input: `x: N = 3; x = x+x; print x;`,
+		out: `6`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test10`,
+		input: `x: N = 3; x=x-x;`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `math_type_test11`,
+		input: `x: Z/2Z = 0; print x;`,
+		out: `false`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test12`,
+		input: `x: Z/2Z = 1; print x;`,
+		out: `true`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test13`,
+		input: `x: Z/2Z = 2; print x;`,
+		out: `false`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test14`,
+		input: `x: Z/3Z = 2; y: Z/2Z = 1; print x+y;`,
+		out: `3`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test14.1`,
+		input: `x: Z/3Z = 2; y: Z/2Z = 1; print x;`,
+		out: `2`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test15`,
+		input: `x: Z/0Z;`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `math_type_test16`,
+		input: `x: Z/5Z = 3; y: Z/5Z = 4; print x+y;`,
+		out: `2`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test17`,
+		input: `x: Z/5Z = 3; y: Z/5Z = 4; print x*y;`,
+		out: `2`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test18`,
+		input: `tup: Z/5Z * Z/10Z = (3,9); print tup+tup;`,
+		out: `(1,8)`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test19`,
+		input: `x: (Z/4Z)^3 = (1,2,3); print x+x;`,
+		out: `(2,0,2)`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test20`,
+		input: `x: Z/3N = 4;`,
+		out: ``,
+		err: true,
+	},
+
+	{
+		name: `math_type_test21`,
+		input: `x: Z/3Z * Z/4Z = (2,3); print x*x;`,
+		out: `(1,1)`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test22`,
+		input: `tup: Z/3Z^2*Z/14Z = ((3,5),24); print tup;`,
+		out: `((0,2),10)`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test23`,
+		input: `x: Bool = true; print x;`,
+		out: `true`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test24`,
+		input: `print true && false;`,
+		out: `false`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test25`,
+		input: `print true || false;`,
+		out: `true`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test26`,
+		input: `x: Bool = true; y: Bool = true; print x==y;`,
+		out: `true`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test27`,
+		input: `x: Bool = true; y: Bool = false; print x==y;`,
+		out: `false`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test28`,
+		input: `print true+false;`,
+		out: `true`,
+		err: false,
+	},
+	{
+		name: `math_type_test28.1`,
+		input: `print true*false;`,
+		out: `false`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test29`,
+		input: `print true+true;`,
+		out: `false`,
+		err: false,
+	},
+	{
+		name: `math_type_test29.1`,
+		input: `print true*true;`,
+		out: `true`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test30`,
+		input: `print false+true;`,
+		out: `true`,
+		err: false,
+	},
+	{
+		name: `math_type_test30.1`,
+		input: `print false*true;`,
+		out: `false`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test31`,
+		input: `print false+false;`,
+		out: `false`,
+		err: false,
+	},
+
+	{
+		name: `math_type_test31.1`,
+		input: `print false*false;`,
+		out: `false`,
 		err: false,
 	},
 ];

@@ -7,8 +7,10 @@ import {
 	StringLiteral,
 	FuncCall,
 	ArrayAccess,
-	NumberLiteral,
+	IntegerLiteral,
 	Tuple,
+	NaturalLiteral,
+	BooleanLiteral,
 } from "../ast/exprs.js";
 import * as MATH from "../ast/math.js";
 import {
@@ -28,9 +30,9 @@ import {
 import {
 	FunctionType,
 	FundTypeString,
+	ModulusType,
 	ProductType,
 	TypeAST,
-	TypeString,
 } from "../ast/type.js";
 import {
 	IllegalTypeConversionError,
@@ -535,7 +537,7 @@ export class Parser {
 
 	multiplicative(): Expr {
 		let left = this.negation();
-		while (["*", "/"].includes(this.current())) {
+		while (["*", "/", "%"].includes(this.current())) {
 			if (this.current() == "*") {
 				this.match("*");
 				let right = this.negation();
@@ -548,6 +550,14 @@ export class Parser {
 				this.match("/");
 				let right = this.negation();
 				left = new MATH.Div(
+					left,
+					right,
+					unionSpan([left.span, right.span])
+				);
+			} else {
+				this.match("%");
+				let right = this.negation();
+				left = new MATH.Mod(
 					left,
 					right,
 					unionSpan([left.span, right.span])
@@ -629,6 +639,11 @@ export class Parser {
 		if (this.current() == "ID") return this.id();
 		if (this.current() == "STR") return this.str();
 
+		if (this.current() == "true" || this.current() == "false") {
+			let tok: Token = this.match(this.current());
+			return new BooleanLiteral(tok.value == "true", tok.span);
+		}
+
 		let startTok: Token = this.match("(");
 		let exprs: Expr[] = [this.expr()];
 
@@ -667,7 +682,6 @@ export class Parser {
 	}
 
 	typeMultiplicative(): TypeAST {
-		//TODO
 		let childs: TypeAST[] = [this.typeExponent()];
 		while (this.current() == "*") {
 			this.match("*");
@@ -682,7 +696,7 @@ export class Parser {
 		let left: TypeAST = this.typePrimary();
 		if (this.current() == "^") {
 			this.match("^");
-			let right: NumberLiteral = this.num();
+			let right: IntegerLiteral = this.num();
 			let count: number = right.val;
 
 			let types: TypeAST[] = [];
@@ -703,6 +717,13 @@ export class Parser {
 		}
 
 		let tok: Token = this.match(this.current());
+		if (tok.value == "Z" && this.current() == "/") {
+			this.match("/");
+			let n: NaturalLiteral = this.natural();
+			if (this.scan.peek().value != "Z") this.error("Z");
+			let e: Token = this.match("ID");
+			return new ModulusType(n.val, unionSpan([tok.span, e.span]));
+		}
 
 		// TODO sucky type conversion
 		return new TypeAST(tok.value as FundTypeString, tok.span);
@@ -713,7 +734,36 @@ export class Parser {
 		return new Id(token.value, token.span);
 	}
 
-	num(): NumberLiteral {
+	natural(): NaturalLiteral {
+		let token: Token = this.match("NUM");
+
+		if (
+			isNaN(+token.value) ||
+			isNaN(parseFloat(token.value)) ||
+			token.value.indexOf(".") != -1
+		)
+			this.buffer.throwError(
+				new IllegalTypeConversionError(
+					new TypeAST("String"),
+					new TypeAST("N"),
+					token.span
+				)
+			);
+
+		let n: number = +token.value;
+		if (n <= 0)
+			this.buffer.throwError(
+				new IllegalTypeConversionError(
+					new TypeAST("Int"),
+					new TypeAST("N"),
+					token.span
+				)
+			);
+
+		return new NaturalLiteral(n, token.span);
+	}
+
+	num(): IntegerLiteral {
 		let token: Token = this.match("NUM");
 
 		if (isNaN(+token.value) || isNaN(parseFloat(token.value)))
@@ -725,6 +775,6 @@ export class Parser {
 				)
 			);
 
-		return new NumberLiteral(+token.value, token.span);
+		return new IntegerLiteral(+token.value, token.span);
 	}
 }

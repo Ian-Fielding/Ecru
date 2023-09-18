@@ -1,21 +1,29 @@
 import { IOBuffer } from "../IOBuffer.js";
 import {
 	CompilerError,
-	DimensionError,
 	IllegalTypeConversionError,
 	UnsupportedBinop,
 } from "../error.js";
 import { Span } from "../parser/token.js";
 import {
+	BooleanLiteral,
 	Expr,
-	NumberLiteral,
+	IntegerLiteral,
+	ModulusLiteral,
+	NaturalLiteral,
 	StringLiteral,
 	Tuple,
 	VoidObj,
 	getTypeCast,
 } from "./exprs.js";
 import { Scope } from "./symbols.js";
-import { ProductType, TypeAST, TypeEnum, gcdType } from "./type.js";
+import {
+	ModulusType,
+	ProductType,
+	TypeAST,
+	TypeEnum,
+	gcdType,
+} from "./type.js";
 
 export abstract class Binop extends Expr {
 	a: Expr;
@@ -76,8 +84,8 @@ export class Negate extends Expr {
 	}
 
 	override rval(buffer: IOBuffer): Expr {
-		let a: NumberLiteral = this.expr.rval(buffer) as NumberLiteral;
-		return new NumberLiteral(-a.val, a.span);
+		let a: IntegerLiteral = this.expr.rval(buffer) as IntegerLiteral;
+		return new IntegerLiteral(-a.val, a.span);
 	}
 }
 
@@ -124,6 +132,35 @@ export class Exponent extends Expr {
 	}
 }
 
+export class Mod extends Binop {
+	constructor(a: Expr, b: Expr, span: Span) {
+		super(a, b, "%", span);
+	}
+
+	override toString(): string {
+		return `mod(${this.a},${this.b})`;
+	}
+
+	override applyType(buffer: IOBuffer): void {
+		this.type = new TypeAST("Int");
+		this.a = getTypeCast(this.a, this.type);
+		this.a.applyType(buffer);
+		this.b = getTypeCast(this.b, new TypeAST("N"));
+		this.b.applyType(buffer);
+
+		return;
+	}
+
+	override rval(buffer: IOBuffer): IntegerLiteral {
+		let aRval: IntegerLiteral = this.a.rval(buffer) as IntegerLiteral;
+		let bRval: NaturalLiteral = this.b.rval(buffer) as NaturalLiteral;
+
+		let ret: number = aRval.val % bRval.val;
+		if (ret < 0) ret += bRval.val;
+		return new IntegerLiteral(ret, this.span);
+	}
+}
+
 export class Add extends Binop {
 	constructor(a: Expr, b: Expr, span: Span) {
 		super(a, b, "+", span);
@@ -141,10 +178,18 @@ export class Add extends Binop {
 				let temp: Add = new Add(aRval, bRval, this.span);
 				temp.applyType(buffer);
 				return temp.rval(buffer);
+			case TypeEnum.MODULUS:
+				let m1: ModulusLiteral = aRval as ModulusLiteral;
+				let m2: ModulusLiteral = bRval as ModulusLiteral;
+				return m1.add(m2, buffer);
 			case TypeEnum.INTEGER:
-				let v1: NumberLiteral = aRval as NumberLiteral;
-				let v2: NumberLiteral = bRval as NumberLiteral;
-				return new NumberLiteral(v1.val + v2.val, this.span);
+				let v1: IntegerLiteral = aRval as IntegerLiteral;
+				let v2: IntegerLiteral = bRval as IntegerLiteral;
+				return v1.add(v2, buffer);
+			case TypeEnum.NATURAL:
+				let n1: NaturalLiteral = aRval as NaturalLiteral;
+				let n2: NaturalLiteral = bRval as NaturalLiteral;
+				return n1.add(n2, buffer);
 			case TypeEnum.STRING:
 				let s1: StringLiteral = aRval as StringLiteral;
 				let s2: StringLiteral = bRval as StringLiteral;
@@ -190,10 +235,18 @@ export class Mul extends Binop {
 				let temp: Mul = new Mul(aRval, bRval, this.span);
 				temp.applyType(buffer);
 				return temp.rval(buffer);
+			case TypeEnum.MODULUS:
+				let m1: ModulusLiteral = aRval as ModulusLiteral;
+				let m2: ModulusLiteral = bRval as ModulusLiteral;
+				return m1.mul(m2, buffer);
 			case TypeEnum.INTEGER:
-				let v1: NumberLiteral = aRval as NumberLiteral;
-				let v2: NumberLiteral = bRval as NumberLiteral;
-				return new NumberLiteral(v1.val * v2.val, this.span);
+				let v1: IntegerLiteral = aRval as IntegerLiteral;
+				let v2: IntegerLiteral = bRval as IntegerLiteral;
+				return v1.mul(v2, buffer);
+			case TypeEnum.NATURAL:
+				let n1: NaturalLiteral = aRval as NaturalLiteral;
+				let n2: NaturalLiteral = bRval as NaturalLiteral;
+				return n1.mul(n2, buffer);
 			case TypeEnum.STRING:
 				buffer.throwError(
 					new UnsupportedBinop(this.symbol, this.type, this.span)
@@ -240,10 +293,18 @@ export class Sub extends Binop {
 				let temp: Sub = new Sub(aRval, bRval, this.span);
 				temp.applyType(buffer);
 				return temp.rval(buffer);
+			case TypeEnum.MODULUS:
+				let m1: ModulusLiteral = aRval as ModulusLiteral;
+				let m2: ModulusLiteral = bRval as ModulusLiteral;
+				return m1.sub(m2, buffer);
 			case TypeEnum.INTEGER:
-				let v1: NumberLiteral = aRval as NumberLiteral;
-				let v2: NumberLiteral = bRval as NumberLiteral;
-				return new NumberLiteral(v1.val - v2.val, this.span);
+				let v1: IntegerLiteral = aRval as IntegerLiteral;
+				let v2: IntegerLiteral = bRval as IntegerLiteral;
+				return v1.sub(v2, buffer);
+			case TypeEnum.NATURAL:
+				let n1: NaturalLiteral = aRval as NaturalLiteral;
+				let n2: NaturalLiteral = bRval as NaturalLiteral;
+				return n1.sub(n2, buffer);
 			case TypeEnum.STRING:
 				buffer.throwError(
 					new UnsupportedBinop(this.symbol, this.type, this.span)
@@ -290,10 +351,18 @@ export class Div extends Binop {
 				let temp: Div = new Div(aRval, bRval, this.span);
 				temp.applyType(buffer);
 				return temp.rval(buffer);
+			case TypeEnum.MODULUS:
+				let m1: ModulusLiteral = aRval as ModulusLiteral;
+				let m2: ModulusLiteral = bRval as ModulusLiteral;
+				return m1.div(m2, buffer);
 			case TypeEnum.INTEGER:
-				let v1: NumberLiteral = aRval as NumberLiteral;
-				let v2: NumberLiteral = bRval as NumberLiteral;
-				return new NumberLiteral(v1.val / v2.val, this.span);
+				let v1: IntegerLiteral = aRval as IntegerLiteral;
+				let v2: IntegerLiteral = bRval as IntegerLiteral;
+				return v1.div(v2, buffer);
+			case TypeEnum.NATURAL:
+				let n1: NaturalLiteral = aRval as NaturalLiteral;
+				let n2: NaturalLiteral = bRval as NaturalLiteral;
+				return n1.div(n2, buffer);
 			case TypeEnum.STRING:
 				buffer.throwError(
 					new UnsupportedBinop(this.symbol, this.type, this.span)
@@ -344,12 +413,12 @@ export class LogicalNot extends Expr {
 	}
 
 	override rval(buffer: IOBuffer): Expr {
-		let r: NumberLiteral = this.a.rval(buffer) as NumberLiteral;
+		let r: IntegerLiteral = this.a.rval(buffer) as IntegerLiteral;
 
 		let v1: number = r.val;
 		if (v1 != 0) v1 = 1;
 
-		return new NumberLiteral(v1, this.span);
+		return new IntegerLiteral(v1, this.span);
 	}
 }
 
@@ -361,27 +430,32 @@ export class LogicalOr extends Binop {
 	override toString(): string {
 		return `or(${this.a},${this.b})`;
 	}
-	override rval(buffer: IOBuffer): Expr {
+	override rval(buffer: IOBuffer): BooleanLiteral {
 		let aRval: Expr = this.a.rval(buffer);
-		let bRval: Expr = this.b.rval(buffer);
+		let bRval: Expr;
 
 		switch (this.type.type) {
 			case TypeEnum.ANY:
+				bRval = this.b.rval(buffer);
 				let temp: LogicalOr = new LogicalOr(aRval, bRval, this.span);
 				temp.applyType(buffer);
 				return temp.rval(buffer);
-			case TypeEnum.INTEGER:
-				let v1: number = (aRval as NumberLiteral).val;
-				let v2: number = (bRval as NumberLiteral).val;
-				if (v1 != 0) v1 = 1;
-				if (v2 != 0) v2 = 1;
+			case TypeEnum.MODULUS:
+				let type: ModulusType = this.type as ModulusType;
+				if (type.mod == 2) {
+					let n1: number = (aRval as ModulusLiteral).val;
+					if (n1 == 1) return new BooleanLiteral(true, this.span);
 
-				return new NumberLiteral(Math.max(v1, v2), this.span);
+					bRval = this.b.rval(buffer);
+					let n2: number = (bRval as ModulusLiteral).val;
+					return new BooleanLiteral(n2 == 1, this.span);
+				}
+
 			case TypeEnum.STRING:
 				buffer.throwError(
 					new IllegalTypeConversionError(
 						this.type,
-						new TypeAST("Int"),
+						new ModulusType(2, this.span),
 						this.span
 					)
 				);
@@ -392,7 +466,7 @@ export class LogicalOr extends Binop {
 						this.span
 					)
 				);
-				return new VoidObj();
+				return new BooleanLiteral(false, this.span);
 		}
 	}
 }
@@ -404,27 +478,32 @@ export class LogicalAnd extends Binop {
 	override toString(): string {
 		return `and(${this.a},${this.b})`;
 	}
-	override rval(buffer: IOBuffer): Expr {
+	override rval(buffer: IOBuffer): BooleanLiteral {
 		let aRval: Expr = this.a.rval(buffer);
-		let bRval: Expr = this.b.rval(buffer);
+		let bRval: Expr;
 
 		switch (this.type.type) {
 			case TypeEnum.ANY:
+				bRval = this.b.rval(buffer);
 				let temp: LogicalAnd = new LogicalAnd(aRval, bRval, this.span);
 				temp.applyType(buffer);
 				return temp.rval(buffer);
-			case TypeEnum.INTEGER:
-				let v1: number = (aRval as NumberLiteral).val;
-				let v2: number = (bRval as NumberLiteral).val;
-				if (v1 != 0) v1 = 1;
-				if (v2 != 0) v2 = 1;
+			case TypeEnum.MODULUS:
+				let type: ModulusType = this.type as ModulusType;
+				if (type.mod == 2) {
+					let n1: number = (aRval as ModulusLiteral).val;
+					if (n1 != 1) return new BooleanLiteral(false, this.span);
 
-				return new NumberLiteral(v1 * v2, this.span);
+					bRval = this.b.rval(buffer);
+					let n2: number = (bRval as ModulusLiteral).val;
+					return new BooleanLiteral(n2 == 1, this.span);
+				}
+
 			case TypeEnum.STRING:
 				buffer.throwError(
 					new IllegalTypeConversionError(
 						this.type,
-						new TypeAST("Int"),
+						new ModulusType(2, this.span),
 						this.span
 					)
 				);
@@ -435,7 +514,7 @@ export class LogicalAnd extends Binop {
 						this.span
 					)
 				);
-				return new VoidObj();
+				return new BooleanLiteral(false, this.span);
 		}
 	}
 }
@@ -448,7 +527,7 @@ export class LogicalEq extends Binop {
 		return `equals(${this.a},${this.b})`;
 	}
 
-	override rval(buffer: IOBuffer): NumberLiteral {
+	override rval(buffer: IOBuffer): BooleanLiteral {
 		let aRval: Expr = this.a.rval(buffer);
 		let bRval: Expr = this.b.rval(buffer);
 
@@ -458,13 +537,21 @@ export class LogicalEq extends Binop {
 				temp.applyType(buffer);
 				return temp.rval(buffer);
 			case TypeEnum.INTEGER:
-				let v1: number = (aRval as NumberLiteral).val;
-				let v2: number = (bRval as NumberLiteral).val;
-				return new NumberLiteral(v1 == v2 ? 1 : 0, this.span);
+				let v1: number = (aRval as IntegerLiteral).val;
+				let v2: number = (bRval as IntegerLiteral).val;
+				return new BooleanLiteral(v1 == v2, this.span);
+			case TypeEnum.NATURAL:
+				let n1: number = (aRval as NaturalLiteral).val;
+				let n2: number = (bRval as NaturalLiteral).val;
+				return new BooleanLiteral(n1 == n2, this.span);
+			case TypeEnum.MODULUS:
+				let m1: number = (aRval as ModulusLiteral).val;
+				let m2: number = (bRval as ModulusLiteral).val;
+				return new BooleanLiteral(m1 == m2, this.span);
 			case TypeEnum.STRING:
 				let s1: StringLiteral = aRval as StringLiteral;
 				let s2: StringLiteral = bRval as StringLiteral;
-				return new NumberLiteral(s1.name == s2.name ? 1 : 0, this.span);
+				return new BooleanLiteral(s1.name == s2.name, this.span);
 			case TypeEnum.TUPLE:
 				let t1: Tuple = aRval as Tuple;
 				let t2: Tuple = bRval as Tuple;
@@ -476,9 +563,9 @@ export class LogicalEq extends Binop {
 					);
 					eq.applyType(buffer);
 					if (eq.rval(buffer).val == 0)
-						return new NumberLiteral(0, this.span);
+						return new BooleanLiteral(false, this.span);
 				}
-				return new NumberLiteral(1, this.span);
+				return new BooleanLiteral(true, this.span);
 			default:
 				buffer.throwError(
 					new CompilerError(
@@ -486,7 +573,7 @@ export class LogicalEq extends Binop {
 						this.span
 					)
 				);
-				return new NumberLiteral(0, this.span);
+				return new BooleanLiteral(false, this.span);
 		}
 	}
 }

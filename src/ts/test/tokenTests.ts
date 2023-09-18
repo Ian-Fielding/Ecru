@@ -125,4 +125,18 @@ export let tokenTests: TokenTest[] = [
 			new Token("EOF", "EOF", new Span(2, 4, 2, 4)),
 		],
 	},
+	{
+		name: "token12",
+		input: "x: Z/2Z;",
+		tokens: [
+			new Token("ID", "x", new Span(1, 1, 1, 2)),
+			new Token(":", ":", new Span(1, 2, 1, 3)),
+			new Token("ID", "Z", new Span(1, 4, 1, 5)),
+			new Token("/", "/", new Span(1, 5, 1, 6)),
+			new Token("NUM", "2", new Span(1, 6, 1, 7)),
+			new Token("ID", "Z", new Span(1, 7, 1, 8)),
+			new Token(";", ";", new Span(1, 8, 1, 9)),
+			new Token("EOF", "EOF", new Span(1, 9, 1, 9)),
+		],
+	},
 ];

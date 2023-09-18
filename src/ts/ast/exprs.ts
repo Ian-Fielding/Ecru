@@ -3,6 +3,7 @@ import {
 	ArgumentLengthError,
 	CompilerError,
 	DimensionError,
+	DivisionByZeroError,
 	IllegalCallError,
 	IllegalIndexError,
 	IllegalTypeConversionError,
@@ -14,7 +15,14 @@ import { Span } from "../parser/token.js";
 import { AST, ReturnObject } from "./asts.js";
 import { DeclarationStatement, ReturnStatement, Statement } from "./stmts.js";
 import { Scope, IdSymbol } from "./symbols.js";
-import { TypeAST, FunctionType, TypeEnum, ProductType } from "./type.js";
+import {
+	TypeAST,
+	FunctionType,
+	TypeEnum,
+	ProductType,
+	ModulusType,
+} from "./type.js";
+import { unionSpan } from "../utils.js";
 
 export abstract class Expr extends AST {
 	type: TypeAST;
@@ -37,6 +45,10 @@ export function getTypeCast(expr: Expr, type: TypeAST): Expr {
 	switch (type.type) {
 		case TypeEnum.INTEGER:
 			return new TypeCastToInt(expr);
+		case TypeEnum.NATURAL:
+			return new TypeCastToNatural(expr);
+		case TypeEnum.MODULUS:
+			return new TypeCastToModulus(expr, type as ModulusType);
 		case TypeEnum.STRING:
 			return new TypeCastToString(expr);
 		case TypeEnum.TUPLE:
@@ -49,7 +61,151 @@ export function getTypeCast(expr: Expr, type: TypeAST): Expr {
 			return expr;
 		default:
 			//NOT IMPLEMENTEd
-			throw new Error("NOT IMPLEMENTED " + type);
+			throw new Error("NOT IMPLEMENTED " + type.type);
+	}
+}
+
+class TypeCastToModulus extends Expr {
+	expr: Expr;
+	mod: number;
+
+	constructor(expr: Expr, type: ModulusType) {
+		super(expr.span);
+		this.expr = expr;
+
+		this.type = type;
+		this.mod = type.mod;
+	}
+
+	override applyBind(scope: Scope, buffer: IOBuffer): void {
+		this.expr.applyBind(scope, buffer);
+	}
+
+	override applyType(buffer: IOBuffer): void {
+		this.expr.applyType(buffer);
+	}
+
+	override toString(): string {
+		return this.expr.toString();
+	}
+
+	override rval(buffer: IOBuffer): ModulusLiteral {
+		let r: Expr = this.expr.rval(buffer);
+		switch (r.type.type) {
+			case TypeEnum.MODULUS:
+				return r as ModulusLiteral;
+			case TypeEnum.NATURAL:
+				let m: NaturalLiteral = r as NaturalLiteral;
+				return new ModulusLiteral(m.val, this.mod, this.span);
+			case TypeEnum.INTEGER:
+				let n: IntegerLiteral = r as IntegerLiteral;
+				return new ModulusLiteral(n.val, this.mod, this.span);
+			case TypeEnum.STRING:
+				let s: StringLiteral = r as StringLiteral;
+				if (isNaN(+s.name) || isNaN(parseFloat(s.name)))
+					buffer.throwError(
+						new IllegalTypeConversionError(
+							new TypeAST("Int"),
+							this.type,
+							this.span
+						)
+					);
+				let val: number = +s.name;
+				return new ModulusLiteral(val, this.mod, r.span);
+			case TypeEnum.ANY:
+			case TypeEnum.RATIONAL:
+			case TypeEnum.REAL:
+			//TODO implement once types is good
+			case TypeEnum.TUPLE:
+			case TypeEnum.DUMMY:
+			case TypeEnum.FORMULA:
+			case TypeEnum.MAP:
+			case TypeEnum.VOID:
+				buffer.throwError(
+					new IllegalTypeConversionError(r.type, this.type, this.span)
+				);
+				return new ModulusLiteral(0, this.mod, r.span);
+		}
+	}
+}
+
+class TypeCastToNatural extends Expr {
+	expr: Expr;
+
+	constructor(expr: Expr) {
+		super(expr.span);
+		this.expr = expr;
+
+		this.type = new TypeAST("N");
+	}
+
+	override applyBind(scope: Scope, buffer: IOBuffer): void {
+		this.expr.applyBind(scope, buffer);
+	}
+
+	override applyType(buffer: IOBuffer): void {
+		this.expr.applyType(buffer);
+	}
+
+	override toString(): string {
+		return this.expr.toString();
+	}
+
+	override rval(buffer: IOBuffer): NaturalLiteral {
+		let r: Expr = this.expr.rval(buffer);
+		switch (r.type.type) {
+			case TypeEnum.NATURAL:
+				return r as NaturalLiteral;
+			case TypeEnum.MODULUS:
+				let m: ModulusLiteral = r as ModulusLiteral;
+				return new NaturalLiteral(m.val, this.span);
+			case TypeEnum.INTEGER:
+				let n: IntegerLiteral = r as IntegerLiteral;
+
+				if (n.val <= 0)
+					buffer.throwError(
+						new IllegalTypeConversionError(
+							n.type,
+							this.type,
+							this.span
+						)
+					);
+
+				return new NaturalLiteral(n.val, this.span);
+			case TypeEnum.STRING:
+				let s: StringLiteral = r as StringLiteral;
+				if (isNaN(+s.name) || isNaN(parseFloat(s.name)))
+					buffer.throwError(
+						new IllegalTypeConversionError(
+							new TypeAST("Int"),
+							this.type,
+							this.span
+						)
+					);
+				let val: number = +s.name;
+				if (val <= 0)
+					buffer.throwError(
+						new IllegalTypeConversionError(
+							s.type,
+							this.type,
+							this.span
+						)
+					);
+				return new NaturalLiteral(+s.name, r.span);
+			case TypeEnum.ANY:
+			case TypeEnum.RATIONAL:
+			case TypeEnum.REAL:
+			//TODO implement once types is good
+			case TypeEnum.TUPLE:
+			case TypeEnum.DUMMY:
+			case TypeEnum.FORMULA:
+			case TypeEnum.MAP:
+			case TypeEnum.VOID:
+				buffer.throwError(
+					new IllegalTypeConversionError(r.type, this.type, this.span)
+				);
+				return new NaturalLiteral(1, this.span);
+		}
 	}
 }
 
@@ -207,13 +363,17 @@ class TypeCastToInt extends Expr {
 		return this.expr.toString();
 	}
 
-	override rval(buffer: IOBuffer): NumberLiteral {
+	override rval(buffer: IOBuffer): IntegerLiteral {
 		let r: Expr = this.expr.rval(buffer);
 		switch (r.type.type) {
 			case TypeEnum.INTEGER:
-			case TypeEnum.BOOLEAN:
+				return r as IntegerLiteral;
+			case TypeEnum.MODULUS:
+				let m: ModulusLiteral = r as ModulusLiteral;
+				return new IntegerLiteral(m.val, this.span);
 			case TypeEnum.NATURAL:
-				return r as NumberLiteral;
+				let n: NaturalLiteral = r as NaturalLiteral;
+				return new IntegerLiteral(n.val, this.span);
 			case TypeEnum.STRING:
 				let s: StringLiteral = r as StringLiteral;
 				if (isNaN(+s.name) || isNaN(parseFloat(s.name)))
@@ -224,7 +384,7 @@ class TypeCastToInt extends Expr {
 							this.span
 						)
 					);
-				return new NumberLiteral(+s.name, r.span);
+				return new IntegerLiteral(+s.name, r.span);
 			case TypeEnum.ANY:
 			case TypeEnum.RATIONAL:
 			case TypeEnum.REAL:
@@ -237,7 +397,7 @@ class TypeCastToInt extends Expr {
 				buffer.throwError(
 					new IllegalTypeConversionError(r.type, this.type, this.span)
 				);
-				return new NumberLiteral(0, this.span);
+				return new IntegerLiteral(0, this.span);
 		}
 	}
 }
@@ -269,9 +429,19 @@ class TypeCastToString extends Expr {
 			case TypeEnum.STRING:
 				return r as StringLiteral;
 			case TypeEnum.INTEGER:
-			case TypeEnum.BOOLEAN:
+				let i: IntegerLiteral = r as IntegerLiteral;
+				return new StringLiteral(i.val + "", r.span);
+
+			case TypeEnum.MODULUS:
+				let m: ModulusLiteral = r as ModulusLiteral;
+				if (m.mod == 2)
+					return new StringLiteral(
+						m.val == 1 ? "true" : "false",
+						this.span
+					);
+				return new StringLiteral(m.val + "", this.span);
 			case TypeEnum.NATURAL:
-				let s: NumberLiteral = r as NumberLiteral;
+				let s: NaturalLiteral = r as NaturalLiteral;
 				return new StringLiteral(s.val + "", r.span);
 			case TypeEnum.TUPLE:
 				let t: Tuple = r as Tuple;
@@ -617,7 +787,6 @@ export class ArrayAccess extends Expr {
 	arr: Expr;
 	ind: Expr;
 	constructor(arr: Expr, ind: Expr, span: Span) {
-		// TODO
 		super(span);
 		this.arr = arr;
 		this.ind = ind;
@@ -647,7 +816,7 @@ export class ArrayAccess extends Expr {
 	}
 
 	override rval(buffer: IOBuffer): Expr {
-		let i: number = (this.ind.rval(buffer) as NumberLiteral).val;
+		let i: number = (this.ind.rval(buffer) as IntegerLiteral).val;
 
 		switch (this.arr.type.type) {
 			case TypeEnum.TUPLE:
@@ -695,11 +864,10 @@ export class ArrayAccess extends Expr {
 	}
 }
 
-export class NumberLiteral extends Expr {
+abstract class NumberLiteral extends Expr {
 	val: number;
 	constructor(val: number, span: Span) {
 		super(span);
-		this.type = new TypeAST("Int");
 		this.val = val;
 	}
 	override applyBind(scope: Scope, buffer: IOBuffer): void {}
@@ -713,7 +881,175 @@ export class NumberLiteral extends Expr {
 	override toString(): string {
 		return this.val + "";
 	}
+
+	abstract add(other: NumberLiteral, buffer: IOBuffer): NumberLiteral;
+	abstract sub(other: NumberLiteral, buffer: IOBuffer): NumberLiteral;
+	abstract mul(other: NumberLiteral, buffer: IOBuffer): NumberLiteral;
+	abstract div(other: NumberLiteral, buffer: IOBuffer): NumberLiteral;
 }
+
+export class RationalLiteral extends NumberLiteral {
+	constructor(num: IntegerLiteral, den: NaturalLiteral, span: Span) {
+		super(0, span);
+		//TODO
+		this.type = new TypeAST("Q");
+	}
+	override add(other: IntegerLiteral, buffer: IOBuffer): IntegerLiteral {
+		return new IntegerLiteral(
+			this.val + other.val,
+			unionSpan([this.span, other.span])
+		);
+	}
+	override sub(other: IntegerLiteral, buffer: IOBuffer): IntegerLiteral {
+		return new IntegerLiteral(
+			this.val - other.val,
+			unionSpan([this.span, other.span])
+		);
+	}
+	override mul(other: IntegerLiteral, buffer: IOBuffer): IntegerLiteral {
+		return new IntegerLiteral(
+			this.val * other.val,
+			unionSpan([this.span, other.span])
+		);
+	}
+	override div(other: IntegerLiteral, buffer: IOBuffer): IntegerLiteral {
+		if (other.val == 0)
+			buffer.throwError(new DivisionByZeroError(other.span));
+
+		return new IntegerLiteral(
+			Math.floor(this.val / other.val),
+			unionSpan([this.span, other.span])
+		);
+	}
+}
+
+export class IntegerLiteral extends NumberLiteral {
+	constructor(val: number, span: Span) {
+		super(val, span);
+		this.type = new TypeAST("Int");
+	}
+	override add(other: IntegerLiteral, buffer: IOBuffer): IntegerLiteral {
+		return new IntegerLiteral(
+			this.val + other.val,
+			unionSpan([this.span, other.span])
+		);
+	}
+	override sub(other: IntegerLiteral, buffer: IOBuffer): IntegerLiteral {
+		return new IntegerLiteral(
+			this.val - other.val,
+			unionSpan([this.span, other.span])
+		);
+	}
+	override mul(other: IntegerLiteral, buffer: IOBuffer): IntegerLiteral {
+		return new IntegerLiteral(
+			this.val * other.val,
+			unionSpan([this.span, other.span])
+		);
+	}
+	override div(other: IntegerLiteral, buffer: IOBuffer): IntegerLiteral {
+		if (other.val == 0)
+			buffer.throwError(new DivisionByZeroError(other.span));
+
+		return new IntegerLiteral(
+			Math.floor(this.val / other.val),
+			unionSpan([this.span, other.span])
+		);
+	}
+}
+
+export class NaturalLiteral extends NumberLiteral {
+	constructor(val: number, span: Span) {
+		super(val, span);
+		this.type = new TypeAST("N");
+	}
+
+	override add(other: NaturalLiteral, buffer: IOBuffer): NaturalLiteral {
+		return new NaturalLiteral(
+			this.val + other.val,
+			unionSpan([this.span, other.span])
+		);
+	}
+	override sub(other: NaturalLiteral, buffer: IOBuffer): NaturalLiteral {
+		let n: number = this.val - other.val;
+
+		if (n <= 0)
+			buffer.throwError(
+				new IllegalTypeConversionError(
+					new TypeAST("Int"),
+					this.type,
+					this.span
+				)
+			);
+
+		return new NaturalLiteral(n, unionSpan([this.span, other.span]));
+	}
+	override mul(other: NaturalLiteral, buffer: IOBuffer): NaturalLiteral {
+		return new NaturalLiteral(
+			this.val * other.val,
+			unionSpan([this.span, other.span])
+		);
+	}
+	override div(other: NaturalLiteral, buffer: IOBuffer): NaturalLiteral {
+		let n: number = Math.floor(this.val / other.val);
+
+		return new NaturalLiteral(
+			n == 0 ? 1 : n,
+			unionSpan([this.span, other.span])
+		);
+	}
+}
+
+export class ModulusLiteral extends NumberLiteral {
+	mod: number;
+	constructor(val: number, mod: number, span: Span) {
+		val %= mod;
+		if (val < 0) val += mod;
+
+		super(val, span);
+		this.mod = mod;
+		this.type = new ModulusType(mod, span);
+	}
+	override add(other: ModulusLiteral, buffer: IOBuffer): ModulusLiteral {
+		return new ModulusLiteral(
+			this.val + other.val,
+			this.mod,
+			unionSpan([this.span, other.span])
+		);
+	}
+	override sub(other: ModulusLiteral, buffer: IOBuffer): ModulusLiteral {
+		return new ModulusLiteral(
+			this.val - other.val,
+			this.mod,
+			unionSpan([this.span, other.span])
+		);
+	}
+	override mul(other: ModulusLiteral, buffer: IOBuffer): ModulusLiteral {
+		return new ModulusLiteral(
+			this.val * other.val,
+			this.mod,
+			unionSpan([this.span, other.span])
+		);
+	}
+	override div(other: ModulusLiteral, buffer: IOBuffer): ModulusLiteral {
+		if (other.val == 0)
+			buffer.throwError(new DivisionByZeroError(other.span));
+
+		return new ModulusLiteral(
+			Math.floor(this.val / other.val),
+			this.mod,
+			unionSpan([this.span, other.span])
+		);
+	}
+}
+
+export class BooleanLiteral extends ModulusLiteral {
+	name: boolean;
+	constructor(name: boolean, span: Span) {
+		super(name ? 1 : 0, 2, span);
+		this.name = name;
+	}
+}
+
 /*
 export class IntegerLiteral extends Expr {
 	val: number;

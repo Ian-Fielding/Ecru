@@ -15,24 +15,25 @@ export const enum TypeEnum {
 	RATIONAL,
 	INTEGER,
 	NATURAL,
-	BOOLEAN,
 	STRING,
 	VOID,
 	MAP,
 	TUPLE,
+	MODULUS,
 	DUMMY,
 	ANY,
 }
 
-export type FundTypeEnum =
-	| TypeEnum.FORMULA
-	| TypeEnum.REAL
-	| TypeEnum.FORMULA
+export type NumberType =
 	| TypeEnum.REAL
 	| TypeEnum.RATIONAL
 	| TypeEnum.INTEGER
 	| TypeEnum.NATURAL
-	| TypeEnum.BOOLEAN
+	| TypeEnum.MODULUS;
+
+export type FundTypeEnum =
+	| NumberType
+	| TypeEnum.FORMULA
 	| TypeEnum.STRING
 	| TypeEnum.VOID
 	| TypeEnum.ANY;
@@ -49,15 +50,19 @@ export type FundTypeString =
 	| "Z"
 	| "Natural"
 	| "N"
-	| "Boolean"
-	| "Bool"
 	| "String"
 	| "Str"
 	| "Dummy"
 	| "void"
 	| "Any";
 
-export type TypeString = FundTypeString | "Map" | "Tuple";
+export type TypeString =
+	| FundTypeString
+	| "Map"
+	| "Tuple"
+	| "Modulus"
+	| "Bool"
+	| "Boolean";
 
 export function typeEnumToString(t: TypeEnum): TypeString {
 	switch (t) {
@@ -71,8 +76,6 @@ export function typeEnumToString(t: TypeEnum): TypeString {
 			return "Z";
 		case TypeEnum.NATURAL:
 			return "N";
-		case TypeEnum.BOOLEAN:
-			return "Bool";
 		case TypeEnum.STRING:
 			return "String";
 		case TypeEnum.VOID:
@@ -85,6 +88,8 @@ export function typeEnumToString(t: TypeEnum): TypeString {
 			return "Dummy";
 		case TypeEnum.ANY:
 			return "Any";
+		case TypeEnum.MODULUS:
+			return "Modulus";
 	}
 }
 
@@ -106,9 +111,6 @@ export function typeStringToEnum(s: TypeString): TypeEnum {
 		case "Natural":
 		case "N":
 			return TypeEnum.NATURAL;
-		case "Boolean":
-		case "Bool":
-			return TypeEnum.BOOLEAN;
 		case "String":
 		case "Str":
 			return TypeEnum.STRING;
@@ -118,6 +120,10 @@ export function typeStringToEnum(s: TypeString): TypeEnum {
 			return TypeEnum.MAP;
 		case "Tuple":
 			return TypeEnum.TUPLE;
+		case "Modulus":
+		case "Boolean":
+		case "Bool":
+			return TypeEnum.MODULUS;
 		case "Dummy":
 			return TypeEnum.DUMMY;
 		case "Any":
@@ -236,11 +242,24 @@ export class FunctionType extends Type {
 	}
 }
 
+export class ModulusType extends Type {
+	mod: number;
+	constructor(mod: number, span: Span) {
+		super("Modulus", span);
+		this.mod = mod;
+	}
+
+	override copy(): ModulusType {
+		return new ModulusType(this.mod, this.span);
+	}
+}
+
 export function gcdType(t1: TypeAST, t2: TypeAST, buffer?: IOBuffer): TypeAST {
 	const precedence: FundTypeEnum[] = [
 		TypeEnum.ANY,
 		TypeEnum.STRING,
 		TypeEnum.INTEGER,
+		TypeEnum.NATURAL,
 	];
 	if ((t1.type == TypeEnum.TUPLE) != (t2.type == TypeEnum.TUPLE)) {
 		if (buffer)
@@ -267,6 +286,14 @@ export function gcdType(t1: TypeAST, t2: TypeAST, buffer?: IOBuffer): TypeAST {
 			types.push(gcdType(a.types[i], b.types[i], buffer));
 		}
 		return new ProductType(types, unionSpan([t1.span, t2.span]));
+	}
+
+	if (t1.type == TypeEnum.MODULUS && t2.type == TypeEnum.MODULUS) {
+		let a: ModulusType = t1 as ModulusType;
+		let b: ModulusType = t2 as ModulusType;
+
+		if (a.mod == b.mod) return a;
+		return new TypeAST("Int");
 	}
 
 	for (let type of precedence) {

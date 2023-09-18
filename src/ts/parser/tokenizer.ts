@@ -52,6 +52,8 @@ const reserved: string[] = [
 	"print",
 	"pprintln",
 	"pprint",
+	"false",
+	"true",
 ];
 
 /**

@@ -30,6 +30,12 @@ export class StackOverflowError extends EcruError {
 	}
 }
 
+export class DivisionByZeroError extends EcruError {
+	constructor(span: Span) {
+		super("DivisionByZeroError", "Division by zero encountered.", span);
+	}
+}
+
 export class ParserError extends EcruError {
 	constructor(exp: string, saw: string, span: Span) {
 		super("ParserError", `Expected ${exp} but saw "${saw}"`, span);
