@@ -60,6 +60,10 @@ export class Parser {
 		return this.scan.peek(n).kind;
 	}
 
+	currentValue(n?: number): string {
+		return this.scan.peek(n).value;
+	}
+
 	match(kind: string): Token {
 		if (kind == this.current()) return this.scan.pop();
 
@@ -229,8 +233,7 @@ export class Parser {
 		);
 	}
 
-	funcDecl(): Statement {
-		let id: Id = this.id();
+	funcDeclOnlySuffix(requireArrow: boolean): FuncDecl {
 		this.match("(");
 
 		//TODO add optional parameters
@@ -261,23 +264,30 @@ export class Parser {
 			unionSpan([domain.span, codomain.span])
 		);
 
-		if (this.current() == "=") this.match("=");
+		if (requireArrow) this.match("=>");
 
 		let stmts: Statement[] = this.stmts();
 
 		let span1: Span[] = params.map((p) => p.span);
 		let span2: Span[] = stmts.map((p) => p.span);
 
+		return new FuncDecl(
+			params,
+			stmts,
+			funcType,
+			unionSpan(span1.concat(span2))
+		);
+	}
+
+	funcDecl(): Statement {
+		let id: Id = this.id();
+		let func: FuncDecl = this.funcDeclOnlySuffix(false);
+
 		return new DeclarationAndAssignmentStatement(
 			id,
-			funcType,
-			new FuncDecl(
-				params,
-				stmts,
-				funcType,
-				unionSpan(span1.concat(span2))
-			),
-			unionSpan([id.span].concat(span2))
+			func.type,
+			func,
+			unionSpan([id.span, func.span])
 		);
 	}
 
@@ -638,7 +648,8 @@ export class Parser {
 		if (this.current() == "NUM") return this.num();
 		if (this.current() == "ID") return this.id();
 		if (this.current() == "STR") return this.str();
-
+		if (this.current() == "\\lambda" || this.current() == "λ")
+			return this.lambdaDecl();
 		if (this.current() == "true" || this.current() == "false") {
 			let tok: Token = this.match(this.current());
 			return new BooleanLiteral(tok.value == "true", tok.span);
@@ -656,6 +667,19 @@ export class Parser {
 
 		if (exprs.length == 1) return exprs[0];
 		return new Tuple(exprs, unionSpan([startTok.span, endTok.span]));
+	}
+
+	lambdaDecl(): Expr {
+		let start: Token;
+		if (this.current() == "λ") {
+			start = this.match("λ");
+		} else {
+			start = this.match("\\lambda");
+		}
+
+		let func: FuncDecl = this.funcDeclOnlySuffix(true);
+		func.span = unionSpan([start.span, func.span]);
+		return func;
 	}
 
 	type(): TypeAST {

@@ -32,6 +32,7 @@ const reserved: string[] = [
 	"~",
 	":",
 	"->",
+	"=>",
 	";",
 	",",
 	"[",
@@ -54,6 +55,8 @@ const reserved: string[] = [
 	"pprint",
 	"false",
 	"true",
+	"\\lambda",
+	"λ",
 ];
 
 /**

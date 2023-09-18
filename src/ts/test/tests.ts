@@ -1597,4 +1597,109 @@ export let tests: Test[] = [
 		out: `false`,
 		err: false,
 	},
+
+	{
+		name: `lambda_test1`,
+		input: `x: N-> N;`,
+		out: ``,
+		err: false,
+	},
+
+	{
+		name: `lambda_test2`,
+		input: `x: N->N; x=λ(a:N):N => {return a+3;}; print x(12);`,
+		out: `15`,
+		err: false,
+	},
+
+	{
+		name: `lambda_test3`,
+		input: `print λ(a:N):N => {return a+3;}(14);`,
+		out: `17`,
+		err: false,
+	},
+
+	{
+		name: `lambda_test4`,
+		input: `
+			test_lambda(x:N, y:N):N->Z {
+				myRet(z:N):Z{
+					return z+10;
+				}
+
+				return myRet;
+			}
+
+			print(test_lambda(3,4)(10));
+		`,
+		out: `20`,
+		err: false,
+	},
+
+	{
+		name: `lambda_test5`,
+		input: `
+			test_lambda(x:N, y:N):N->Z {
+				return \\lambda(z:N):Z => {return z+3;};
+			}
+
+			print(test_lambda(3,4)(10));
+		`,
+		out: `13`,
+		err: false,
+	},
+
+	{
+		name: `lambda_test6`,
+		input: `
+			a: Z^2*N->Z^3;
+			b(x:Z^2, y:N):Z^3 {
+				return (y,x[1],x[0]);
+			}
+
+			a=b;
+
+			print a((1,2),4);
+		`,
+		out: `(4,2,1)`,
+		err: false,
+	},
+
+	{
+		name: `lambda_test7`,
+		input: `
+			z: (Z -> Z) -> (Z -> Z);
+			z = \\lambda (x: Z->Z):Z->Z => {
+				return \\lambda (w:Z):Z => {
+					return w+x(4);
+				};
+			};
+
+			print z(\\lambda (t:Z):Z => {return t*t;})(3);
+
+		`,
+		out: `19`,
+		err: false,
+	},
+
+	{
+		name: `lambda_test8`,
+		input: ``,
+		out: ``,
+		err: false,
+	},
+
+	{
+		name: `lambda_test9`,
+		input: ``,
+		out: ``,
+		err: false,
+	},
+
+	{
+		name: `lambda_test10`,
+		input: ``,
+		out: ``,
+		err: false,
+	},
 ];
