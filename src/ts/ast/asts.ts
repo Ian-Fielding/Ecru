@@ -2,7 +2,6 @@ import { IOBuffer } from "../IOBuffer";
 import { Span } from "../parser/token";
 import { Expr } from "./exprs";
 import { Scope } from "./symbols";
-import { TypeAST } from "./type";
 
 /**
  * Representation of the "return status" of a return or break after execution

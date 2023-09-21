@@ -18,9 +18,11 @@ import {
 } from "./exprs.js";
 import { Scope } from "./symbols.js";
 import {
+	INT_TYPE,
 	ModulusType,
+	NAT_TYPE,
 	ProductType,
-	TypeAST,
+	Type,
 	TypeEnum,
 	gcdType,
 } from "./type.js";
@@ -45,8 +47,8 @@ export abstract class Binop extends Expr {
 	override applyType(buffer: IOBuffer): void {
 		this.a.applyType(buffer);
 		this.b.applyType(buffer);
-		let aType: TypeAST = this.a.type;
-		let bType: TypeAST = this.b.type;
+		let aType: Type = this.a.type;
+		let bType: Type = this.b.type;
 
 		this.type = gcdType(aType, bType, buffer);
 		this.a = getTypeCast(this.a, this.type);
@@ -66,7 +68,7 @@ export class Negate extends Expr {
 	constructor(expr: Expr, span: Span) {
 		super(span);
 		this.expr = expr;
-		this.type = new TypeAST("Int");
+		this.type = INT_TYPE;
 	}
 
 	override toString(): string {
@@ -142,10 +144,10 @@ export class Mod extends Binop {
 	}
 
 	override applyType(buffer: IOBuffer): void {
-		this.type = new TypeAST("Int");
+		this.type = INT_TYPE;
 		this.a = getTypeCast(this.a, this.type);
 		this.a.applyType(buffer);
-		this.b = getTypeCast(this.b, new TypeAST("N"));
+		this.b = getTypeCast(this.b, NAT_TYPE);
 		this.b.applyType(buffer);
 
 		return;
@@ -407,7 +409,7 @@ export class LogicalNot extends Expr {
 		this.a.applyBind(scope, buffer);
 	}
 	override applyType(buffer: IOBuffer): void {
-		this.type = new TypeAST("Integer");
+		this.type = INT_TYPE;
 		this.a = getTypeCast(this.a, this.type);
 		this.a.applyType(buffer);
 	}

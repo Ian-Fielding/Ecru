@@ -3,7 +3,7 @@ import { IOBuffer, consoleBuffer } from "./IOBuffer.js";
 import { Program } from "./ast/stmts.js";
 import { EcruError } from "./error.js";
 import { Scope } from "./ast/symbols.js";
-import { TypeAST } from "./ast/type.js";
+import { Type, VOID_TYPE } from "./ast/type.js";
 
 export interface CompileObj {
 	parseTree: string;
@@ -59,7 +59,7 @@ export function compile(
 	}
 
 	try {
-		prog.applyType(buffer, new TypeAST("void"));
+		prog.applyType(buffer, VOID_TYPE);
 	} catch (e: any) {
 		if (!(e instanceof EcruError)) throw e;
 		let error: EcruError = e as EcruError;

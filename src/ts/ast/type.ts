@@ -5,7 +5,7 @@ import {
 	IllegalTypeConversionError,
 } from "../error.js";
 import { Span } from "../parser/token.js";
-import { divides, gcd, unionSpan } from "../utils.js";
+import { unionSpan } from "../utils.js";
 import { AST } from "./asts.js";
 import { Scope } from "./symbols.js";
 
@@ -20,51 +20,10 @@ export const enum TypeEnum {
 	MAP,
 	TUPLE,
 	MODULUS,
-	DUMMY,
 	ANY,
 }
 
-export type NumberType =
-	| TypeEnum.REAL
-	| TypeEnum.RATIONAL
-	| TypeEnum.INTEGER
-	| TypeEnum.NATURAL
-	| TypeEnum.MODULUS;
-
-export type FundTypeEnum =
-	| NumberType
-	| TypeEnum.FORMULA
-	| TypeEnum.STRING
-	| TypeEnum.VOID
-	| TypeEnum.ANY;
-
-export type FundTypeString =
-	| "Formula"
-	| "Form"
-	| "Real"
-	| "R"
-	| "Rational"
-	| "Q"
-	| "Integer"
-	| "Int"
-	| "Z"
-	| "Natural"
-	| "N"
-	| "String"
-	| "Str"
-	| "Dummy"
-	| "void"
-	| "Any";
-
-export type TypeString =
-	| FundTypeString
-	| "Map"
-	| "Tuple"
-	| "Modulus"
-	| "Bool"
-	| "Boolean";
-
-export function typeEnumToString(t: TypeEnum): TypeString {
+export function typeEnumToString(t: TypeEnum): string {
 	switch (t) {
 		case TypeEnum.FORMULA:
 			return "Form";
@@ -84,8 +43,6 @@ export function typeEnumToString(t: TypeEnum): TypeString {
 			return "Map";
 		case TypeEnum.TUPLE:
 			return "Tuple";
-		case TypeEnum.DUMMY:
-			return "Dummy";
 		case TypeEnum.ANY:
 			return "Any";
 		case TypeEnum.MODULUS:
@@ -93,60 +50,13 @@ export function typeEnumToString(t: TypeEnum): TypeString {
 	}
 }
 
-export function typeStringToEnum(s: TypeString): TypeEnum {
-	switch (s) {
-		case "Formula":
-		case "Form":
-			return TypeEnum.FORMULA;
-		case "Real":
-		case "R":
-			return TypeEnum.REAL;
-		case "Rational":
-		case "Q":
-			return TypeEnum.RATIONAL;
-		case "Integer":
-		case "Int":
-		case "Z":
-			return TypeEnum.INTEGER;
-		case "Natural":
-		case "N":
-			return TypeEnum.NATURAL;
-		case "String":
-		case "Str":
-			return TypeEnum.STRING;
-		case "void":
-			return TypeEnum.VOID;
-		case "Map":
-			return TypeEnum.MAP;
-		case "Tuple":
-			return TypeEnum.TUPLE;
-		case "Modulus":
-		case "Boolean":
-		case "Bool":
-			return TypeEnum.MODULUS;
-		case "Dummy":
-			return TypeEnum.DUMMY;
-		case "Any":
-			return TypeEnum.ANY;
-	}
-}
-
-abstract class Type extends AST {
+export abstract class Type extends AST {
 	type: TypeEnum;
-	name: TypeString;
-	constructor(name: TypeString | TypeEnum, span: Span) {
-		let str: TypeString;
-		let num: TypeEnum;
-		if (typeof name == "string") {
-			num = typeStringToEnum(name);
-			str = typeEnumToString(num);
-		} else {
-			str = typeEnumToString(name);
-			num = name;
-		}
+	name: string;
+	constructor(type: TypeEnum, span: Span) {
 		super(span);
-		this.type = num;
-		this.name = str;
+		this.type = type;
+		this.name = typeEnumToString(type);
 	}
 
 	override toString(): string {
@@ -155,30 +65,79 @@ abstract class Type extends AST {
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
-	equals(other: TypeAST) {
+	equals(other: Type) {
 		return other.type == this.type;
 	}
 
 	abstract copy(): Type;
 }
 
-export class TypeAST extends Type {
-	constructor(
-		name: FundTypeString | FundTypeEnum,
-		span: Span = new Span(0, 0, 0, 0)
-	) {
-		super(name, span);
+export class RationalType extends Type {
+	constructor(span: Span = new Span(0, 0, 0, 0)) {
+		super(TypeEnum.RATIONAL, span);
 	}
 
-	override copy(): TypeAST {
-		return new TypeAST(this.name as FundTypeString);
+	override copy(): Type {
+		return new RationalType(this.span);
+	}
+}
+export class IntType extends Type {
+	constructor(span: Span = new Span(0, 0, 0, 0)) {
+		super(TypeEnum.INTEGER, span);
+	}
+
+	override copy(): Type {
+		return new IntType(this.span);
+	}
+}
+export class NaturalType extends Type {
+	constructor(span: Span = new Span(0, 0, 0, 0)) {
+		super(TypeEnum.NATURAL, span);
+	}
+
+	override copy(): Type {
+		return new NaturalType(this.span);
+	}
+}
+export class StringType extends Type {
+	constructor(span: Span = new Span(0, 0, 0, 0)) {
+		super(TypeEnum.STRING, span);
+	}
+
+	override copy(): Type {
+		return new StringType(this.span);
+	}
+}
+export class VoidType extends Type {
+	constructor(span: Span = new Span(0, 0, 0, 0)) {
+		super(TypeEnum.VOID, span);
+	}
+
+	override copy(): Type {
+		return new VoidType(this.span);
+	}
+}
+export class AnyType extends Type {
+	constructor(span: Span = new Span(0, 0, 0, 0)) {
+		super(TypeEnum.ANY, span);
+	}
+
+	override copy(): Type {
+		return new AnyType(this.span);
 	}
 }
 
+export const RAT_TYPE = new RationalType();
+export const INT_TYPE = new IntType();
+export const NAT_TYPE = new NaturalType();
+export const STR_TYPE = new StringType();
+export const VOID_TYPE = new VoidType();
+export const ANY_TYPE = new AnyType();
+
 export class ProductType extends Type {
-	types: TypeAST[];
-	constructor(types: TypeAST[], span: Span = new Span(0, 0, 0, 0)) {
-		super("Tuple", span);
+	types: Type[];
+	constructor(types: Type[], span: Span = new Span(0, 0, 0, 0)) {
+		super(TypeEnum.TUPLE, span);
 		this.types = types;
 	}
 
@@ -189,10 +148,8 @@ export class ProductType extends Type {
 		);
 	}
 
-	override equals(other: TypeAST): boolean {
-		if (!(other instanceof ProductType)) return false;
-
-		let o: ProductType = other as ProductType;
+	override equals(other: ProductType): boolean {
+		let o: ProductType = other;
 		if (o.types.length != this.types.length) return false;
 
 		for (let i = 0; i < this.types.length; i++)
@@ -208,15 +165,15 @@ export class ProductType extends Type {
 }
 
 export class FunctionType extends Type {
-	domain: TypeAST;
-	codomain: TypeAST;
+	domain: Type;
+	codomain: Type;
 
 	constructor(
-		domain: TypeAST,
-		codomain: TypeAST,
+		domain: Type,
+		codomain: Type,
 		span: Span = new Span(0, 0, 0, 0)
 	) {
-		super("Map", span);
+		super(TypeEnum.MAP, span);
 		this.domain = domain;
 		this.codomain = codomain;
 	}
@@ -229,12 +186,11 @@ export class FunctionType extends Type {
 		);
 	}
 
-	override equals(other: TypeAST): boolean {
-		if (!(other instanceof FunctionType)) return false;
-
-		let o: FunctionType = other as FunctionType;
-
-		return this.domain.equals(o.domain) && this.codomain.equals(o.codomain);
+	override equals(other: FunctionType): boolean {
+		return (
+			this.domain.equals(other.domain) &&
+			this.codomain.equals(other.codomain)
+		);
 	}
 
 	override toString(): string {
@@ -245,7 +201,7 @@ export class FunctionType extends Type {
 export class ModulusType extends Type {
 	mod: number;
 	constructor(mod: number, span: Span) {
-		super("Modulus", span);
+		super(TypeEnum.MODULUS, span);
 		this.mod = mod;
 	}
 
@@ -254,20 +210,11 @@ export class ModulusType extends Type {
 	}
 }
 
-export function gcdType(t1: TypeAST, t2: TypeAST, buffer?: IOBuffer): TypeAST {
-	const precedence: FundTypeEnum[] = [
-		TypeEnum.ANY,
-		TypeEnum.STRING,
-		TypeEnum.INTEGER,
-		TypeEnum.NATURAL,
-	];
+export function gcdType(t1: Type, t2: Type, buffer?: IOBuffer): Type {
 	if ((t1.type == TypeEnum.TUPLE) != (t2.type == TypeEnum.TUPLE)) {
 		if (buffer)
-			buffer.throwError(
-				new CompilerError("Girl this aint workin")
-				//new IllegalTypeConversionError(t1, t2, t1.span)
-			);
-		return new TypeAST("Dummy");
+			buffer.throwError(new IllegalTypeConversionError(t1, t2, t1.span));
+		return ANY_TYPE;
 	}
 
 	if (t1.type == TypeEnum.TUPLE && t2.type == TypeEnum.TUPLE) {
@@ -278,10 +225,10 @@ export function gcdType(t1: TypeAST, t2: TypeAST, buffer?: IOBuffer): TypeAST {
 				buffer.throwError(
 					new DimensionError(a.types.length, b.types.length, a.span)
 				);
-			return new TypeAST("Dummy");
+			return ANY_TYPE;
 		}
 
-		let types: TypeAST[] = [];
+		let types: Type[] = [];
 		for (let i = 0; i < a.types.length; i++) {
 			types.push(gcdType(a.types[i], b.types[i], buffer));
 		}
@@ -293,16 +240,18 @@ export function gcdType(t1: TypeAST, t2: TypeAST, buffer?: IOBuffer): TypeAST {
 		let b: ModulusType = t2 as ModulusType;
 
 		if (a.mod == b.mod) return a;
-		return new TypeAST("Int");
+		return INT_TYPE;
 	}
 
-	for (let type of precedence) {
-		if (t1.type == type || t2.type == type) {
-			return new TypeAST(type);
-		}
-	}
+	if (t1.type == TypeEnum.ANY || t2.type == TypeEnum.ANY) return ANY_TYPE;
+	if (t1.type == TypeEnum.STRING || t2.type == TypeEnum.STRING)
+		return STR_TYPE;
+	if (t1.type == TypeEnum.INTEGER || t2.type == TypeEnum.INTEGER)
+		return INT_TYPE;
+	if (t1.type == TypeEnum.NATURAL || t2.type == TypeEnum.NATURAL)
+		return NAT_TYPE;
 
 	if (buffer)
 		buffer.throwError(new IllegalTypeConversionError(t1, t2, t1.span));
-	return new TypeAST("Dummy");
+	return ANY_TYPE;
 }

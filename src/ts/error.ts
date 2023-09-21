@@ -1,5 +1,5 @@
 import { Statement } from "./ast/stmts.js";
-import { TypeAST } from "./ast/type.js";
+import { Type } from "./ast/type.js";
 import { Span } from "./parser/token.js";
 
 export abstract class EcruError extends Error {
@@ -59,7 +59,7 @@ export class UnknownCharacterError extends EcruError {
 }
 
 export class IllegalCallError extends EcruError {
-	constructor(type: TypeAST, span: Span) {
+	constructor(type: Type, span: Span) {
 		super(
 			"IllegalCallError",
 			`Cannot call expression of type ${type}.`,
@@ -79,7 +79,7 @@ export class OutOfBoundsError extends EcruError {
 }
 
 export class IllegalIndexError extends EcruError {
-	constructor(type: TypeAST, span: Span) {
+	constructor(type: Type, span: Span) {
 		super(
 			"IllegalIndexError",
 			`Cannot index expression of type ${type}.`,
@@ -109,7 +109,7 @@ export class RedefinedIdentifierError extends EcruError {
 }
 
 export class IllegalTypeConversionError extends EcruError {
-	constructor(currentType: TypeAST, desiredType: TypeAST, span: Span) {
+	constructor(currentType: Type, desiredType: Type, span: Span) {
 		super(
 			"IllegalTypeConversionError",
 			`Cannot convert type ${currentType} to type ${desiredType}.`,
@@ -119,7 +119,7 @@ export class IllegalTypeConversionError extends EcruError {
 }
 
 export class NonexistentReturnError extends EcruError {
-	constructor(expectedType: TypeAST, span: Span) {
+	constructor(expectedType: Type, span: Span) {
 		super(
 			"NonexistentReturnError",
 			`Function has type ${expectedType} but the definition does not end with a return statement.`,
@@ -146,7 +146,7 @@ export class ArgumentLengthError extends EcruError {
 }
 
 export class UnsupportedBinop extends EcruError {
-	constructor(op: string, type: TypeAST, span: Span) {
+	constructor(op: string, type: Type, span: Span) {
 		super(
 			"UnsupportedBinop",
 			`Binary operator ${op} doesn't support using type ${type}.`,

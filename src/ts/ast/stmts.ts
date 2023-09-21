@@ -15,14 +15,14 @@ import {
 	getTypeCast,
 } from "./exprs.js";
 import { Scope, IdSymbol } from "./symbols.js";
-import { TypeAST } from "./type.js";
+import { INT_TYPE, STR_TYPE, Type } from "./type.js";
 
 export abstract class Statement extends AST {
 	constructor(span: Span) {
 		super(span);
 	}
 
-	abstract applyType(buffer: IOBuffer, expectedType: TypeAST): void;
+	abstract applyType(buffer: IOBuffer, expectedType: Type): void;
 
 	/**
 	 * Executes code at this node and its children
@@ -52,7 +52,7 @@ export class Program extends Statement {
 		return `Program(${ss.join(",")})`;
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+	override applyType(buffer: IOBuffer, expectedType: Type): void {
 		for (let child of this.stmts) {
 			child.applyType(buffer, expectedType);
 		}
@@ -82,7 +82,7 @@ export class CommentStatement extends Statement {
 	override toString(): string {
 		return `CommentStmt("${this.str}")`;
 	}
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+	override applyType(buffer: IOBuffer, expectedType: Type): void {
 		return;
 	}
 
@@ -95,9 +95,9 @@ export class CommentStatement extends Statement {
 
 export class DeclarationStatement extends Statement {
 	id: Id;
-	type: TypeAST;
+	type: Type;
 
-	constructor(id: Id, type: TypeAST, span: Span) {
+	constructor(id: Id, type: Type, span: Span) {
 		super(span);
 		this.id = id;
 		this.type = type;
@@ -120,7 +120,7 @@ export class DeclarationStatement extends Statement {
 		this.id.symbol = sym;
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+	override applyType(buffer: IOBuffer, expectedType: Type): void {
 		if (!this.id.symbol) {
 			buffer.throwError(
 				new UndefinedIdentifierError(this.id.idName, this.span)
@@ -165,7 +165,7 @@ export class AssignmentStatement extends Statement {
 		this.id.symbol = sym;
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+	override applyType(buffer: IOBuffer, expectedType: Type): void {
 		if (!this.id.symbol) {
 			buffer.throwError(
 				new UndefinedIdentifierError(this.id.idName, this.span)
@@ -198,12 +198,12 @@ export class AssignmentStatement extends Statement {
 
 export class DeclarationAndAssignmentStatement extends Statement {
 	//id: Id;
-	//type: TypeAST;
+	//type: Type;
 	//expr: Expr;
 	dec: DeclarationStatement;
 	asg: AssignmentStatement;
 
-	constructor(id: Id, type: TypeAST, expr: Expr, span: Span) {
+	constructor(id: Id, type: Type, expr: Expr, span: Span) {
 		let dec = new DeclarationStatement(id, type, span);
 		let asg = new AssignmentStatement(id, expr, span);
 		super(span);
@@ -220,7 +220,7 @@ export class DeclarationAndAssignmentStatement extends Statement {
 		this.asg.applyBind(scope, buffer);
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+	override applyType(buffer: IOBuffer, expectedType: Type): void {
 		this.dec.applyType(buffer, expectedType);
 		this.asg.applyType(buffer, expectedType);
 	}
@@ -258,7 +258,7 @@ export class ExprAsStatement extends Statement {
 		this.expr.applyBind(scope, buffer);
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+	override applyType(buffer: IOBuffer, expectedType: Type): void {
 		this.expr.applyType(buffer);
 	}
 }
@@ -284,8 +284,8 @@ export class PrintStatement extends Statement {
 		return `PrettyPrintStmt(${this.expr})`;
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		this.expr = getTypeCast(this.expr, new TypeAST("String"));
+	override applyType(buffer: IOBuffer, expectedType: Type): void {
+		this.expr = getTypeCast(this.expr, STR_TYPE);
 		this.expr.applyType(buffer);
 	}
 
@@ -300,11 +300,7 @@ export class PrintStatement extends Statement {
 		} else {
 			// TODO better comparison to string.
 			buffer.throwError(
-				new IllegalTypeConversionError(
-					str.type,
-					new TypeAST("String"),
-					this.span
-				)
+				new IllegalTypeConversionError(str.type, STR_TYPE, this.span)
 			);
 			return { break: true };
 		}
@@ -331,8 +327,8 @@ export class WhileLoop extends Statement {
 		}
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		this.test = getTypeCast(this.test, new TypeAST("Int"));
+	override applyType(buffer: IOBuffer, expectedType: Type): void {
+		this.test = getTypeCast(this.test, INT_TYPE);
 		this.test.applyType(buffer);
 		for (let stmt of this.stmts) stmt.applyType(buffer, expectedType);
 	}
@@ -386,9 +382,9 @@ export class ForLoop extends Statement {
 		)}])`;
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+	override applyType(buffer: IOBuffer, expectedType: Type): void {
 		this.asg.applyType(buffer, expectedType);
-		this.test = getTypeCast(this.test, new TypeAST("Int"));
+		this.test = getTypeCast(this.test, INT_TYPE);
 		this.test.applyType(buffer);
 		this.it.applyType(buffer, expectedType);
 		for (let stmt of this.stmts) stmt.applyType(buffer, expectedType);
@@ -454,8 +450,8 @@ export class IfStmt extends Statement {
 		return `IfStmt(${this.test},[${as.join(",")}],[${bs.join(",")}])`;
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
-		this.test = getTypeCast(this.test, new TypeAST("Int"));
+	override applyType(buffer: IOBuffer, expectedType: Type): void {
+		this.test = getTypeCast(this.test, INT_TYPE);
 		this.test.applyType(buffer);
 		for (let stmt of this.stmts) stmt.applyType(buffer, expectedType);
 		for (let stmt of this.elseStmts) stmt.applyType(buffer, expectedType);
@@ -504,7 +500,7 @@ export class ReturnStatement extends Statement {
 		return `ReturnStmt(${this.expr})`;
 	}
 
-	override applyType(buffer: IOBuffer, expectedType: TypeAST): void {
+	override applyType(buffer: IOBuffer, expectedType: Type): void {
 		this.expr = getTypeCast(this.expr, expectedType);
 		this.expr.applyType(buffer);
 	}

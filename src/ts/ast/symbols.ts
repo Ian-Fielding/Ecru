@@ -1,6 +1,6 @@
 import { IOBuffer } from "../IOBuffer.js";
 import { Expr } from "./exprs.js";
-import { TypeAST } from "./type.js";
+import { ANY_TYPE, Type } from "./type.js";
 
 /**
  * Represents symbol from symbol table
@@ -19,7 +19,7 @@ export class IdSymbol {
 	/**
 	 * The type of this symbol. Default value is DummyType()
 	 */
-	type: TypeAST;
+	type: Type;
 
 	/**
 	 * Name of this symbol (not necessarily unique)
@@ -33,7 +33,7 @@ export class IdSymbol {
 	 */
 	constructor(name: string, scope: Scope) {
 		this.name = name;
-		this.type = new TypeAST("Dummy");
+		this.type = ANY_TYPE;
 		this.val = null;
 		this.scope = scope;
 	}

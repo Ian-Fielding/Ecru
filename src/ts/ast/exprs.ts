@@ -16,20 +16,26 @@ import { AST, ReturnObject } from "./asts.js";
 import { DeclarationStatement, ReturnStatement, Statement } from "./stmts.js";
 import { Scope, IdSymbol } from "./symbols.js";
 import {
-	TypeAST,
+	Type,
 	FunctionType,
 	TypeEnum,
 	ProductType,
 	ModulusType,
+	INT_TYPE,
+	VOID_TYPE,
+	STR_TYPE,
+	ANY_TYPE,
+	NAT_TYPE,
+	RAT_TYPE,
 } from "./type.js";
 import { unionSpan } from "../utils.js";
 
 export abstract class Expr extends AST {
-	type: TypeAST;
+	type: Type;
 
 	constructor(span: Span) {
 		super(span);
-		this.type = new TypeAST("Dummy");
+		this.type = ANY_TYPE;
 	}
 
 	abstract rval(buffer: IOBuffer): Expr;
@@ -41,7 +47,7 @@ export abstract class Expr extends AST {
 	abstract applyType(buffer: IOBuffer): void;
 }
 
-export function getTypeCast(expr: Expr, type: TypeAST): Expr {
+export function getTypeCast(expr: Expr, type: Type): Expr {
 	switch (type.type) {
 		case TypeEnum.INTEGER:
 			return new TypeCastToInt(expr);
@@ -105,7 +111,7 @@ class TypeCastToModulus extends Expr {
 				if (isNaN(+s.name) || isNaN(parseFloat(s.name)))
 					buffer.throwError(
 						new IllegalTypeConversionError(
-							new TypeAST("Int"),
+							INT_TYPE,
 							this.type,
 							this.span
 						)
@@ -117,7 +123,7 @@ class TypeCastToModulus extends Expr {
 			case TypeEnum.REAL:
 			//TODO implement once types is good
 			case TypeEnum.TUPLE:
-			case TypeEnum.DUMMY:
+
 			case TypeEnum.FORMULA:
 			case TypeEnum.MAP:
 			case TypeEnum.VOID:
@@ -136,7 +142,7 @@ class TypeCastToNatural extends Expr {
 		super(expr.span);
 		this.expr = expr;
 
-		this.type = new TypeAST("N");
+		this.type = NAT_TYPE;
 	}
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {
@@ -177,7 +183,7 @@ class TypeCastToNatural extends Expr {
 				if (isNaN(+s.name) || isNaN(parseFloat(s.name)))
 					buffer.throwError(
 						new IllegalTypeConversionError(
-							new TypeAST("Int"),
+							INT_TYPE,
 							this.type,
 							this.span
 						)
@@ -197,7 +203,7 @@ class TypeCastToNatural extends Expr {
 			case TypeEnum.REAL:
 			//TODO implement once types is good
 			case TypeEnum.TUPLE:
-			case TypeEnum.DUMMY:
+
 			case TypeEnum.FORMULA:
 			case TypeEnum.MAP:
 			case TypeEnum.VOID:
@@ -215,7 +221,7 @@ class TypeCastToVoid extends Expr {
 	constructor(expr: Expr) {
 		super(expr.span);
 		this.expr = expr;
-		this.type = new TypeAST("void");
+		this.type = VOID_TYPE;
 	}
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {
@@ -348,7 +354,7 @@ class TypeCastToInt extends Expr {
 		super(expr.span);
 		this.expr = expr;
 
-		this.type = new TypeAST("Int");
+		this.type = INT_TYPE;
 	}
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {
@@ -390,7 +396,7 @@ class TypeCastToInt extends Expr {
 			case TypeEnum.REAL:
 			//TODO implement once types is good
 			case TypeEnum.TUPLE:
-			case TypeEnum.DUMMY:
+
 			case TypeEnum.FORMULA:
 			case TypeEnum.MAP:
 			case TypeEnum.VOID:
@@ -408,7 +414,7 @@ class TypeCastToString extends Expr {
 	constructor(expr: Expr) {
 		super(expr.span);
 		this.expr = expr;
-		this.type = new TypeAST("String");
+		this.type = STR_TYPE;
 	}
 
 	override applyBind(scope: Scope, buffer: IOBuffer): void {
@@ -447,7 +453,7 @@ class TypeCastToString extends Expr {
 				let t: Tuple = r as Tuple;
 				let vs: string[] = [];
 				for (let i = 0; i < t.vals.length; i++) {
-					t.vals[i] = getTypeCast(t.vals[i], new TypeAST("String"));
+					t.vals[i] = getTypeCast(t.vals[i], STR_TYPE);
 					t.vals[i].applyType(buffer);
 					vs.push((t.vals[i].rval(buffer) as StringLiteral).name);
 				}
@@ -459,7 +465,7 @@ class TypeCastToString extends Expr {
 			case TypeEnum.FORMULA:
 			case TypeEnum.MAP:
 			//TODO implement once types is good
-			case TypeEnum.DUMMY:
+
 			case TypeEnum.VOID:
 				buffer.throwError(
 					new IllegalTypeConversionError(r.type, this.type, this.span)
@@ -504,8 +510,7 @@ export class FuncDecl extends Expr {
 	override applyType(buffer: IOBuffer): void {
 		let type: FunctionType = this.type as FunctionType;
 
-		for (let child of this.params)
-			child.applyType(buffer, new TypeAST("Dummy"));
+		for (let child of this.params) child.applyType(buffer, ANY_TYPE);
 		for (let child of this.stmts) child.applyType(buffer, type.codomain);
 
 		if (type.codomain.type != TypeEnum.VOID) {
@@ -695,7 +700,7 @@ export class StringLiteral extends Expr {
 	constructor(name: string, span: Span) {
 		super(span);
 		this.name = name;
-		this.type = new TypeAST("String");
+		this.type = STR_TYPE;
 	}
 	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
@@ -713,7 +718,7 @@ export class StringLiteral extends Expr {
 export class VoidObj extends Expr {
 	constructor() {
 		super(new Span(0, 0, 0, 0));
-		this.type = new TypeAST("void");
+		this.type = VOID_TYPE;
 	}
 	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 
@@ -799,7 +804,7 @@ export class ArrayAccess extends Expr {
 	override applyType(buffer: IOBuffer): void {
 		this.arr.applyType(buffer);
 		this.ind.applyType(buffer);
-		this.ind = getTypeCast(this.ind, new TypeAST("Int"));
+		this.ind = getTypeCast(this.ind, INT_TYPE);
 		this.ind.applyType(buffer);
 
 		if (this.arr.type.type == TypeEnum.STRING) {
@@ -808,7 +813,7 @@ export class ArrayAccess extends Expr {
 		}
 
 		if (this.arr.type.type == TypeEnum.TUPLE) {
-			this.type = new TypeAST("Any");
+			this.type = ANY_TYPE;
 			return;
 		}
 
@@ -889,10 +894,13 @@ abstract class NumberLiteral extends Expr {
 }
 
 export class RationalLiteral extends NumberLiteral {
+	num: IntegerLiteral;
+	den: NaturalLiteral;
 	constructor(num: IntegerLiteral, den: NaturalLiteral, span: Span) {
 		super(0, span);
-		//TODO
-		this.type = new TypeAST("Q");
+		this.num = num;
+		this.den = den;
+		this.type = RAT_TYPE;
 	}
 	override add(other: IntegerLiteral, buffer: IOBuffer): IntegerLiteral {
 		return new IntegerLiteral(
@@ -926,7 +934,7 @@ export class RationalLiteral extends NumberLiteral {
 export class IntegerLiteral extends NumberLiteral {
 	constructor(val: number, span: Span) {
 		super(val, span);
-		this.type = new TypeAST("Int");
+		this.type = INT_TYPE;
 	}
 	override add(other: IntegerLiteral, buffer: IOBuffer): IntegerLiteral {
 		return new IntegerLiteral(
@@ -960,7 +968,7 @@ export class IntegerLiteral extends NumberLiteral {
 export class NaturalLiteral extends NumberLiteral {
 	constructor(val: number, span: Span) {
 		super(val, span);
-		this.type = new TypeAST("N");
+		this.type = NAT_TYPE;
 	}
 
 	override add(other: NaturalLiteral, buffer: IOBuffer): NaturalLiteral {
@@ -974,11 +982,7 @@ export class NaturalLiteral extends NumberLiteral {
 
 		if (n <= 0)
 			buffer.throwError(
-				new IllegalTypeConversionError(
-					new TypeAST("Int"),
-					this.type,
-					this.span
-				)
+				new IllegalTypeConversionError(INT_TYPE, this.type, this.span)
 			);
 
 		return new NaturalLiteral(n, unionSpan([this.span, other.span]));
@@ -1056,7 +1060,7 @@ export class IntegerLiteral extends Expr {
 	constructor(name: string, span: Span) {
 		super(span);
 		this.val = Number(name);
-		this.type = new TypeAST("Int");
+		this.type = INT_TYPE;
 	}
 	override applyBind(scope: Scope, buffer: IOBuffer): void {}
 

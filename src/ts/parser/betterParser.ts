@@ -11,6 +11,7 @@ import {
 	Tuple,
 	NaturalLiteral,
 	BooleanLiteral,
+	RationalLiteral,
 } from "../ast/exprs.js";
 import * as MATH from "../ast/math.js";
 import {
@@ -29,15 +30,24 @@ import {
 } from "../ast/stmts.js";
 import {
 	FunctionType,
-	FundTypeString,
+	INT_TYPE,
+	IntType,
 	ModulusType,
+	NAT_TYPE,
+	NaturalType,
 	ProductType,
-	TypeAST,
+	RationalType,
+	STR_TYPE,
+	StringType,
+	Type,
+	VOID_TYPE,
+	VoidType,
 } from "../ast/type.js";
 import {
 	IllegalTypeConversionError,
 	MissingSemicolonError,
 	ParserError,
+	UndefinedIdentifierError,
 } from "../error.js";
 import { unionSpan } from "../utils.js";
 import { Span, Token } from "./token.js";
@@ -213,7 +223,7 @@ export class Parser {
 	varDecl(): Statement {
 		let idName: Id = this.id(); // TODO token replacement
 		this.match(":");
-		let type: TypeAST = this.type();
+		let type: Type = this.type();
 
 		if (this.current() == "=") {
 			this.match("=");
@@ -246,9 +256,9 @@ export class Parser {
 		let endPar: Token = this.match(")");
 		this.match(":");
 
-		let domainTypes: TypeAST[] = params.map((x) => x.type);
-		let domain: TypeAST;
-		if (domainTypes.length == 0) domain = new TypeAST("void", endPar.span);
+		let domainTypes: Type[] = params.map((x) => x.type);
+		let domain: Type;
+		if (domainTypes.length == 0) domain = new VoidType(endPar.span);
 		else if (domainTypes.length == 1) domain = domainTypes[0];
 		else
 			domain = new ProductType(
@@ -256,7 +266,7 @@ export class Parser {
 				unionSpan(domainTypes.map((t) => t.span))
 			);
 
-		let codomain: TypeAST = this.type();
+		let codomain: Type = this.type();
 
 		let funcType: FunctionType = new FunctionType(
 			domain,
@@ -682,20 +692,20 @@ export class Parser {
 		return func;
 	}
 
-	type(): TypeAST {
+	type(): Type {
 		return this.typeFunctional();
 	}
 
-	typeFunctional(): TypeAST {
-		let childs: TypeAST[] = [this.typeMultiplicative()];
+	typeFunctional(): Type {
+		let childs: Type[] = [this.typeMultiplicative()];
 		while (this.current() == "->") {
 			this.match("->");
 			childs.push(this.typeMultiplicative());
 		}
 
-		let right: TypeAST = childs[childs.length - 1];
+		let right: Type = childs[childs.length - 1];
 		for (let i = childs.length - 2; i >= 0; i--) {
-			let left: TypeAST = childs[i];
+			let left: Type = childs[i];
 			right = new FunctionType(
 				left,
 				right,
@@ -705,8 +715,8 @@ export class Parser {
 		return right;
 	}
 
-	typeMultiplicative(): TypeAST {
-		let childs: TypeAST[] = [this.typeExponent()];
+	typeMultiplicative(): Type {
+		let childs: Type[] = [this.typeExponent()];
 		while (this.current() == "*") {
 			this.match("*");
 			childs.push(this.typeExponent());
@@ -716,14 +726,14 @@ export class Parser {
 		return new ProductType(childs, unionSpan(childs.map((c) => c.span)));
 	}
 
-	typeExponent(): TypeAST {
-		let left: TypeAST = this.typePrimary();
+	typeExponent(): Type {
+		let left: Type = this.typePrimary();
 		if (this.current() == "^") {
 			this.match("^");
 			let right: IntegerLiteral = this.num();
 			let count: number = right.val;
 
-			let types: TypeAST[] = [];
+			let types: Type[] = [];
 			for (let i = 0; i < count; i++) types.push(left.copy());
 
 			return new ProductType(types, unionSpan(types.map((t) => t.span)));
@@ -732,7 +742,7 @@ export class Parser {
 		return left;
 	}
 
-	typePrimary(): TypeAST {
+	typePrimary(): Type {
 		if (this.current() == "(") {
 			this.match("(");
 			let ret = this.type();
@@ -749,8 +759,22 @@ export class Parser {
 			return new ModulusType(n.val, unionSpan([tok.span, e.span]));
 		}
 
-		// TODO sucky type conversion
-		return new TypeAST(tok.value as FundTypeString, tok.span);
+		if (["Bool", "Boolean", "bool", "boolean"].includes(tok.value))
+			return new ModulusType(2, tok.span);
+		if (["N", "Nat", "Natural"].includes(tok.value))
+			return new NaturalType(tok.span);
+		if (["Z", "Int", "Integer"].includes(tok.value))
+			return new IntType(tok.span);
+		if (["Q", "Rat", "Rational"].includes(tok.value))
+			return new RationalType(tok.span);
+		if (["Str", "String"].includes(tok.value))
+			return new StringType(tok.span);
+		if (["void"].includes(tok.value)) return new VoidType(tok.span);
+
+		this.buffer.throwError(
+			new UndefinedIdentifierError(tok.value, tok.span)
+		);
+		return VOID_TYPE;
 	}
 
 	id(): Id {
@@ -767,21 +791,13 @@ export class Parser {
 			token.value.indexOf(".") != -1
 		)
 			this.buffer.throwError(
-				new IllegalTypeConversionError(
-					new TypeAST("String"),
-					new TypeAST("N"),
-					token.span
-				)
+				new IllegalTypeConversionError(STR_TYPE, NAT_TYPE, token.span)
 			);
 
 		let n: number = +token.value;
 		if (n <= 0)
 			this.buffer.throwError(
-				new IllegalTypeConversionError(
-					new TypeAST("Int"),
-					new TypeAST("N"),
-					token.span
-				)
+				new IllegalTypeConversionError(INT_TYPE, NAT_TYPE, token.span)
 			);
 
 		return new NaturalLiteral(n, token.span);
@@ -792,11 +808,7 @@ export class Parser {
 
 		if (isNaN(+token.value) || isNaN(parseFloat(token.value)))
 			this.buffer.throwError(
-				new IllegalTypeConversionError(
-					new TypeAST("String"),
-					new TypeAST("Int"),
-					token.span
-				)
+				new IllegalTypeConversionError(STR_TYPE, INT_TYPE, token.span)
 			);
 
 		return new IntegerLiteral(+token.value, token.span);
