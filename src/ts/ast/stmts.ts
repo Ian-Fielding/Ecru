@@ -7,15 +7,11 @@ import {
 } from "../error.js";
 import { Span } from "../parser/token.js";
 import { AST, ReturnObject } from "./asts.js";
-import {
-	StringLiteral,
-	Id,
-	Expr,
-	IntegerLiteral,
-	getTypeCast,
-} from "./exprs.js";
+import { StringLiteral, Id, IntegerLiteral } from "./expressions/exprs.js";
 import { Scope, IdSymbol } from "./symbols.js";
 import { INT_TYPE, STR_TYPE, Type } from "./type.js";
+import { getTypeCast } from "./expressions/typecast.js";
+import { Expr } from "./expressions/expr.js";
 
 export abstract class Statement extends AST {
 	constructor(span: Span) {
@@ -296,7 +292,7 @@ export class PrintStatement extends Statement {
 		if (str instanceof StringLiteral) {
 			buffer.stdout(str.name + term);
 		} else if (str instanceof IntegerLiteral) {
-			buffer.stdout(str.val + term);
+			buffer.stdout(str.getVal() + term);
 		} else {
 			// TODO better comparison to string.
 			buffer.throwError(
@@ -339,7 +335,7 @@ export class WhileLoop extends Statement {
 				buffer
 			) as IntegerLiteral;
 
-			if (compVal.val == 0) break;
+			if (compVal.isZero()) break;
 
 			for (let child of this.stmts) {
 				let result: ReturnObject = child.execute(buffer);
@@ -412,7 +408,7 @@ export class ForLoop extends Statement {
 				buffer
 			) as IntegerLiteral;
 
-			if (compVal.val == 0) break;
+			if (compVal.isZero()) break;
 
 			for (let child of this.stmts) {
 				result = child.execute(buffer);
@@ -470,7 +466,7 @@ export class IfStmt extends Statement {
 	override execute(buffer: IOBuffer): ReturnObject {
 		let compVal: IntegerLiteral = this.test.rval(buffer) as IntegerLiteral;
 
-		if (compVal.val != 0)
+		if (!compVal.isZero())
 			for (let child of this.stmts) {
 				let result: ReturnObject = child.execute(buffer);
 				if (result.break) return result;

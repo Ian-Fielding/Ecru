@@ -4,6 +4,8 @@ import { tests } from "./tests.js";
 import { tokenTests } from "./tokenTests.js";
 import { silentBuffer } from "../IOBuffer.js";
 import { Tokenizer } from "../parser/tokenizer.js";
+import { shorthandTests } from "./shorthandTest.js";
+import { NaturalLiteral, Shorthand } from "../ast/expressions/exprs.js";
 
 /**
  * Prints str with green background
@@ -47,6 +49,8 @@ let out: string = `Tokenizer score: ${tokenCount}/${tokenTests.length}`;
 if (tokenCount != tokenTests.length) printBad(out);
 else printGood(out);
 
+// ----------------------------------------------
+
 let parseCount: number = 0;
 for (let test of parseTests) {
 	let result: CompileObj = compile(test.input, silentBuffer);
@@ -65,6 +69,27 @@ for (let test of parseTests) {
 out = `Parse tree score: ${parseCount}/${parseTests.length}`;
 if (parseCount != parseTests.length) printBad(out);
 else printGood(out);
+
+// ----------------------------------------------
+
+let shorthandCount: number = 0;
+for (let test of shorthandTests) {
+	let expected: Shorthand = new Shorthand(test.output);
+	let result: Shorthand = new Shorthand(test.input);
+
+	if (expected.equals(result)) shorthandCount++;
+	else {
+		printBad(`Error on ${test.input}`);
+		console.log(`---Exp: "${test.output}"\n---Saw: "${result.shorthand}"`);
+	}
+}
+
+// prints out total shorthand score
+out = `Shorthand score: ${shorthandCount}/${shorthandTests.length}`;
+if (shorthandCount != shorthandTests.length) printBad(out);
+else printGood(out);
+
+// ----------------------------------------------
 
 let basicCount: number = 0;
 for (let test of tests) {
@@ -92,3 +117,5 @@ for (let test of tests) {
 out = `Basic test score: ${basicCount}/${tests.length}`;
 if (basicCount != tests.length) printBad(out);
 else printGood(out);
+
+// ----------------------------------------------

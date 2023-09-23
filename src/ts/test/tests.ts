@@ -1199,7 +1199,61 @@ export let tests: Test[] = [
 	{
 		name: `if_test6`,
 		input: `x: Z = 5;
+			if(x+5==3+5){
+				y: String = "My number is ";
+				print y+x;
+			} else {
+				y: Z = 5;
+				print "My output is "+(x+y);
+			}
+
+			y:String = " and that's that.";
+			print y;
+		`,
+		out: `My output is 10 and that's that.`,
+		err: false,
+	},
+
+	{
+		name: `if_test6.1`,
+		input: `
+			x: Z = 5;
+
+			print "x is first "+x;
 			if(x+5~=3+5){
+				
+			} else {
+				
+			}
+
+			print " then "+x;
+		`,
+		out: `x is first 5 then 5`,
+		err: false,
+	},
+
+	{
+		name: `if_test6.2`,
+		input: `x: Z = 5;
+			if(x==3){
+				y: String = "My number is ";
+				print y+x;
+			} else {
+				y: Z = 5;
+				print "My output is "+(x+y);
+			}
+
+			y:String = " and that's that.";
+			print y;
+		`,
+		out: `My output is 10 and that's that.`,
+		err: false,
+	},
+
+	{
+		name: `if_test6.3`,
+		input: `x: Z = 5;
+			if(x==3){
 				y: String = "My number is ";
 				print y+x;
 			} else {

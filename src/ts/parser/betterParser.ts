@@ -1,7 +1,6 @@
 import { IOBuffer } from "../IOBuffer.js";
 import {
 	VoidObj,
-	Expr,
 	Id,
 	FuncDecl,
 	StringLiteral,
@@ -12,8 +11,8 @@ import {
 	NaturalLiteral,
 	BooleanLiteral,
 	RationalLiteral,
-} from "../ast/exprs.js";
-import * as MATH from "../ast/math.js";
+} from "../ast/expressions/exprs.js";
+import * as MATH from "../ast/expressions/math.js";
 import {
 	Program,
 	ReturnStatement,
@@ -52,6 +51,7 @@ import {
 import { unionSpan } from "../utils.js";
 import { Span, Token } from "./token.js";
 import { Tokenizer } from "./tokenizer.js";
+import { Expr } from "../ast/expressions/expr.js";
 
 export class Parser {
 	input: string;
@@ -731,7 +731,7 @@ export class Parser {
 		if (this.current() == "^") {
 			this.match("^");
 			let right: IntegerLiteral = this.num();
-			let count: number = right.val;
+			let count: number = right.getVal();
 
 			let types: Type[] = [];
 			for (let i = 0; i < count; i++) types.push(left.copy());
@@ -756,7 +756,7 @@ export class Parser {
 			let n: NaturalLiteral = this.natural();
 			if (this.scan.peek().value != "Z") this.error("Z");
 			let e: Token = this.match("ID");
-			return new ModulusType(n.val, unionSpan([tok.span, e.span]));
+			return new ModulusType(n.getVal(), unionSpan([tok.span, e.span]));
 		}
 
 		if (["Bool", "Boolean", "bool", "boolean"].includes(tok.value))

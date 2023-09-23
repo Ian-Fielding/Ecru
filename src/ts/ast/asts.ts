@@ -1,7 +1,7 @@
-import { IOBuffer } from "../IOBuffer";
-import { Span } from "../parser/token";
-import { Expr } from "./exprs";
-import { Scope } from "./symbols";
+import { IOBuffer } from "../IOBuffer.js";
+import { Span } from "../parser/token.js";
+import { Scope } from "./symbols.js";
+import { Expr } from "./expressions/expr.js";
 
 /**
  * Representation of the "return status" of a return or break after execution

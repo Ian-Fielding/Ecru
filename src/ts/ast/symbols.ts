@@ -1,5 +1,5 @@
 import { IOBuffer } from "../IOBuffer.js";
-import { Expr } from "./exprs.js";
+import { Expr } from "./expressions/expr.js";
 import { ANY_TYPE, Type } from "./type.js";
 
 /**

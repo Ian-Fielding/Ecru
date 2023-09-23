@@ -1,9 +1,5 @@
 import { IOBuffer } from "../IOBuffer.js";
-import {
-	CompilerError,
-	DimensionError,
-	IllegalTypeConversionError,
-} from "../error.js";
+import { DimensionError, IllegalTypeConversionError } from "../error.js";
 import { Span } from "../parser/token.js";
 import { unionSpan } from "../utils.js";
 import { AST } from "./asts.js";
