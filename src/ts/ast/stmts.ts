@@ -7,11 +7,12 @@ import {
 } from "../error.js";
 import { Span } from "../parser/token.js";
 import { AST, ReturnObject } from "./asts.js";
-import { StringLiteral, Id, IntegerLiteral } from "./expressions/exprs.js";
+import { StringLiteral, Id } from "./expressions/ast_exprs.js";
 import { Scope, IdSymbol } from "./symbols.js";
 import { INT_TYPE, STR_TYPE, Type } from "./type.js";
 import { getTypeCast } from "./expressions/typecast.js";
 import { Expr } from "./expressions/expr.js";
+import { IntegerLiteral } from "./expressions/terminals/integer.js";
 
 export abstract class Statement extends AST {
 	constructor(span: Span) {

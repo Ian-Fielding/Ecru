@@ -11,15 +11,7 @@ import {
 	OutOfBoundsError,
 	UndefinedIdentifierError,
 } from "../../error.js";
-import {
-	FuncDecl,
-	IntegerLiteral,
-	ModulusLiteral,
-	NaturalLiteral,
-	StringLiteral,
-	Tuple,
-	VoidObj,
-} from "./exprs.js";
+import { StringLiteral, VoidObj } from "./ast_exprs.js";
 import { Scope } from "../symbols.js";
 import { Expr } from "./expr.js";
 import {
@@ -35,6 +27,11 @@ import {
 	NAT_TYPE,
 	RAT_TYPE,
 } from "../type.js";
+import { NaturalLiteral } from "./terminals/natural.js";
+import { IntegerLiteral } from "./terminals/integer.js";
+import { ModulusLiteral } from "./terminals/modulus.js";
+import { FuncDecl } from "./terminals/funcDecl.js";
+import { Tuple } from "./terminals/tuple.js";
 
 export function getTypeCast(expr: Expr, type: Type): Expr {
 	switch (type.type) {

@@ -2,16 +2,10 @@ import { IOBuffer } from "../IOBuffer.js";
 import {
 	VoidObj,
 	Id,
-	FuncDecl,
 	StringLiteral,
 	FuncCall,
 	ArrayAccess,
-	IntegerLiteral,
-	Tuple,
-	NaturalLiteral,
-	BooleanLiteral,
-	RationalLiteral,
-} from "../ast/expressions/exprs.js";
+} from "../ast/expressions/ast_exprs.js";
 import * as MATH from "../ast/expressions/math.js";
 import {
 	Program,
@@ -48,10 +42,15 @@ import {
 	ParserError,
 	UndefinedIdentifierError,
 } from "../error.js";
-import { unionSpan } from "../utils.js";
+import { unionSpan } from "../util/utils.js";
 import { Span, Token } from "./token.js";
 import { Tokenizer } from "./tokenizer.js";
 import { Expr } from "../ast/expressions/expr.js";
+import { NaturalLiteral } from "../ast/expressions/terminals/natural.js";
+import { IntegerLiteral } from "../ast/expressions/terminals/integer.js";
+import { BooleanLiteral } from "../ast/expressions/terminals/boolean.js";
+import { FuncDecl } from "../ast/expressions/terminals/funcDecl.js";
+import { Tuple } from "../ast/expressions/terminals/tuple.js";
 
 export class Parser {
 	input: string;

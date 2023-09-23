@@ -5,15 +5,7 @@ import {
 	UnsupportedBinop,
 } from "../../error.js";
 import { Span } from "../../parser/token.js";
-import {
-	BooleanLiteral,
-	IntegerLiteral,
-	ModulusLiteral,
-	NaturalLiteral,
-	StringLiteral,
-	Tuple,
-	VoidObj,
-} from "./exprs.js";
+import { StringLiteral, VoidObj } from "./ast_exprs.js";
 import { Scope } from "../symbols.js";
 import {
 	INT_TYPE,
@@ -27,6 +19,11 @@ import {
 import { getTypeCast } from "./typecast.js";
 
 import { Expr } from "./expr.js";
+import { NaturalLiteral } from "./terminals/natural.js";
+import { IntegerLiteral } from "./terminals/integer.js";
+import { ModulusLiteral } from "./terminals/modulus.js";
+import { BooleanLiteral } from "./terminals/boolean.js";
+import { Tuple } from "./terminals/tuple.js";
 export abstract class Binop extends Expr {
 	a: Expr;
 	b: Expr;

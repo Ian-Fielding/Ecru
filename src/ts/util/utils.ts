@@ -1,4 +1,4 @@
-import { Span } from "./parser/token.js";
+import { Span } from "../parser/token.js";
 
 /**
  *

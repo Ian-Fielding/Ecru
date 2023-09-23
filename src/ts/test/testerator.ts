@@ -5,7 +5,7 @@ import { tokenTests } from "./tokenTests.js";
 import { silentBuffer } from "../IOBuffer.js";
 import { Tokenizer } from "../parser/tokenizer.js";
 import { shorthandTests } from "./shorthandTest.js";
-import { NaturalLiteral, Shorthand } from "../ast/expressions/exprs.js";
+import { Shorthand } from "../util/shorthand.js";
 
 /**
  * Prints str with green background
