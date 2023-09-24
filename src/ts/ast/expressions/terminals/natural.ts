@@ -8,10 +8,12 @@ import { NumberLiteral } from "./number.js";
 
 export class NaturalLiteral extends NumberLiteral {
 	shorthand: Shorthand;
+	val?: number;
 	constructor(val: number | Shorthand, span: Span) {
 		super(span);
 
 		if (typeof val == "number") {
+			this.val = val;
 			this.shorthand = new Shorthand(val);
 		} else {
 			this.shorthand = val;
@@ -21,7 +23,7 @@ export class NaturalLiteral extends NumberLiteral {
 	}
 
 	getVal(): number {
-		return this.shorthand.getVal();
+		return this.val ? this.val : this.shorthand.getVal();
 	}
 
 	override toString(): string {
@@ -51,7 +53,7 @@ export class NaturalLiteral extends NumberLiteral {
 		);
 	}
 	override div(other: NaturalLiteral, buffer: IOBuffer): NaturalLiteral {
-		let n: number = Math.floor(this.getVal() / other.getVal()); // TODO implement better
+		let n: number = Math.floor(this.getVal() / other.getVal()); // TODO determine if this can be better implemented
 
 		return new NaturalLiteral(
 			n == 0 ? 1 : n,

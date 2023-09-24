@@ -1,6 +1,7 @@
 import { IOBuffer } from "../../../IOBuffer.js";
 import { DivisionByZeroError } from "../../../error.js";
 import { Span } from "../../../parser/token.js";
+import { Shorthand } from "../../../util/shorthand.js";
 import { unionSpan } from "../../../util/utils.js";
 import { RAT_TYPE } from "../../type.js";
 import { IntegerLiteral } from "./integer.js";
@@ -14,13 +15,22 @@ export class RationalLiteral extends NumberLiteral {
 		super(span);
 		this.num = num;
 		this.den = den;
-
 		this.type = RAT_TYPE;
 
-		if (num.isZero()) {
-			this.den = new NaturalLiteral(1, den.span);
+		this.simplifyFraction();
+	}
+
+	simplifyFraction(): void {
+		if (this.num.isZero()) {
+			this.den.shorthand = new Shorthand([]);
 			return;
 		}
+
+		let gcd: Shorthand = this.num.natural!.shorthand.gcd(
+			this.den.shorthand
+		);
+		this.num.natural!.shorthand = this.num.natural!.shorthand.div(gcd);
+		this.den.shorthand = this.den.shorthand.div(gcd);
 	}
 
 	override toString(): string {

@@ -10,11 +10,13 @@ import { NumberLiteral } from "./number.js";
 export class IntegerLiteral extends NumberLiteral {
 	isNegative: boolean;
 	natural?: NaturalLiteral;
+	val?: number;
 
 	constructor(val: number | Shorthand, span: Span) {
 		super(span);
 
 		if (typeof val == "number") {
+			this.val = val;
 			if (val == 0) {
 				this.isNegative = false;
 				this.natural = undefined;
@@ -35,6 +37,7 @@ export class IntegerLiteral extends NumberLiteral {
 	}
 
 	getVal(): number {
+		if (this.val) return this.val;
 		if (!this.natural) return 0;
 		return (this.isNegative ? -1 : 1) * this.natural.getVal();
 	}
@@ -78,7 +81,7 @@ export class IntegerLiteral extends NumberLiteral {
 			buffer.throwError(new DivisionByZeroError(other.span));
 
 		return new IntegerLiteral(
-			Math.floor(this.getVal() / other.getVal()),
+			Math.floor(this.getVal() / other.getVal()), // TODO determine if this can be better implemented
 			unionSpan([this.span, other.span])
 		);
 	}

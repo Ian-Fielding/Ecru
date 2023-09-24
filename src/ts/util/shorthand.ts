@@ -1,4 +1,5 @@
 import { PRIMES } from "./utils.js";
+import { LessThan } from "../vm/insns";
 
 export class Shorthand {
 	static dict: Map<number, number[]> = new Map<number, number[]>();
@@ -13,6 +14,34 @@ export class Shorthand {
 		} else {
 			this.shorthand = val;
 		}
+	}
+
+	greaterThanEqual(other: Shorthand) {
+		return this.equals(other) || this.greaterThan(other);
+	}
+
+	lessThanEqual(other: Shorthand) {
+		return this.equals(other) || this.lessThan(other);
+	}
+
+	greaterThan(other: Shorthand): boolean {
+		return other.lessThan(this);
+	}
+
+	lessThan(other: Shorthand): boolean {
+		let gcd: Shorthand = this.gcd(other);
+		let a: Shorthand = this.div(gcd),
+			b: Shorthand = other.div(gcd);
+
+		function log_parse(nums: number[], index: number = 0): number {
+			if (index >= nums.length) return 0;
+			return (
+				nums[index + 1] * Math.log(nums[index]) +
+				log_parse(nums, index + 2)
+			);
+		}
+
+		return log_parse(a.shorthand) < log_parse(b.shorthand);
 	}
 
 	equals(other: Shorthand): boolean {
@@ -82,6 +111,36 @@ export class Shorthand {
 		}
 
 		return new Shorthand(product);
+	}
+
+	div(gcd: Shorthand): Shorthand {
+		let quotient: number[] = [];
+		let a: number = 0,
+			b: number = 0;
+		while (a < this.shorthand.length) {
+			if (b >= gcd.shorthand.length) {
+				quotient.push(this.shorthand[a], this.shorthand[a + 1]);
+				a += 2;
+				continue;
+			}
+
+			let x: number = this.shorthand[a];
+			let y: number = gcd.shorthand[b];
+			let diff: number = this.shorthand[a + 1] - gcd.shorthand[b + 1];
+
+			if (x < y) {
+				if (diff > 0) quotient.push(this.shorthand[a], diff);
+				a += 2;
+			} else if (x > y) {
+				throw new Error("This isn't the gcd!");
+			} else if (x == y) {
+				if (diff > 0) quotient.push(this.shorthand[a], diff);
+				a += 2;
+				b += 2;
+			}
+		}
+
+		return new Shorthand(quotient);
 	}
 
 	static addToDict(val: number): void {
