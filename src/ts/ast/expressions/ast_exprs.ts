@@ -91,8 +91,15 @@ export class FuncCall extends Expr {
 			return new VoidObj();
 		}
 
+		buffer.pushStack(
+			`Function ${func.name ? func.name : ""} call at ${this.span}.`
+		);
+
 		let changeme: Expr = func.onCall(buffer, this.input.rval(buffer)); //TODO sucks
 		if (buffer.hasSeenError()) return new VoidObj();
+
+		buffer.popStack();
+
 		return changeme;
 	}
 

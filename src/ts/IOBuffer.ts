@@ -1,4 +1,8 @@
-import { EcruError } from "./error";
+import { ThrowStatement } from "typescript";
+import { EcruError, StackOverflowError, ThrowableEcruError } from "./error.js";
+
+const MAX_RECURSION_DEPTH = 350,
+	MAX_DISPLAY_OF_STACK_TRACE = 10;
 
 /**
  * An abstraction of a program's input/output (IO) functionality, i.e. an extension of stdout and stderr, simply made more general
@@ -24,12 +28,26 @@ export class IOBuffer {
 	 */
 	errHistory: string[];
 
+	stack: string[];
+
 	constructor(out: (a: string) => void, err: (b: string) => void) {
 		this.out = out;
 		this.err = err;
 
+		this.stack = [];
+
 		this.outHistory = [];
 		this.errHistory = [];
+	}
+
+	pushStack(input: string): void {
+		this.stack.push(input);
+		if (this.stack.length > MAX_RECURSION_DEPTH)
+			this.throwError(new StackOverflowError(MAX_RECURSION_DEPTH));
+	}
+
+	popStack(): string {
+		return this.stack.pop()!;
 	}
 
 	/**
@@ -56,8 +74,20 @@ export class IOBuffer {
 	 */
 	throwError(err: EcruError) {
 		this.stderr(err.toString() + "\n");
-		if (err.stack) this.stderr(err.stack);
-		throw err;
+
+		let stacktrace: string[] = [];
+		let extra: number = this.stack.length - MAX_DISPLAY_OF_STACK_TRACE;
+
+		for (let i = this.stack.length - 1; i >= Math.max(0, extra); i--)
+			stacktrace.push(`      --> ${this.stack[i]}`);
+
+		if (extra > 0) stacktrace.push(`... (${extra} more).\n`);
+		let throwable: ThrowableEcruError = new ThrowableEcruError(
+			err,
+			stacktrace
+		);
+
+		throw throwable;
 	}
 
 	/**
@@ -90,6 +120,7 @@ export class IOBuffer {
 	clear(): void {
 		this.outHistory = [];
 		this.errHistory = [];
+		this.stack = [];
 	}
 }
 

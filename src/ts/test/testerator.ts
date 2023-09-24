@@ -103,7 +103,11 @@ for (let test of tests) {
 		printBad(`Error on ${test.name}`);
 		let err1: string = test.err ? "Error" : "No error";
 		let err2: string = err
-			? `Error (${result.buffer.getErr()})`
+			? `Error (${result.errorMsg}) ${
+					result.errorstack.length == 0
+						? ""
+						: "with stack trace\n" + result.errorstack
+			  }`
 			: "No error";
 
 		console.log(`---Inp: ${test.input}`);

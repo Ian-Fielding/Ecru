@@ -19,17 +19,20 @@ import { Tuple } from "./tuple.js";
 export class FuncDecl extends Expr {
 	params: DeclarationStatement[];
 	stmts: Statement[];
+	name?: string;
 
 	constructor(
 		params: DeclarationStatement[],
 		stmts: Statement[],
 		type: FunctionType,
-		span: Span
+		span: Span,
+		name?: string
 	) {
 		super(span);
 		this.params = params;
 		this.stmts = stmts;
 		this.type = type;
+		if (name) this.name = name;
 	}
 
 	override toString(): string {

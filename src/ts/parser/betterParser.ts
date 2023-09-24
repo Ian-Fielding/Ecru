@@ -206,7 +206,7 @@ export class Parser {
 				);
 
 			default:
-				this.match("/=");
+				this.match("/="); //TODO the error messages kind of suck since they fail and say "failed to match /=" you know
 				expr = this.expr();
 				return new AssignmentStatement(
 					id,
@@ -291,6 +291,7 @@ export class Parser {
 	funcDecl(): Statement {
 		let id: Id = this.id();
 		let func: FuncDecl = this.funcDeclOnlySuffix(false);
+		func.name = id.idName;
 
 		return new DeclarationAndAssignmentStatement(
 			id,
@@ -688,6 +689,7 @@ export class Parser {
 
 		let func: FuncDecl = this.funcDeclOnlySuffix(true);
 		func.span = unionSpan([start.span, func.span]);
+		func.name = "λ";
 		return func;
 	}
 

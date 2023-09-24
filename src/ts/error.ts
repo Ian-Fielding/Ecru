@@ -2,19 +2,25 @@ import { Statement } from "./ast/stmts.js";
 import { Type } from "./ast/type.js";
 import { Span } from "./parser/token.js";
 
-export abstract class EcruError extends Error {
-	_name: string;
+export class ThrowableEcruError extends Error {
+	constructor(err: EcruError, stacktrace: string[]) {
+		super(err.msg);
+		this.stack = stacktrace.join("\n");
+	}
+}
+
+export abstract class EcruError {
+	name: string;
 	msg: string;
 	span: Span;
 	constructor(name: string, msg: string, span: Span) {
-		super(msg);
-		this._name = name;
+		this.name = name;
 		this.msg = msg;
 		this.span = span;
 	}
 
-	override toString(): string {
-		return `${this._name}:${this.span} -- ${this.msg}`;
+	toString(): string {
+		return `${this.name}:${this.span} -- ${this.msg}`;
 	}
 }
 
@@ -25,8 +31,12 @@ export class CompilerError extends EcruError {
 }
 
 export class StackOverflowError extends EcruError {
-	constructor() {
-		super("StackOverflowError", "TODO", new Span(0, 0, 0, 0));
+	constructor(maxDepth: number) {
+		super(
+			"StackOverflowError",
+			`Maximum recursion depth of ${maxDepth} encountered.`,
+			new Span(0, 0, 0, 0)
+		);
 	}
 }
 

@@ -499,6 +499,53 @@ export let tests: Test[] = [
 		out: `14`,
 		err: false,
 	},
+	{
+		name: `func_test24.2`,
+		input: `
+			f(x:Z):Z { 
+				return 1+f(x-1);
+			} 
+			print f(2);
+		`,
+		out: ``,
+		err: true,
+	},
+	{
+		name: `func_test24.3`,
+		input: `
+			g():Z {
+				return 3;
+			}
+			f(x:N):N { 
+				return x+g();
+			}
+			print f(2);
+		`,
+		out: `5`,
+		err: false,
+	},
+	{
+		name: `func_test24.4`,
+		input: `
+			f(x:N):N { 
+				return 3;
+			}
+			print f(2);
+		`,
+		out: `3`,
+		err: false,
+	},
+	{
+		name: `func_test24.5`,
+		input: `
+			f(x:N):N { 
+				return 3+4;
+			}
+			print f(2);
+		`,
+		out: `7`,
+		err: false,
+	},
 
 	{
 		name: `func_test25`,
