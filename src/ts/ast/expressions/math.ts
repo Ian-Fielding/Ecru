@@ -11,7 +11,6 @@ import {
 	INT_TYPE,
 	ModulusType,
 	NAT_TYPE,
-	ProductType,
 	Type,
 	TypeEnum,
 	gcdType,

@@ -1,4 +1,3 @@
-import { ThrowStatement } from "typescript";
 import { EcruError, StackOverflowError, ThrowableEcruError } from "./error.js";
 
 const MAX_RECURSION_DEPTH = 350,

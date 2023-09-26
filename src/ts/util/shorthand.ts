@@ -1,5 +1,4 @@
 import { PRIMES } from "./utils.js";
-import { LessThan } from "../vm/insns";
 
 export class Shorthand {
 	static dict: Map<number, number[]> = new Map<number, number[]>();

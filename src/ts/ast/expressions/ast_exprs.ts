@@ -2,18 +2,12 @@ import { IOBuffer } from "../../IOBuffer.js";
 import {
 	ArgumentLengthError,
 	CompilerError,
-	DimensionError,
-	DivisionByZeroError,
 	IllegalCallError,
 	IllegalIndexError,
-	IllegalTypeConversionError,
-	NonexistentReturnError,
 	OutOfBoundsError,
 	UndefinedIdentifierError,
 } from "../../error.js";
 import { Span } from "../../parser/token.js";
-import { AST, ReturnObject } from "../asts.js";
-import { DeclarationStatement, ReturnStatement, Statement } from "../stmts.js";
 import { Scope, IdSymbol } from "../symbols.js";
 import {
 	Type,
@@ -25,17 +19,10 @@ import {
 	VOID_TYPE,
 	STR_TYPE,
 	ANY_TYPE,
-	NAT_TYPE,
-	RAT_TYPE,
 } from "../type.js";
-import { PRIMES, intPow, unionSpan } from "../../util/utils.js";
 import { getTypeCast } from "./typecast.js";
 import { Expr } from "./expr.js";
-import { NaturalType } from "../type.js";
-import { Shorthand } from "../../util/shorthand.js";
-import { NaturalLiteral } from "./terminals/natural.js";
 import { IntegerLiteral } from "./terminals/integer.js";
-import { ModulusLiteral } from "./terminals/modulus.js";
 import { FuncDecl } from "./terminals/funcDecl.js";
 import { Tuple } from "./terminals/tuple.js";
 

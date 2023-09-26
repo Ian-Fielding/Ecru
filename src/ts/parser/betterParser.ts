@@ -6,7 +6,6 @@ import {
 	FuncCall,
 	ArrayAccess,
 } from "../ast/expressions/ast_exprs.js";
-import * as MATH from "../ast/expressions/math.js";
 import {
 	Program,
 	ReturnStatement,
@@ -51,6 +50,20 @@ import { IntegerLiteral } from "../ast/expressions/terminals/integer.js";
 import { BooleanLiteral } from "../ast/expressions/terminals/boolean.js";
 import { FuncDecl } from "../ast/expressions/terminals/funcDecl.js";
 import { Tuple } from "../ast/expressions/terminals/tuple.js";
+import {
+	Add,
+	Div,
+	Exponent,
+	Factorial,
+	LogicalAnd,
+	LogicalEq,
+	LogicalNot,
+	LogicalOr,
+	Mod,
+	Mul,
+	Negate,
+	Sub,
+} from "../ast/expressions/math.js";
 
 export class Parser {
 	input: string;
@@ -183,7 +196,7 @@ export class Parser {
 				expr = this.expr();
 				return new AssignmentStatement(
 					id,
-					new MATH.Add(id, expr, unionSpan([id.span, expr.span])),
+					new Add(id, expr, unionSpan([id.span, expr.span])),
 					unionSpan([id.span, expr.span])
 				);
 
@@ -192,7 +205,7 @@ export class Parser {
 				expr = this.expr();
 				return new AssignmentStatement(
 					id,
-					new MATH.Sub(id, expr, unionSpan([id.span, expr.span])),
+					new Sub(id, expr, unionSpan([id.span, expr.span])),
 					unionSpan([id.span, expr.span])
 				);
 
@@ -201,7 +214,7 @@ export class Parser {
 				expr = this.expr();
 				return new AssignmentStatement(
 					id,
-					new MATH.Mul(id, expr, unionSpan([id.span, expr.span])),
+					new Mul(id, expr, unionSpan([id.span, expr.span])),
 					unionSpan([id.span, expr.span])
 				);
 
@@ -210,7 +223,7 @@ export class Parser {
 				expr = this.expr();
 				return new AssignmentStatement(
 					id,
-					new MATH.Div(id, expr, unionSpan([id.span, expr.span])),
+					new Div(id, expr, unionSpan([id.span, expr.span])),
 					unionSpan([id.span, expr.span])
 				);
 		}
@@ -462,7 +475,7 @@ export class Parser {
 			this.match(this.current());
 
 			let right = this.boolAnd();
-			left = new MATH.LogicalOr(
+			left = new LogicalOr(
 				left,
 				right,
 				unionSpan([left.span, right.span])
@@ -477,7 +490,7 @@ export class Parser {
 			this.match(this.current());
 
 			let right = this.boolEq();
-			left = new MATH.LogicalAnd(
+			left = new LogicalAnd(
 				left,
 				right,
 				unionSpan([left.span, right.span])
@@ -492,7 +505,7 @@ export class Parser {
 			this.match("==");
 
 			let right = this.boolNeq();
-			left = new MATH.LogicalEq(
+			left = new LogicalEq(
 				left,
 				right,
 				unionSpan([left.span, right.span])
@@ -507,12 +520,8 @@ export class Parser {
 			this.match("~=");
 
 			let right = this.boolNeg();
-			left = new MATH.LogicalNot(
-				new MATH.LogicalEq(
-					left,
-					right,
-					unionSpan([left.span, right.span])
-				),
+			left = new LogicalNot(
+				new LogicalEq(left, right, unionSpan([left.span, right.span])),
 
 				unionSpan([left.span, right.span])
 			);
@@ -526,7 +535,7 @@ export class Parser {
 
 			let ins: Expr = this.boolNeg();
 
-			return new MATH.LogicalNot(ins, unionSpan([tok.span, ins.span]));
+			return new LogicalNot(ins, unionSpan([tok.span, ins.span]));
 		}
 		return this.additive();
 	}
@@ -537,19 +546,11 @@ export class Parser {
 			if (this.current() == "+") {
 				this.match("+");
 				let right = this.multiplicative();
-				left = new MATH.Add(
-					left,
-					right,
-					unionSpan([left.span, right.span])
-				);
+				left = new Add(left, right, unionSpan([left.span, right.span]));
 			} else if (this.current() == "-") {
 				this.match("-");
 				let right = this.multiplicative();
-				left = new MATH.Sub(
-					left,
-					right,
-					unionSpan([left.span, right.span])
-				);
+				left = new Sub(left, right, unionSpan([left.span, right.span]));
 			}
 		}
 		return left;
@@ -561,27 +562,15 @@ export class Parser {
 			if (this.current() == "*") {
 				this.match("*");
 				let right = this.negation();
-				left = new MATH.Mul(
-					left,
-					right,
-					unionSpan([left.span, right.span])
-				);
+				left = new Mul(left, right, unionSpan([left.span, right.span]));
 			} else if (this.current() == "/") {
 				this.match("/");
 				let right = this.negation();
-				left = new MATH.Div(
-					left,
-					right,
-					unionSpan([left.span, right.span])
-				);
+				left = new Div(left, right, unionSpan([left.span, right.span]));
 			} else {
 				this.match("%");
 				let right = this.negation();
-				left = new MATH.Mod(
-					left,
-					right,
-					unionSpan([left.span, right.span])
-				);
+				left = new Mod(left, right, unionSpan([left.span, right.span]));
 			}
 		}
 		return left;
@@ -591,7 +580,7 @@ export class Parser {
 		if (this.current() == "-") {
 			let tok: Token = this.match("-");
 			let ins: Expr = this.negation();
-			return new MATH.Negate(ins, unionSpan([tok.span, ins.span]));
+			return new Negate(ins, unionSpan([tok.span, ins.span]));
 		}
 		return this.exponent();
 	}
@@ -606,7 +595,7 @@ export class Parser {
 		let right: Expr = childs[childs.length - 1];
 		for (let i = childs.length - 2; i >= 0; i--) {
 			let left: Expr = childs[i];
-			right = new MATH.Exponent(
+			right = new Exponent(
 				left,
 				right,
 				unionSpan([left.span, right.span])
@@ -619,10 +608,7 @@ export class Parser {
 		let child: Expr = this.funcCall();
 		while (this.current() == "!") {
 			let tok: Token = this.match("!");
-			child = new MATH.Factorial(
-				child,
-				unionSpan([tok.span, child.span])
-			);
+			child = new Factorial(child, unionSpan([tok.span, child.span]));
 		}
 		return child;
 	}

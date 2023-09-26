@@ -1,16 +1,5 @@
 import { IOBuffer } from "../../IOBuffer.js";
-import {
-	ArgumentLengthError,
-	CompilerError,
-	DimensionError,
-	DivisionByZeroError,
-	IllegalCallError,
-	IllegalIndexError,
-	IllegalTypeConversionError,
-	NonexistentReturnError,
-	OutOfBoundsError,
-	UndefinedIdentifierError,
-} from "../../error.js";
+import { DimensionError, IllegalTypeConversionError } from "../../error.js";
 import { StringLiteral, VoidObj } from "./ast_exprs.js";
 import { Scope } from "../symbols.js";
 import { Expr } from "./expr.js";
@@ -23,9 +12,7 @@ import {
 	INT_TYPE,
 	VOID_TYPE,
 	STR_TYPE,
-	ANY_TYPE,
 	NAT_TYPE,
-	RAT_TYPE,
 } from "../type.js";
 import { NaturalLiteral } from "./terminals/natural.js";
 import { IntegerLiteral } from "./terminals/integer.js";

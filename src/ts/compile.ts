@@ -1,9 +1,9 @@
 import { Parser } from "./parser/betterParser.js";
 import { IOBuffer, consoleBuffer } from "./IOBuffer.js";
 import { Program } from "./ast/stmts.js";
-import { EcruError, ThrowableEcruError } from "./error.js";
+import { ThrowableEcruError } from "./error.js";
 import { Scope } from "./ast/symbols.js";
-import { Type, VOID_TYPE } from "./ast/type.js";
+import { VOID_TYPE } from "./ast/type.js";
 
 export interface CompileObj {
 	parseTree: string;

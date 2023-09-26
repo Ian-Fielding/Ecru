@@ -1,6 +1,5 @@
 import { IOBuffer } from "../IOBuffer.js";
 import {
-	CompilerError,
 	IllegalTypeConversionError,
 	RedefinedIdentifierError,
 	UndefinedIdentifierError,
