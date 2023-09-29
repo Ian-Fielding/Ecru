@@ -34,7 +34,6 @@ export class IOBuffer {
 		this.err = err;
 
 		this.stack = [];
-
 		this.outHistory = [];
 		this.errHistory = [];
 	}

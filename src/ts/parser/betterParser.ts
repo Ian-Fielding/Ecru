@@ -1,6 +1,6 @@
 import { IOBuffer } from "../IOBuffer.js";
 import {
-	VoidObj,
+	VOID_OBJ,
 	Id,
 	StringLiteral,
 	FuncCall,
@@ -171,7 +171,7 @@ export class Parser {
 		if (this.current() == "return") {
 			let tok: Token = this.match("return");
 			if (this.current() == ";")
-				return new ReturnStatement(new VoidObj(), tok.span);
+				return new ReturnStatement(VOID_OBJ, tok.span);
 			let expr = this.expr();
 			return new ReturnStatement(expr, unionSpan([tok.span, expr.span]));
 		}

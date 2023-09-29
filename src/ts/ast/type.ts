@@ -3,6 +3,7 @@ import { DimensionError, IllegalTypeConversionError } from "../error.js";
 import { Span } from "../parser/token.js";
 import { unionSpan } from "../util/utils.js";
 import { AST } from "./asts.js";
+import { Id } from "./expressions/ast_exprs.js";
 import { Scope } from "./symbols.js";
 
 export const enum TypeEnum {
@@ -16,6 +17,7 @@ export const enum TypeEnum {
 	MAP,
 	TUPLE,
 	MODULUS,
+	SET,
 	ANY,
 }
 
@@ -43,6 +45,8 @@ export function typeEnumToString(t: TypeEnum): string {
 			return "Any";
 		case TypeEnum.MODULUS:
 			return "Modulus";
+		case TypeEnum.SET:
+			return "Set";
 	}
 }
 
@@ -157,6 +161,22 @@ export class ProductType extends Type {
 	override toString(): string {
 		let ts: string[] = this.types.map((t) => t.toString());
 		return `(${ts.join(",")})`;
+	}
+}
+
+export class IdAsType extends Type {
+	id: Id;
+	constructor(id: Id, span: Span = new Span(0, 0, 0, 0)) {
+		super(TypeEnum.SET, span);
+		this.id = id;
+	}
+
+	override copy(): Type {
+		return new IdAsType(this.id, this.span);
+	}
+
+	override applyBind(scope: Scope, buffer: IOBuffer): void {
+		this.id.applyBind(scope, buffer);
 	}
 }
 

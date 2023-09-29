@@ -11,8 +11,8 @@ import {
 	Statement,
 } from "../../stmts.js";
 import { Scope } from "../../symbols.js";
-import { FunctionType, ANY_TYPE, TypeEnum } from "../../type.js";
-import { VoidObj, Id } from "../ast_exprs.js";
+import { FunctionType, ANY_TYPE, TypeEnum, Type } from "../../type.js";
+import { Id, VOID_OBJ } from "../ast_exprs.js";
 import { Expr } from "../expr.js";
 import { Tuple } from "./tuple.js";
 
@@ -85,8 +85,8 @@ export class FuncDecl extends Expr {
 	}
 
 	onCall(buffer: IOBuffer, input: Expr): Expr {
-		let backup: (Expr | null)[] = [];
-		let retVal: Expr = new VoidObj();
+		let backup: (Expr | null | Type)[] = [];
+		let retVal: Expr = VOID_OBJ;
 
 		/*let inputLength: number;
 		if (input instanceof VoidObj) inputLength = 0;

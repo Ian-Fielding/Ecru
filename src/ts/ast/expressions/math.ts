@@ -5,7 +5,7 @@ import {
 	UnsupportedBinop,
 } from "../../error.js";
 import { Span } from "../../parser/token.js";
-import { StringLiteral, VoidObj } from "./ast_exprs.js";
+import { StringLiteral, VOID_OBJ } from "./ast_exprs.js";
 import { Scope } from "../symbols.js";
 import {
 	INT_TYPE,
@@ -211,7 +211,7 @@ export class Add extends Binop {
 						this.span
 					)
 				);
-				return new VoidObj();
+				return VOID_OBJ;
 		}
 	}
 }
@@ -249,7 +249,7 @@ export class Mul extends Binop {
 				buffer.throwError(
 					new UnsupportedBinop(this.symbol, this.type, this.span)
 				);
-				return new VoidObj();
+				return VOID_OBJ;
 			case TypeEnum.TUPLE:
 				let t1: Tuple = aRval as Tuple;
 				let t2: Tuple = bRval as Tuple;
@@ -269,7 +269,7 @@ export class Mul extends Binop {
 						this.span
 					)
 				);
-				return new VoidObj();
+				return VOID_OBJ;
 		}
 	}
 }
@@ -307,7 +307,7 @@ export class Sub extends Binop {
 				buffer.throwError(
 					new UnsupportedBinop(this.symbol, this.type, this.span)
 				);
-				return new VoidObj();
+				return VOID_OBJ;
 			case TypeEnum.TUPLE:
 				let t1: Tuple = aRval as Tuple;
 				let t2: Tuple = bRval as Tuple;
@@ -327,7 +327,7 @@ export class Sub extends Binop {
 						this.span
 					)
 				);
-				return new VoidObj();
+				return VOID_OBJ;
 		}
 	}
 }
@@ -365,7 +365,7 @@ export class Div extends Binop {
 				buffer.throwError(
 					new UnsupportedBinop(this.symbol, this.type, this.span)
 				);
-				return new VoidObj();
+				return VOID_OBJ;
 			case TypeEnum.TUPLE:
 				let t1: Tuple = aRval as Tuple;
 				let t2: Tuple = bRval as Tuple;
@@ -385,7 +385,7 @@ export class Div extends Binop {
 						this.span
 					)
 				);
-				return new VoidObj();
+				return VOID_OBJ;
 		}
 	}
 }

@@ -1,4 +1,10 @@
 import { IOBuffer } from "../IOBuffer.js";
+import {
+	ExpressionAsTypeError,
+	IllegalTypeConversionError,
+	TypeAsExpressionError,
+} from "../error.js";
+import { VOID_OBJ } from "./expressions/ast_exprs.js";
 import { Expr } from "./expressions/expr.js";
 import { ANY_TYPE, Type } from "./type.js";
 
@@ -9,7 +15,7 @@ export class IdSymbol {
 	/**
 	 * Represents symbol's value. Default value is null and stays null until execution. Will become obsolete once VM is functional
 	 */
-	val: Expr | null;
+	val: Expr | Type | null;
 
 	/**
 	 * The scope of this symbol
@@ -44,16 +50,30 @@ export class IdSymbol {
 	 * @returns val
 	 */
 	rval(buffer: IOBuffer): Expr {
-		return this.val!;
+		let val: Expr | Type = this.val!;
+		if (val instanceof Type) {
+			buffer.throwError(new TypeAsExpressionError(val, val.span));
+			return VOID_OBJ;
+		} else return val;
+	}
+
+	rvalType(buffer: IOBuffer): Type {
+		let val: Expr | Type = this.val!;
+		if (val instanceof Expr) {
+			buffer.throwError(new ExpressionAsTypeError(val, val.span));
+			return ANY_TYPE;
+		} else return val;
 	}
 
 	/**
 	 * Converts symbol to LaTeX. TODO
 	 */
 	toLatex(): string {
-		if (this.val == null) return "\\text{UNDEFINED}";
+		return "TODO";
 
-		return this.val.toLatex();
+		//if (this.val == null) return "\\text{UNDEFINED}";
+
+		//return this.val.toLatex();
 	}
 
 	/**

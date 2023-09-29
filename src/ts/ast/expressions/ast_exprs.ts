@@ -14,7 +14,6 @@ import {
 	FunctionType,
 	TypeEnum,
 	ProductType,
-	ModulusType,
 	INT_TYPE,
 	VOID_TYPE,
 	STR_TYPE,
@@ -37,7 +36,7 @@ export class FuncCall extends Expr {
 		this.funcName = funcName;
 		this.params = params;
 
-		if (params.length == 0) this.input = new VoidObj();
+		if (params.length == 0) this.input = VOID_OBJ;
 		else if (params.length == 1) this.input = params[0];
 		else this.input = new Tuple(params, span);
 	}
@@ -75,7 +74,7 @@ export class FuncCall extends Expr {
 					this.span
 				)
 			);
-			return new VoidObj();
+			return VOID_OBJ;
 		}
 
 		buffer.pushStack(
@@ -83,7 +82,7 @@ export class FuncCall extends Expr {
 		);
 
 		let changeme: Expr = func.onCall(buffer, this.input.rval(buffer)); //TODO sucks
-		if (buffer.hasSeenError()) return new VoidObj();
+		if (buffer.hasSeenError()) return VOID_OBJ;
 
 		buffer.popStack();
 
@@ -145,6 +144,8 @@ export class VoidObj extends Expr {
 		return "void";
 	}
 }
+
+export const VOID_OBJ: VoidObj = new VoidObj();
 
 export class Id extends Expr {
 	symbol: IdSymbol | null;
@@ -273,7 +274,7 @@ export class ArrayAccess extends Expr {
 						this.span
 					)
 				);
-				return new VoidObj();
+				return VOID_OBJ;
 		}
 	}
 

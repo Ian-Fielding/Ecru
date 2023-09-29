@@ -1,3 +1,4 @@
+import { Expr } from "./ast/expressions/expr.js";
 import { Statement } from "./ast/stmts.js";
 import { Type } from "./ast/type.js";
 import { Span } from "./parser/token.js";
@@ -27,6 +28,26 @@ export abstract class EcruError {
 export class CompilerError extends EcruError {
 	constructor(msg: string, span?: Span) {
 		super("CompilerError", msg, span ? span : new Span(0, 0, 0, 0));
+	}
+}
+
+export class ExpressionAsTypeError extends EcruError {
+	constructor(expr: Expr, span: Span) {
+		super(
+			"ExpressionAsTypeError",
+			`Can't treat expr ${expr} as a type.`,
+			span
+		);
+	}
+}
+
+export class TypeAsExpressionError extends EcruError {
+	constructor(type: Type, span: Span) {
+		super(
+			"TypeAsExpressionError",
+			`Can't treat type ${type} as an expression.`,
+			span
+		);
 	}
 }
 

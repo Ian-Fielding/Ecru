@@ -1,6 +1,6 @@
 import { IOBuffer } from "../../IOBuffer.js";
 import { DimensionError, IllegalTypeConversionError } from "../../error.js";
-import { StringLiteral, VoidObj } from "./ast_exprs.js";
+import { StringLiteral, VOID_OBJ, VoidObj } from "./ast_exprs.js";
 import { Scope } from "../symbols.js";
 import { Expr } from "./expr.js";
 import {
@@ -96,7 +96,7 @@ class TypeCastToModulus extends Expr {
 			case TypeEnum.REAL:
 			//TODO implement once types is good
 			case TypeEnum.TUPLE:
-
+			case TypeEnum.SET:
 			case TypeEnum.FORMULA:
 			case TypeEnum.MAP:
 			case TypeEnum.VOID:
@@ -176,7 +176,7 @@ class TypeCastToNatural extends Expr {
 			case TypeEnum.REAL:
 			//TODO implement once types is good
 			case TypeEnum.TUPLE:
-
+			case TypeEnum.SET:
 			case TypeEnum.FORMULA:
 			case TypeEnum.MAP:
 			case TypeEnum.VOID:
@@ -217,7 +217,7 @@ class TypeCastToVoid extends Expr {
 				new IllegalTypeConversionError(r.type, this.type, this.span)
 			);
 
-		return new VoidObj();
+		return VOID_OBJ;
 	}
 }
 
@@ -369,7 +369,7 @@ class TypeCastToInt extends Expr {
 			case TypeEnum.REAL:
 			//TODO implement once types is good
 			case TypeEnum.TUPLE:
-
+			case TypeEnum.SET:
 			case TypeEnum.FORMULA:
 			case TypeEnum.MAP:
 			case TypeEnum.VOID:
@@ -438,7 +438,7 @@ class TypeCastToString extends Expr {
 			case TypeEnum.FORMULA:
 			case TypeEnum.MAP:
 			//TODO implement once types is good
-
+			case TypeEnum.SET:
 			case TypeEnum.VOID:
 				buffer.throwError(
 					new IllegalTypeConversionError(r.type, this.type, this.span)
