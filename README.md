@@ -1,3 +1,6 @@
+# Attention
+Ecru is no longer in active development. The project had grown to such a degree of complexity that I felt unable to implement the features I wanted. A better version will come soon.
+
 # Ecru
 
 Ecru is an open source Computer Algebra System (CAS), programming language, and Integrated Development Environment (IDE) project. Our mission is to provide a powerful platform for mathematical computation, symbolic manipulation, and general-purpose programming. 
